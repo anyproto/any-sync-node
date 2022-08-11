@@ -1,4 +1,4 @@
-package tree
+package acltree
 
 import (
 	"fmt"
@@ -16,39 +16,38 @@ type ChangeContent struct {
 
 // Change is an abstract type for all types of changes
 type Change struct {
-	Next            []*Change
-	Unattached      []*Change
-	PreviousIds     []string
-	Id              string
-	SnapshotId      string
-	IsSnapshot      bool
-	DecryptedChange []byte // TODO: check if we need it
-	ParsedModel     interface{}
+	Next                    []*Change
+	Unattached              []*Change
+	PreviousIds             []string
+	Id                      string
+	SnapshotId              string
+	IsSnapshot              bool
+	DecryptedDocumentChange []byte
 
-	Content *aclpb.Change
+	Content *aclpb.ACLChange
 	Sign    []byte
 }
 
-func (ch *Change) ProtoChange() proto.Marshaler {
-	return ch.Content
-}
-
 func (ch *Change) DecryptContents(key *symmetric.Key) error {
-	// if the document is already decrypted
-	if ch.Content.CurrentReadKeyHash == 0 {
+	if ch.Content.ChangesData == nil {
 		return nil
 	}
+
 	decrypted, err := key.Decrypt(ch.Content.ChangesData)
 	if err != nil {
 		return fmt.Errorf("failed to decrypt changes data: %w", err)
 	}
 
-	ch.DecryptedChange = decrypted
+	ch.DecryptedDocumentChange = decrypted
 	return nil
 }
 
+func (ch *Change) IsACLChange() bool {
+	return ch.Content.GetAclData() != nil
+}
+
 func NewFromRawChange(rawChange *aclpb.RawChange) (*Change, error) {
-	unmarshalled := &aclpb.Change{}
+	unmarshalled := &aclpb.ACLChange{}
 	err := proto.Unmarshal(rawChange.Payload, unmarshalled)
 	if err != nil {
 		return nil, err
@@ -59,19 +58,34 @@ func NewFromRawChange(rawChange *aclpb.RawChange) (*Change, error) {
 	return ch, nil
 }
 
-func NewChange(id string, ch *aclpb.Change) *Change {
+func NewChange(id string, ch *aclpb.ACLChange) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.TreeHeadIds,
 		Id:          id,
 		Content:     ch,
 		SnapshotId:  ch.SnapshotBaseId,
-		IsSnapshot:  ch.IsSnapshot,
+		IsSnapshot:  ch.GetAclData().GetAclSnapshot() != nil,
 	}
 }
 
+func NewACLChange(id string, ch *aclpb.ACLChange) *Change {
+	return &Change{
+		Next:        nil,
+		PreviousIds: ch.AclHeadIds,
+		Id:          id,
+		Content:     ch,
+		SnapshotId:  ch.SnapshotBaseId,
+		IsSnapshot:  ch.GetAclData().GetAclSnapshot() != nil,
+	}
+}
+
+func (ch *Change) ProtoChange() proto.Marshaler {
+	return ch.Content
+}
+
 func (ch *Change) DecryptedChangeContent() []byte {
-	return ch.DecryptedChange
+	return ch.DecryptedDocumentChange
 }
 
 func (ch *Change) Signature() []byte {
