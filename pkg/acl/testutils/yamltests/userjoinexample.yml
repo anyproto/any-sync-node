@@ -1,0 +1,56 @@
+list:
+  author: A
+records:
+  - identity: A
+    aclChanges:
+      - userAdd:
+          identity: A
+          permission: admin
+          encryptionKey: key.Enc.A
+          encryptedReadKeys: [key.Read.1]
+    readKey: key.Read.1
+  - identity: A
+    aclChanges:
+      - userInvite:
+          acceptKey: key.Sign.Onetime1
+          encryptionKey: key.Enc.Onetime1
+          encryptedReadKeys: [key.Read.1]
+          permissions: writer
+          inviteIdx: A.1.2
+      - userAdd:
+          identity: C
+          permission: reader
+          encryptionKey: key.Enc.C
+          encryptedReadKeys: [key.Read.1]
+    readKey: key.Read.1
+  - identity: B
+    aclChanges:
+      - userJoin:
+          identity: B
+          encryptionKey: key.Enc.B
+          acceptSignature: key.Sign.Onetime1
+          inviteId: A.1.2
+          encryptedReadKeys: [key.Read.1]
+    readKey: key.Read.1
+keys:
+  Enc:
+    - name: A
+      value: generated
+    - name: B
+      value: generated
+    - name: C
+      value: generated
+    - name: Onetime1
+      value: generated
+  Sign:
+    - name: A
+      value: generated
+    - name: B
+      value: generated
+    - name: C
+      value: generated
+    - name: Onetime1
+      value: generated
+  Read:
+    - name: 1
+      value: generated
