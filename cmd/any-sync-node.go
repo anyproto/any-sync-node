@@ -4,21 +4,22 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/anytypeio/any-sync-node/account"
-	"github.com/anytypeio/any-sync-node/config"
-	"github.com/anytypeio/any-sync-node/debug/nodedebugrpc"
-	"github.com/anytypeio/any-sync-node/nodespace"
-	"github.com/anytypeio/any-sync-node/nodespace/nodecache"
-	"github.com/anytypeio/any-sync-node/storage"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace"
-	"github.com/anytypeio/any-sync/metric"
-	"github.com/anytypeio/any-sync/net/dialer"
-	"github.com/anytypeio/any-sync/net/pool"
-	"github.com/anytypeio/any-sync/net/rpc/server"
-	"github.com/anytypeio/any-sync/net/secureservice"
-	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/api"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/file"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc/server"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/document"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/requesthandler"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -31,7 +32,7 @@ import (
 var log = logger.NewNamed("main")
 
 var (
-	flagConfigFile = flag.String("c", "etc/any-sync-node.yml", "path to config file")
+	flagConfigFile = flag.String("c", "etc/config.yml", "path to config file")
 	flagVersion    = flag.Bool("v", false, "show version and exit")
 	flagHelp       = flag.Bool("h", false, "show help and exit")
 )
@@ -93,15 +94,16 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
-		Register(metric.New()).
-		Register(storage.New()).
-		Register(nodecache.New(200)).
-		Register(nodeconf.New()).
-		Register(secureservice.New()).
-		Register(dialer.New()).
-		Register(pool.New()).
-		Register(nodespace.New()).
-		Register(commonspace.New()).
+		Register(node.New()).
+		Register(secure.New()).
 		Register(server.New()).
-		Register(nodedebugrpc.New())
+		Register(&file.Service{}).
+		Register(dialer.New()).
+		Register(pool.NewPool()).
+		Register(configuration.New()).
+		Register(document.New()).
+		Register(message.New()).
+		Register(requesthandler.New()).
+		Register(treecache.New()).
+		Register(api.New())
 }
