@@ -6,17 +6,14 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusrpc"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/stream"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -29,7 +26,7 @@ import (
 var log = logger.NewNamed("main")
 
 var (
-	flagConfigFile = flag.String("c", "etc/config.yml", "path to config file")
+	flagConfigFile = flag.String("c", "etc/consensus-config.yml", "path to config file")
 	flagVersion    = flag.Bool("v", false, "show version and exit")
 	flagHelp       = flag.Bool("h", false, "show help and exit")
 )
@@ -61,7 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatal("can't open config file", zap.Error(err))
 	}
-
+	conf.Log.ApplyGlobal()
 	// bootstrap components
 	a.Register(conf)
 	Bootstrap(a)
@@ -90,20 +87,11 @@ func main() {
 }
 
 func Bootstrap(a *app.App) {
-	a.Register(account.New()).
-		Register(storage.New()).
-		Register(nodecache.New(200)).
-		Register(nodeconf.New()).
+	a.Register(metric.New()).
+		Register(account.New()).
 		Register(secure.New()).
-		Register(dialer.New()).
-		Register(pool.New()).
-		Register(nodespace.New()).
-		Register(commonspace.New()).
-		Register(server.New())
-
-	//Register(document.New()).
-	//Register(message.New()).
-	//Register(requesthandler.New()).
-	//Register(treecache.New()).
-	//Register(api.New())
+		Register(server.New()).
+		Register(db.New()).
+		Register(stream.New()).
+		Register(consensusrpc.New())
 }
