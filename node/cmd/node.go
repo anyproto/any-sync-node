@@ -4,13 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace/clientcache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
@@ -21,6 +14,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -33,7 +30,7 @@ import (
 var log = logger.NewNamed("main")
 
 var (
-	flagConfigFile = flag.String("c", "etc/client.yml", "path to config file")
+	flagConfigFile = flag.String("c", "etc/config.yml", "path to config file")
 	flagVersion    = flag.Bool("v", false, "show version and exit")
 	flagHelp       = flag.Bool("h", false, "show help and exit")
 )
@@ -95,17 +92,14 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
-		Register(nodeconf.New()).
 		Register(metric.New()).
-		Register(badgerprovider.New()).
 		Register(storage.New()).
-		Register(clientcache.New(200)).
+		Register(nodecache.New(200)).
+		Register(nodeconf.New()).
 		Register(secure.New()).
 		Register(dialer.New()).
 		Register(pool.New()).
+		Register(nodespace.New()).
 		Register(commonspace.New()).
-		Register(clientspace.New()).
-		Register(server.New()).
-		Register(document.New()).
-		Register(api.New())
+		Register(server.New())
 }
