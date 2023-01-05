@@ -2,9 +2,9 @@ package storage
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/dgraph-io/badger/v3"
 )
 

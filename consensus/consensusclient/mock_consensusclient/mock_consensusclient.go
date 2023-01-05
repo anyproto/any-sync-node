@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	app "github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	app "github.com/anytypeio/any-sync/app"
 	consensusclient "github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusclient"
 	consensusproto "github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	gomock "github.com/golang/mock/gomock"

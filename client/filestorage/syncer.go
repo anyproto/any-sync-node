@@ -2,8 +2,8 @@ package filestorage
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/badgerfilestore"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	blocks "github.com/ipfs/go-block-format"
 	"go.uber.org/zap"
 	"sync"
@@ -106,7 +106,7 @@ func (s *syncer) add(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) 
 		bs = append(bs, b)
 	}
 	ctx = fileblockstore.CtxWithSpaceId(ctx, spaceOps.SpaceId)
-	
+
 	successCidsCh := s.ps.origin.AddAsync(ctx, bs)
 	for doneCid := range successCidsCh {
 		doneCids.Add(spaceOps.SpaceId, badgerfilestore.OpAdd, doneCid)

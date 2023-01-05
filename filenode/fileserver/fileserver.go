@@ -1,10 +1,10 @@
 package fileserver
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
+	"github.com/anytypeio/any-sync/commonfile/fileproto"
+	"github.com/anytypeio/any-sync/net/rpc/server"
 )
 
 const CName = "common.commonfile.fileservice"

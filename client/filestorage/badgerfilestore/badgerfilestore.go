@@ -2,7 +2,7 @@ package badgerfilestore
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
+	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
 	"github.com/dgraph-io/badger/v3"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"

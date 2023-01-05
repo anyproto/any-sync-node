@@ -2,9 +2,9 @@ package acl
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync/synchandler"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"go.uber.org/zap"
 	"sync"

@@ -1,10 +1,10 @@
 package rpcstore
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/anytypeio/any-sync/nodeconf"
 )
 
 const CName = "common.commonfile.rpcstore"

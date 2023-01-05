@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands/client"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands/node"

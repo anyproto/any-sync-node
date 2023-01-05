@@ -2,9 +2,9 @@ package filestorage
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/badgerfilestore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/rpcstore"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 	format "github.com/ipfs/go-ipld-format"

@@ -2,11 +2,8 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/filenode
 
 go 1.19
 
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/common => ../common
-
 require (
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/go-anytype-infrastructure-experiments/common v0.0.0-00010101000000-000000000000
 	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.3.2
 	go.uber.org/zap v1.24.0
@@ -14,6 +11,7 @@ require (
 )
 
 require (
+	github.com/anytypeio/any-sync v0.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect

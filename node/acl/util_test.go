@@ -1,7 +1,7 @@
 package acl
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cidutil"
+	"github.com/anytypeio/any-sync/util/cidutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
