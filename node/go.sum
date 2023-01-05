@@ -44,6 +44,8 @@ github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRF
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/anytypeio/any-sync v0.0.1 h1:5CnfvhL/kqgeXc6uiv4GtCfvbvRLN2vCnv1hReA5+50=
 github.com/anytypeio/any-sync v0.0.1/go.mod h1:tjXvTv0Uux70pZxJkrv+zrc3lunj9KScxwzQ6r7/lPM=
+github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20230105133618-383142851541 h1:rLl/6/23/lgAfOhnt8drvjF5lT49MUqz6HDhIIanIN8=
+github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20230105133618-383142851541/go.mod h1:/5PbOxhDsTNDBFPRUKpsJngF5B2O/uro3wkupPrsIA8=
 github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232 h1:kMPPZYmJgbs4AJfodbg2OCXg5cp+9LPAJcLZJqmcghk=
 github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232/go.mod h1:+PeHBAWp7gUh/yw6uAauKc5ku0w4cFNg6DUddGxoGq0=
 github.com/awalterschulze/gographviz v2.0.3+incompatible h1:9sVEXJBJLwGX7EQVhLm2elIKCm7P2YHFC8v6096G09E=
