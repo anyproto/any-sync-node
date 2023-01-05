@@ -2,7 +2,6 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/node
 
 go 1.19
 
-
 require (
 	github.com/akrylysov/pogreb v0.10.1
 	github.com/anytypeio/any-sync v0.0.1
@@ -16,6 +15,7 @@ require (
 )
 
 require (
+	github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20230105133618-383142851541 // indirect
 	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
