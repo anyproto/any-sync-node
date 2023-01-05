@@ -17,6 +17,7 @@ import (
 	fconfig "github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/config"
 	config "github.com/anytypeio/go-anytype-infrastructure-experiments/node/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
 )
