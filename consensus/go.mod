@@ -2,18 +2,15 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/consensus
 
 go 1.19
 
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/common => ../common
-
 require (
-	github.com/anytypeio/go-anytype-infrastructure-experiments/common v0.0.0-00010101000000-000000000000
-	github.com/cheggaaa/mb/v3 v3.0.0-20221122160120-e9034545510c
+	github.com/anytypeio/any-sync v0.0.1
+	github.com/cheggaaa/mb/v3 v3.0.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/stretchr/testify v1.8.1
 	go.mongodb.org/mongo-driver v1.10.3
 	go.uber.org/zap v1.24.0
-	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32
 )
 
@@ -65,5 +62,6 @@ require (
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )

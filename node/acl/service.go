@@ -2,12 +2,12 @@ package acl
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync/synchandler"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cidutil"
+	"github.com/anytypeio/any-sync/accountservice"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anytypeio/any-sync/util/cidutil"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusclient"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"time"

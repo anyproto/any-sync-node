@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"os"

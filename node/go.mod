@@ -2,20 +2,16 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/node
 
 go 1.19
 
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/common => ../common
-
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/consensus => ../consensus
 
 require (
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/go-anytype-infrastructure-experiments/common v0.0.0-00010101000000-000000000000
-	github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20221107145605-92bdf7d57b48
+	github.com/anytypeio/any-sync v0.0.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
-	gopkg.in/yaml.v3 v3.0.1
+	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
 	storj.io/drpc v0.0.32
 )
 
@@ -24,7 +20,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cheggaaa/mb/v3 v3.0.0-20221122160120-e9034545510c // indirect
+	github.com/cheggaaa/mb/v3 v3.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
@@ -62,9 +58,9 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
-	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )

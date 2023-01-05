@@ -2,14 +2,14 @@ package document
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/accountservice"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/headsync"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace/clientcache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 )
 
 type Service interface {

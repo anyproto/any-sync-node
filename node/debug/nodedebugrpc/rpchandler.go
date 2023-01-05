@@ -2,7 +2,7 @@ package nodedebugrpc
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/debug/nodedebugrpc/nodedebugrpcproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"

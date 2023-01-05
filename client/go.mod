@@ -1,14 +1,11 @@
 module github.com/anytypeio/go-anytype-infrastructure-experiments/client
 
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/common => ../common
-
 go 1.19
 
 require (
 	github.com/VividCortex/ewma v1.2.0
-	github.com/anytypeio/go-anytype-infrastructure-experiments/common v0.0.0-00010101000000-000000000000
-	github.com/cheggaaa/mb/v3 v3.0.0-20221122160120-e9034545510c
-	github.com/dgraph-io/badger/v3 v3.2103.3
+	github.com/anytypeio/any-sync v0.0.1
+	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/ipfs/go-block-format v0.0.3
@@ -17,17 +14,16 @@ require (
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/multierr v1.9.0
 	go.uber.org/zap v1.24.0
-	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32
 )
 
 require (
 	github.com/alecthomas/units v0.0.0-20210927113745-59d0afb8317a // indirect
-	github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20221217135026-4eba413631b3 // indirect
 	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cheggaaa/mb/v3 v3.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
@@ -110,5 +106,6 @@ require (
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )

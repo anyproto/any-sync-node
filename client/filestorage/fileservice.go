@@ -2,12 +2,12 @@ package filestorage
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/badgerfilestore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/rpcstore"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	"io"
 )
 

@@ -13,7 +13,6 @@ endif
 export PATH=$(GOPATH)/bin:$(shell echo $$PATH)
 
 proto:
-	$(MAKE) -C common proto
 	$(MAKE) -C consensus proto
 	$(MAKE) -C client proto
 
@@ -27,5 +26,4 @@ test:
 	$(MAKE) -C node test
 	$(MAKE) -C filenode test
 	$(MAKE) -C consensus test
-	$(MAKE) -C common test
 	$(MAKE) -C client test

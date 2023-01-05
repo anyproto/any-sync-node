@@ -1,13 +1,13 @@
 package config
 
 import (
-	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	commonaccount "github.com/anytypeio/any-sync/accountservice"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace"
+	"github.com/anytypeio/any-sync/metric"
+	"github.com/anytypeio/any-sync/net"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
 	"gopkg.in/yaml.v3"
 	"os"

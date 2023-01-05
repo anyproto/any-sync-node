@@ -2,12 +2,12 @@ package textdocument
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/accountservice"
+	"github.com/anytypeio/any-sync/commonspace"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	textchange "github.com/anytypeio/go-anytype-infrastructure-experiments/client/document/textchangeproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 	"github.com/gogo/protobuf/proto"
 )
 

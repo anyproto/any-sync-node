@@ -2,9 +2,9 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/app/ocache"
+	"github.com/anytypeio/any-sync/commonspace"
+	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 )
 
 type rpcHandler struct {

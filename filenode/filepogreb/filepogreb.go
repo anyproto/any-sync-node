@@ -3,9 +3,9 @@ package filepogreb
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/config"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"

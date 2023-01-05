@@ -2,10 +2,10 @@ package stream
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/app/ocache"
+	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
 	"github.com/cheggaaa/mb/v3"

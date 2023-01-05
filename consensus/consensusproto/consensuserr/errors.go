@@ -2,7 +2,7 @@ package consensuserr
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
+	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 )
 

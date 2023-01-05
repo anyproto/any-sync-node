@@ -2,9 +2,9 @@ package fileserver
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileproto/fileprotoerr"
+	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
+	"github.com/anytypeio/any-sync/commonfile/fileproto"
+	"github.com/anytypeio/any-sync/commonfile/fileproto/fileprotoerr"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 )

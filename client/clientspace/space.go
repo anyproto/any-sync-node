@@ -2,7 +2,7 @@ package clientspace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
+	"github.com/anytypeio/any-sync/commonspace"
 )
 
 func newClientSpace(cc commonspace.Space) (commonspace.Space, error) {

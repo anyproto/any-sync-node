@@ -2,8 +2,8 @@ package consensusrpc
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserr"
