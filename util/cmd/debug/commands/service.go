@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands/client"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands/node"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
 
