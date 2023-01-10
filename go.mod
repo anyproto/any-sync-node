@@ -1,4 +1,4 @@
-module github.com/anytypeio/go-anytype-infrastructure-experiments/node
+module github.com/anytypeio/any-sync-node
 
 go 1.19
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/anytypeio/any-sync-node/storage"
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
@@ -8,7 +9,6 @@ import (
 	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"gopkg.in/yaml.v3"
 	"os"
 )
@@ -33,7 +33,7 @@ type Config struct {
 	APIServer  net.Config            `yaml:"apiServer"`
 	Nodes      []nodeconf.NodeConfig `yaml:"nodes"`
 	Space      commonspace.Config    `yaml:"space"`
-	Storage    badgerprovider.Config `yaml:"storage"`
+	Storage    storage.Config        `yaml:"storage"`
 	Metric     metric.Config         `yaml:"metric"`
 	Log        logger.Config         `yaml:"log"`
 }
@@ -66,7 +66,7 @@ func (c Config) GetSpace() commonspace.Config {
 	return c.Space
 }
 
-func (c Config) GetStorage() badgerprovider.Config {
+func (c Config) GetStorage() storage.Config {
 	return c.Storage
 }
 
