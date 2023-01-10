@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/akrylysov/pogreb v0.10.1
 	github.com/anytypeio/any-sync v0.0.1
-	github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20230105133618-383142851541
+	github.com/anytypeio/any-sync-consensusnode v0.0.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/ipfs/go-cid v0.3.2
