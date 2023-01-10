@@ -1,5 +1,6 @@
-.PHONY: proto build test
+.PHONY: proto build test deps
 export GOPRIVATE=github.com/anytypeio
+export PATH:=deps:$(PATH)
 
 build:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/node))
@@ -9,5 +10,8 @@ test:
 	go test ./... --cover
 
 proto:
-	@$(eval GOGO_START := GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1)
-	$(GOGO_START) protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. debug/nodedebugrpc/nodedebugrpcproto/protos/*.proto
+	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. debug/nodedebugrpc/nodedebugrpcproto/protos/*.proto
+
+deps:
+	go mod download
+	go build -o deps/protoc-gen-go-drpc storj.io/drpc/cmd/protoc-gen-go-drpc
