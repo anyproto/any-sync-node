@@ -3,7 +3,7 @@ export GOPRIVATE=github.com/anytypeio
 export PATH:=deps:$(PATH)
 
 build:
-	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/node))
+	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/any-sync/app))
 	go build -v -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
 
 test:
