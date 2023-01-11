@@ -14,4 +14,5 @@ proto:
 
 deps:
 	go mod download
-	go build -o deps/protoc-gen-go-drpc storj.io/drpc/cmd/protoc-gen-go-drpc
+	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
+	go build -o deps github.com/ahmetb/govvv
