@@ -48,3 +48,9 @@ jobs:
 
       - name: debug
         run: ls -al ./
+
+      - name: upload-artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: any-sync-node_1.0_amd64.deb
+          path: any-sync-node_1.0_amd64.deb
