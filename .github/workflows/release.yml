@@ -38,6 +38,11 @@ jobs:
       - name: build
         run: make build
 
+      - name: debug
+        run: |
+          ls -al ./
+          echo "${{ github }}"
+
       # create package {{
       - name: create package
         uses: bpicode/github-action-fpm@master
@@ -45,9 +50,6 @@ jobs:
           fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version ${{ github.ref }} --input-type dir"
           fpm_args: "./bin"
       # }}
-
-      - name: debug
-        run: ls -al ./
 
 #      - name: upload-artifact
 #        uses: actions/upload-artifact@v3
