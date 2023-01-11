@@ -38,11 +38,16 @@ jobs:
       - name: build
         run: make build
 
+      - name: get release version
+        id: release-version
+        run: |
+          echo "$GITHUB_REF_NAME" | sed 's|^[a-zA-Z]\+|RELEASE_VERSION=|' >> $GITHUB_OUTPUT
+
       # create package {{
       - name: create package
         uses: bpicode/github-action-fpm@master
         with:
-          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version 0.0.2 --input-type dir"
+          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --input-type dir"
           fpm_args: "./bin"
       # }}
 
@@ -62,18 +67,18 @@ jobs:
           draft: false
           prerelease: false
 
-#      - name: upload-artifact
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: any-sync-node_1.0_amd64.deb
-#          path: any-sync-node_1.0_amd64.deb
-#
-#      - name: upload-release-asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ github.event.release.upload_url }}
-#          asset_path: ./any-sync-node_1.0_amd64.deb
-#          asset_name: any-sync-node_1.0_amd64.deb
-#          asset_content_type: application/octet-stream
+      - name: upload-artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
+          path: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
+
+      - name: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
+          asset_name: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
+          asset_content_type: application/octet-stream
