@@ -45,3 +45,6 @@ jobs:
           fpm_args: "./bin"
           fpm_opts: "--debug -n ${{ github.event.repository.name }} -t deb -s dir"
       # }}
+
+      - name: debug
+        run: ls -al ./
