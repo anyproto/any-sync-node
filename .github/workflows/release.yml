@@ -39,4 +39,6 @@ jobs:
         run: make build
 
       - name: debug
-        run: ls -al bin/
+        run: |
+          ls -al bin/
+          ls -al deps/
