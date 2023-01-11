@@ -41,7 +41,7 @@ jobs:
       # create package {{
       - name: create package
         uses: bpicode/github-action-fpm@master
-          with:
-            fpm_args: "./bin"
-            fpm_opts: "--debug -n ${{ github.event.repository.name }} -t deb -s dir"
+        with:
+          fpm_args: "./bin"
+          fpm_opts: "--debug -n ${{ github.event.repository.name }} -t deb -s dir"
       # }}
