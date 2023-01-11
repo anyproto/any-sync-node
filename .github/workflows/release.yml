@@ -38,18 +38,29 @@ jobs:
       - name: build
         run: make build
 
+      # create package {{
+      - name: create package
+        uses: bpicode/github-action-fpm@master
+        with:
+          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version 0.0.2 --input-type dir"
+          fpm_args: "./bin"
+      # }}
+
       - name: debug
         run: |
           ls -al ./
           env
 
-      # create package {{
-      - name: create package
-        uses: bpicode/github-action-fpm@master
+      - name: create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version ${{ github.ref }} --input-type dir"
-          fpm_args: "./bin"
-      # }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
 
 #      - name: upload-artifact
 #        uses: actions/upload-artifact@v3
