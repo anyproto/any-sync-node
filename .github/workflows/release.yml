@@ -41,7 +41,7 @@ jobs:
       - name: debug
         run: |
           ls -al ./
-          echo "${{ github }}"
+          env
 
       # create package {{
       - name: create package
