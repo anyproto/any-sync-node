@@ -60,6 +60,9 @@ jobs:
           fpm_args: "./bin"
       # }}
 
+      - name: debug
+        run: ls -al ./
+
       - name: create release
         id: create_release
         uses: actions/create-release@v1
