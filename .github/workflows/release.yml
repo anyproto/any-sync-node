@@ -47,18 +47,18 @@ jobs:
         run: |
           echo "$GITHUB_REF_NAME" | sed 's|^[a-zA-Z]\+|RELEASE_VERSION=|' >> $GITHUB_OUTPUT
 
-      # create package {{
-      - name: create package
+      # create packages {{
+      - name: create package deb
         uses: bpicode/github-action-fpm@master
         with:
           fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --input-type dir"
           fpm_args: "./bin"
+      - name: create package rpm
+        uses: bpicode/github-action-fpm@master
+        with:
+          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type rpm --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --input-type dir"
+          fpm_args: "./bin"
       # }}
-
-      - name: debug
-        run: |
-          ls -al ./
-          env
 
       - name: create release
         id: create_release
@@ -71,13 +71,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: upload-artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
-          path: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
-
-      - name: upload-release-asset
+      - name: upload-release-asset deb
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,4 +79,14 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
           asset_name: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.deb
+          asset_content_type: application/octet-stream
+
+      - name: upload-release-asset rpm
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.rpm
+          asset_name: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_amd64.rpm
           asset_content_type: application/octet-stream
