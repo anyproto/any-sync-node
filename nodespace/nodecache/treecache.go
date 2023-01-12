@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/metric"
 	"time"
 )
 
@@ -53,6 +54,7 @@ func (c *treeCache) Init(a *app.App) (err error) {
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(c.gcttl)*time.Second),
+		ocache.WithPrometheus(a.MustComponent(metric.CName).(metric.Metric).Registry(), "tree", "cache"),
 	)
 	return nil
 }
