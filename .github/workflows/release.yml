@@ -53,7 +53,7 @@ jobs:
       - name: create archives
         run: |
           zip --junk-paths ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.zip bin/*
-          tar --create --gzip --verbose --file=${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.tgz --directory=bin/ *
+          tar --create --gzip --verbose --exclude='.gitignore' --file=${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.tgz --directory=bin/ .
       - name: create package deb
         uses: bpicode/github-action-fpm@master
         with:
