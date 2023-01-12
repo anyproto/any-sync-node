@@ -57,12 +57,12 @@ jobs:
       - name: create package deb
         uses: bpicode/github-action-fpm@master
         with:
-          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --input-type dir"
+          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --exclude-file .gitignore --input-type dir"
           fpm_args: "./bin"
       - name: create package rpm
         uses: bpicode/github-action-fpm@master
         with:
-          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type rpm --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --input-type dir"
+          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type rpm --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --exclude-file .gitignore --input-type dir"
           fpm_args: "./bin"
       # }}
 
