@@ -52,7 +52,7 @@ jobs:
       # create archives {{
       - name: create archives
         run: |
-          zip --junk-paths ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }} bin/*
+          zip --junk-paths ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.zip bin/*
           tar --create --gzip --verbose --file=${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.tgz --directory=bin/ .
       # }}
       # create packages {{
@@ -83,6 +83,27 @@ jobs:
           draft: false
           prerelease: false
 
+      # upload-release-asset {{
+      - name: upload-release-asset zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.zip
+          asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.zip
+          asset_content_type: application/zip
+
+      - name: upload-release-asset tgz
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.tgz
+          asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.tgz
+          asset_content_type: application/gzip
+
       - name: upload-release-asset deb
         uses: actions/upload-release-asset@v1
         env:
@@ -102,3 +123,4 @@ jobs:
           asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.x86_64.rpm
           asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.x86_64.rpm
           asset_content_type: application/octet-stream
+      # }}
