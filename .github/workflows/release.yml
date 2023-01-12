@@ -49,13 +49,11 @@ jobs:
         run: |
           echo "$GITHUB_REF_NAME" | sed 's|^[a-zA-Z]\+|RELEASE_VERSION=|' >> $GITHUB_OUTPUT
 
-      # create archives {{
+      # create asset {{
       - name: create archives
         run: |
           zip --junk-paths ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.zip bin/*
           tar --create --gzip --verbose --file=${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.tgz --directory=bin/ .
-      # }}
-      # create packages {{
       - name: create package deb
         uses: bpicode/github-action-fpm@master
         with:
@@ -68,9 +66,9 @@ jobs:
           fpm_args: "./bin"
       # }}
 
-      - name: debug
-        run: |
-          ls -al ./
+      #- name: debug
+      #  run: |
+      #    ls -al ./
 
       - name: create release
         id: create_release
