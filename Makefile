@@ -15,4 +15,5 @@ proto:
 deps:
 	go mod download
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
+	go build -o deps/protoc-gen-gogofaster github.com/gogo/protobuf/protoc-gen-gogofaster
 	go build -o deps github.com/ahmetb/govvv
