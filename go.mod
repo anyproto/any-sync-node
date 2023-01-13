@@ -8,8 +8,6 @@ require (
 	github.com/anytypeio/any-sync v0.0.0-20230113104244-4c4abc926633
 	github.com/anytypeio/go-chash v0.0.2
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.6.0
-	github.com/ipfs/go-cid v0.3.2
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3
@@ -30,6 +28,7 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/huandu/skiplist v1.2.0 // indirect
+	github.com/ipfs/go-cid v0.3.2 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.2 // indirect

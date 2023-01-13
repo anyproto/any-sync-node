@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
+	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/metric"
@@ -49,7 +50,7 @@ func (c *treeCache) Init(a *app.App) (err error) {
 			if err != nil {
 				return
 			}
-			return space.BuildTree(ctx, id, nil)
+			return space.BuildTree(ctx, id, commonspace.BuildTreeOpts{})
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),

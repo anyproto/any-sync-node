@@ -19,7 +19,7 @@ func (r *rpcHandler) DumpTree(ctx context.Context, request *nodedebugrpcproto.Du
 	if err != nil {
 		return
 	}
-	dump, err := tree.DebugDump()
+	dump, err := tree.DebugDump(nil)
 	if err != nil {
 		return
 	}
