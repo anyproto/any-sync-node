@@ -3,27 +3,27 @@ module github.com/anytypeio/any-sync-node
 go 1.19
 
 require (
+	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/any-sync v0.0.1
-	github.com/anytypeio/any-sync-consensusnode v0.0.1
+	github.com/anytypeio/any-sync v0.0.0-20230113104244-4c4abc926633
+	github.com/anytypeio/go-chash v0.0.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
-	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
+	golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32
 )
 
 require (
-	github.com/ahmetb/govvv v0.3.0 // indirect
-	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cheggaaa/mb/v3 v3.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/goccy/go-graphviz v0.0.9 // indirect
@@ -31,26 +31,28 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/huandu/skiplist v1.2.0 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
+	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.2 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.23.2 // indirect
+	github.com/libp2p/go-libp2p v0.24.1 // indirect
 	github.com/libp2p/go-openssl v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-pointer v0.0.1 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
-	github.com/multiformats/go-multiaddr v0.7.0 // indirect
+	github.com/multiformats/go-multiaddr v0.8.0 // indirect
 	github.com/multiformats/go-multibase v0.1.1 // indirect
-	github.com/multiformats/go-multicodec v0.6.0 // indirect
+	github.com/multiformats/go-multicodec v0.7.0 // indirect
 	github.com/multiformats/go-multihash v0.2.1 // indirect
+	github.com/multiformats/go-multistream v0.3.3 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.13.0 // indirect
-	github.com/prometheus/client_model v0.2.0 // indirect
+	github.com/prometheus/client_golang v1.14.0 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/spacemonkeygo/spacelog v0.0.0-20180420211403-2296661a0572 // indirect
