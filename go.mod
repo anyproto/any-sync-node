@@ -5,8 +5,7 @@ go 1.19
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/any-sync v0.0.0-20230113104244-4c4abc926633
-	github.com/anytypeio/go-chash v0.0.2
+	github.com/anytypeio/any-sync v0.0.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
@@ -16,6 +15,7 @@ require (
 )
 
 require (
+	github.com/anytypeio/go-chash v0.0.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
