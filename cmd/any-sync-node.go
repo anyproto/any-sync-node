@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	// import this to keep govvv in go.mod on mod tidy
+	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
 	"github.com/anytypeio/any-sync-node/account"
 	"github.com/anytypeio/any-sync-node/config"
 	"github.com/anytypeio/any-sync-node/debug/nodedebugrpc"
