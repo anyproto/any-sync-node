@@ -2,10 +2,9 @@ package nodesync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/accountservice"
+	"github.com/anytypeio/any-sync-node/testutil/testnodeconf"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/any-sync/testutil/accounttest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -31,22 +30,10 @@ func newFixture(t *testing.T) *fixture {
 		nodeSync: New().(*nodeSync),
 		a:        new(app.App),
 	}
-
-	conf := newConfig()
-	var nodeCount = 9
-	var accService accountservice.Service
-	for i := 0; i < nodeCount; i++ {
-		ac := &accounttest.AccountTestService{}
-		require.NoError(t, ac.Init(nil))
-		if i == 0 {
-			accService = ac
-		}
-		conf.nodes = append(conf.nodes, ac.NodeConf(nil))
-	}
-
-	fx.a.Register(conf).
-		Register(nodeconf.New()).
-		Register(accService).
+	accServ, confServ := testnodeconf.GenNodeConfig(9)
+	fx.a.Register(nodeconf.New()).
+		Register(accServ).
+		Register(&config{Config: confServ}).
 		Register(fx.nodeSync)
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
@@ -61,23 +48,10 @@ func (fx *fixture) Finish(t *testing.T) {
 	require.NoError(t, fx.a.Close(ctx))
 }
 
-func newConfig() *config {
-	return &config{}
-}
-
 type config struct {
-	nodes []nodeconf.NodeConfig
+	*testnodeconf.Config
 }
 
-func (c *config) Init(a *app.App) (err error) { return }
-func (c *config) Name() string                { return "config" }
-
-func (c *config) GetNodeSync() Config {
-	return Config{
-		SyncOnStart: false,
-	}
-}
-
-func (c *config) GetNodes() []nodeconf.NodeConfig {
-	return c.nodes
+func (c config) GetNodeSync() Config {
+	return Config{}
 }
