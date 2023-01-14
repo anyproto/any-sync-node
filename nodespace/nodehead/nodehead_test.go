@@ -3,6 +3,7 @@ package nodehead
 import (
 	"context"
 	"encoding/hex"
+	"github.com/anytypeio/any-sync-node/storage"
 	"github.com/anytypeio/any-sync-node/testutil/testnodeconf"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/ldiff"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math"
+	"os"
 	"testing"
 )
 
@@ -59,24 +61,43 @@ func TestNodeHead_Ranges(t *testing.T) {
 }
 
 func newFixture(t *testing.T) *fixture {
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
 	fx := &fixture{
 		NodeHead: New(),
 		a:        new(app.App),
+		dataPath: tmpDir,
 	}
 	accServ, confServ := testnodeconf.GenNodeConfig(3)
 	fx.a.Register(nodeconf.New()).
 		Register(accServ).
-		Register(confServ).
-		Register(fx.NodeHead)
+		Register(&config{Config: confServ}).
+		Register(fx.NodeHead).
+		Register(storage.New())
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
 }
 
 type fixture struct {
 	NodeHead
-	a *app.App
+	a        *app.App
+	dataPath string
 }
 
 func (fx *fixture) Finish(t *testing.T) {
 	require.NoError(t, fx.a.Close(ctx))
+	if fx.dataPath != "" {
+		_ = os.RemoveAll(fx.dataPath)
+	}
+}
+
+type config struct {
+	*testnodeconf.Config
+	dataPath string
+}
+
+func (c *config) GetStorage() storage.Config {
+	return storage.Config{
+		Path: c.dataPath,
+	}
 }
