@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	spacestorage "github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
 	"sort"
@@ -45,6 +46,7 @@ func testSpace(t *testing.T, store spacestorage.SpaceStorage, payload spacestora
 func TestSpaceStorage_Create(t *testing.T) {
 	dir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	payload := spaceTestPayload()
 	store, err := createSpaceStorage(dir, payload)
@@ -62,13 +64,14 @@ func TestSpaceStorage_Create(t *testing.T) {
 func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
 	dir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	payload := spaceTestPayload()
 	store, err := createSpaceStorage(dir, payload)
 	require.NoError(t, err)
 	require.NoError(t, store.Close())
 
-	store, err = newSpaceStorage(dir, payload.SpaceHeaderWithId.Id)
+	store, err = newSpaceStorage(&storageService{rootPath: dir}, payload.SpaceHeaderWithId.Id)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, store.Close())
@@ -98,6 +101,7 @@ func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
 func TestSpaceStorage_StoredIds(t *testing.T) {
 	dir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	payload := spaceTestPayload()
 	store, err := createSpaceStorage(dir, payload)
@@ -122,4 +126,23 @@ func TestSpaceStorage_StoredIds(t *testing.T) {
 	sort.Strings(storedIds)
 	require.NoError(t, err)
 	require.Equal(t, ids, storedIds)
+}
+
+func TestSpaceStorage_WriteSpaceHash(t *testing.T) {
+	dir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	payload := spaceTestPayload()
+	store, err := createSpaceStorage(dir, payload)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, store.Close())
+	}()
+
+	hash := "123"
+	require.NoError(t, store.WriteSpaceHash(hash))
+	hash2, err := store.ReadSpaceHash()
+	require.NoError(t, err)
+	assert.Equal(t, hash, hash2)
 }

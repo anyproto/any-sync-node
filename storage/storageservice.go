@@ -1,28 +1,35 @@
 package storage
 
 import (
+	"context"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"os"
 	"path"
+	"sync"
 )
-
-type storageService struct {
-	rootPath string
-}
-
-type NodeStorage interface {
-	spacestorage.SpaceStorageProvider
-	AllSpaceIds() (ids []string, err error)
-}
 
 func New() NodeStorage {
 	return &storageService{}
 }
 
+type NodeStorage interface {
+	spacestorage.SpaceStorageProvider
+	AllSpaceIds() (ids []string, err error)
+	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
+}
+
+type storageService struct {
+	rootPath     string
+	onWriteHash  func(ctx context.Context, spaceId, hash string)
+	lockedSpaces map[string]chan struct{}
+	mu           sync.Mutex
+}
+
 func (s *storageService) Init(a *app.App) (err error) {
 	cfg := a.MustComponent("config").(configGetter).GetStorage()
 	s.rootPath = cfg.Path
+	s.lockedSpaces = map[string]chan struct{}{}
 	return nil
 }
 
@@ -31,7 +38,7 @@ func (s *storageService) Name() (name string) {
 }
 
 func (s *storageService) SpaceStorage(id string) (spacestorage.SpaceStorage, error) {
-	return newSpaceStorage(s.rootPath, id)
+	return newSpaceStorage(s, id)
 }
 
 func (s *storageService) SpaceExists(id string) bool {
@@ -57,4 +64,8 @@ func (s *storageService) AllSpaceIds() (ids []string, err error) {
 		files = append(files, file.Name())
 	}
 	return files, nil
+}
+
+func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
+	s.onWriteHash = onWrite
 }

@@ -61,6 +61,8 @@ func newSpaceKeys(spaceId string) spaceKeys {
 var (
 	spaceIdKey         = []byte("spaceId")
 	spaceSettingsIdKey = []byte("spaceSettingsId")
+
+	spaceHashKey = []byte("spaceHash")
 )
 
 func (s spaceKeys) SpaceIdKey() []byte {

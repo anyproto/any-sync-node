@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/akrylysov/pogreb"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
@@ -27,11 +28,12 @@ type spaceStorage struct {
 	keys            spaceKeys
 	aclStorage      liststorage.ListStorage
 	header          *spacesyncproto.RawSpaceHeaderWithId
+	onWriteHash     func(ctx context.Context, spaceId, hash string)
 }
 
-func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceStorage, err error) {
+func newSpaceStorage(s *storageService, spaceId string) (store spacestorage.SpaceStorage, err error) {
 	log.With(zap.String("id", spaceId)).Debug("space storage opening with new")
-	dbPath := path.Join(rootPath, spaceId)
+	dbPath := path.Join(s.rootPath, spaceId)
 	if _, err = os.Stat(dbPath); err != nil {
 		err = spacestorage.ErrSpaceStorageMissing
 		return
@@ -91,7 +93,8 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 			RawHeader: header,
 			Id:        spaceId,
 		},
-		aclStorage: aclStorage,
+		aclStorage:  aclStorage,
+		onWriteHash: s.onWriteHash,
 	}
 	return
 }
@@ -224,6 +227,18 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	}
 	err = nil
 	return
+}
+
+func (s *spaceStorage) WriteSpaceHash(hash string) error {
+	return s.objDb.Put(spaceHashKey, []byte(hash))
+}
+
+func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
+	v, err := s.objDb.Get(spaceHashKey)
+	if err != nil {
+		return "", err
+	}
+	return string(v), nil
 }
 
 func (s *spaceStorage) Close() (err error) {
