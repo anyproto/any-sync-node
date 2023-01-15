@@ -136,6 +136,15 @@ func (t *treeStorage) HasChange(ctx context.Context, id string) (bool, error) {
 	return t.db.Has(t.keys.RawChangeKey(id))
 }
 
+func (t *treeStorage) TransactionAdd(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
+	for _, ch := range changes {
+		if err := t.AddRawChange(ch); err != nil {
+			return err
+		}
+	}
+	return t.SetHeads(heads)
+}
+
 func (t *treeStorage) Delete() (err error) {
 	storedKeys, err := t.storedKeys()
 	if err != nil {
