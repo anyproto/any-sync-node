@@ -2,9 +2,12 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/ocache"
+	"encoding/hex"
 	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/net/peer"
+	"go.uber.org/zap"
+	"math"
 )
 
 type rpcHandler struct {
@@ -56,18 +59,45 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 }
 
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	sp, err := r.s.GetOrPickSpace(ctx, req.SpaceId)
-	if err != nil {
-		switch err {
-		case ocache.ErrNotExists:
-			err = spacesyncproto.ErrSpaceNotInCache
-		case spacesyncproto.ErrSpaceMissing:
-		default:
-			err = spacesyncproto.ErrUnexpected
-		}
+	if resp = r.tryStoreHeadSync(req); resp != nil {
 		return
 	}
-	return sp.SpaceSyncRpc().HeadSync(ctx, req)
+	sp, err := r.s.GetSpace(ctx, req.SpaceId)
+	if err != nil {
+		return
+	}
+	return sp.HeadSync().HandleRangeRequest(ctx, req)
+}
+
+func (r *rpcHandler) tryStoreHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
+	if len(req.Ranges) == 1 {
+		if req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64 {
+			ss, storeErr := r.s.spaceStorageProvider.SpaceStorage(req.SpaceId)
+			if storeErr != nil {
+				return
+			}
+			defer func() {
+				_ = ss.Close()
+			}()
+			hash, err := ss.ReadSpaceHash()
+			if err != nil {
+				return
+			}
+			hashB, err := hex.DecodeString(hash)
+			if err != nil {
+				return
+			}
+			log.Debug("got head sync with storage", zap.String("spaceId", req.SpaceId))
+			return &spacesyncproto.HeadSyncResponse{
+				Results: []*spacesyncproto.HeadSyncResult{
+					{
+						Hash: hashB,
+					},
+				},
+			}
+		}
+	}
+	return nil
 }
 
 func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
@@ -75,9 +105,9 @@ func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_Object
 	if err != nil {
 		return err
 	}
-	sp, err := r.s.GetSpace(stream.Context(), msg.SpaceId)
+	peerId, err := peer.CtxPeerId(stream.Context())
 	if err != nil {
-		return spacesyncproto.ErrSpaceMissing
+		return err
 	}
-	return sp.SpaceSyncRpc().Stream(stream)
+	return r.s.streamPool.ReadStream(peerId, stream, msg.SpaceId)
 }

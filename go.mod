@@ -62,7 +62,10 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
+	golang.org/x/net v0.3.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
+
+replace github.com/anytypeio/any-sync => ../any-sync

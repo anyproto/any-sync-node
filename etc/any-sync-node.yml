@@ -63,7 +63,7 @@ space:
     gcTTL: 60
     syncPeriod: 20
 storage:
-    path: db/node/1/data
+    path: db
 metric:
     addr: ":7001"
 log:

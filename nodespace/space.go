@@ -5,7 +5,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace"
 )
 
-func newNodeSpace(cc commonspace.Space) (commonspace.Space, error) {
+func newNodeSpace(cc commonspace.Space) (*nodeSpace, error) {
 	return &nodeSpace{cc}, nil
 }
 
@@ -14,8 +14,6 @@ type nodeSpace struct {
 }
 
 func (s *nodeSpace) Init(ctx context.Context) (err error) {
-	// try to push acl to consensus node
-	//
 	return s.Space.Init(ctx)
 }
 

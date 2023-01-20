@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"context"
+	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	spacestorage "github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -11,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
@@ -33,6 +36,22 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 	}
 }
 
+type storeConfig string
+
+func (sc storeConfig) Name() string          { return "config" }
+func (sc storeConfig) Init(_ *app.App) error { return nil }
+
+func (sc storeConfig) GetStorage() Config {
+	return Config{Path: string(sc)}
+}
+func newTestService(dir string) *storageService {
+	ss := New()
+	a := new(app.App)
+	a.Register(storeConfig(dir)).Register(ss)
+	a.Start(context.Background())
+	return ss.(*storageService)
+}
+
 func testSpace(t *testing.T, store spacestorage.SpaceStorage, payload spacestorage.SpaceStorageCreatePayload) {
 	header, err := store.SpaceHeader()
 	require.NoError(t, err)
@@ -49,14 +68,14 @@ func TestSpaceStorage_Create(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	payload := spaceTestPayload()
-	store, err := createSpaceStorage(dir, payload)
+	store, err := createSpaceStorage(newTestService(dir), payload)
 	require.NoError(t, err)
 
 	testSpace(t, store, payload)
 	require.NoError(t, store.Close())
 
 	t.Run("create same storage returns error", func(t *testing.T) {
-		_, err := createSpaceStorage(dir, payload)
+		_, err := createSpaceStorage(newTestService(dir), payload)
 		require.Error(t, err)
 	})
 }
@@ -67,7 +86,7 @@ func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	payload := spaceTestPayload()
-	store, err := createSpaceStorage(dir, payload)
+	store, err := createSpaceStorage(newTestService(dir), payload)
 	require.NoError(t, err)
 	require.NoError(t, store.Close())
 
@@ -104,7 +123,7 @@ func TestSpaceStorage_StoredIds(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	payload := spaceTestPayload()
-	store, err := createSpaceStorage(dir, payload)
+	store, err := createSpaceStorage(newTestService(dir), payload)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, store.Close())
@@ -134,7 +153,7 @@ func TestSpaceStorage_WriteSpaceHash(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	payload := spaceTestPayload()
-	store, err := createSpaceStorage(dir, payload)
+	store, err := createSpaceStorage(newTestService(dir), payload)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, store.Close())
@@ -145,4 +164,58 @@ func TestSpaceStorage_WriteSpaceHash(t *testing.T) {
 	hash2, err := store.ReadSpaceHash()
 	require.NoError(t, err)
 	assert.Equal(t, hash, hash2)
+}
+
+func TestLock(t *testing.T) {
+	dir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+	ss := newTestService(dir)
+
+	payload := spaceTestPayload()
+	store, err := ss.CreateSpaceStorage(payload)
+	require.NoError(t, err)
+
+	_, err = ss.SpaceStorage(payload.SpaceHeaderWithId.Id)
+	require.Equal(t, ErrLocked, err)
+
+	require.NoError(t, store.Close())
+
+	store, err = ss.SpaceStorage(payload.SpaceHeaderWithId.Id)
+	require.NoError(t, err)
+	require.NoError(t, store.Close())
+}
+
+func TestWaitStore(t *testing.T) {
+	dir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+	ss := newTestService(dir)
+
+	payload := spaceTestPayload()
+	store, err := ss.CreateSpaceStorage(payload)
+	require.NoError(t, err)
+
+	var storeCh = make(chan spacestorage.SpaceStorage)
+
+	go func() {
+		st, e := ss.WaitSpaceStorage(context.Background(), payload.SpaceHeaderWithId.Id)
+		require.NoError(t, e)
+		storeCh <- st
+	}()
+
+	select {
+	case <-time.After(time.Second / 10):
+	case <-storeCh:
+		assert.True(t, false, "should be locked")
+	}
+
+	require.NoError(t, store.Close())
+
+	select {
+	case <-time.After(time.Second / 10):
+		assert.True(t, false, "timeout")
+	case store = <-storeCh:
+	}
+	require.NoError(t, store.Close())
 }

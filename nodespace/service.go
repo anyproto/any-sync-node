@@ -9,8 +9,9 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/metric"
-	peer "github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/rpc/server"
+	"github.com/anytypeio/any-sync/net/streampool"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"golang.org/x/exp/slices"
 	"time"
@@ -27,6 +28,7 @@ func New() Service {
 type Service interface {
 	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
 	GetOrPickSpace(ctx context.Context, id string) (commonspace.Space, error)
+	StreamPool() streampool.StreamPool
 	app.ComponentRunnable
 }
 
@@ -36,6 +38,7 @@ type service struct {
 	commonSpace          commonspace.SpaceService
 	confService          nodeconf.Service
 	spaceStorageProvider spacestorage.SpaceStorageProvider
+	streamPool           streampool.StreamPool
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -43,6 +46,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.SpaceService)
 	s.confService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
+	s.streamPool = a.MustComponent(streampool.CName).(streampool.Service).NewStreamPool(&streamHandler{s: s})
 	s.spaceCache = ocache.New(
 		s.loadSpace,
 		ocache.WithLogger(log.Sugar()),
@@ -59,6 +63,10 @@ func (s *service) Name() (name string) {
 
 func (s *service) Run(ctx context.Context) (err error) {
 	return
+}
+
+func (s *service) StreamPool() streampool.StreamPool {
+	return s.streamPool
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, error) {

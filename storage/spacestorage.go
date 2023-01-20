@@ -28,7 +28,7 @@ type spaceStorage struct {
 	keys            spaceKeys
 	aclStorage      liststorage.ListStorage
 	header          *spacesyncproto.RawSpaceHeaderWithId
-	onWriteHash     func(ctx context.Context, spaceId, hash string)
+	service         *storageService
 }
 
 func newSpaceStorage(s *storageService, spaceId string) (store spacestorage.SpaceStorage, err error) {
@@ -93,15 +93,15 @@ func newSpaceStorage(s *storageService, spaceId string) (store spacestorage.Spac
 			RawHeader: header,
 			Id:        spaceId,
 		},
-		aclStorage:  aclStorage,
-		onWriteHash: s.onWriteHash,
+		aclStorage: aclStorage,
+		service:    s,
 	}
 	return
 }
 
-func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
+func createSpaceStorage(s *storageService, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
 	log.With(zap.String("id", payload.SpaceHeaderWithId.Id)).Debug("space storage creating")
-	dbPath := path.Join(rootPath, payload.SpaceHeaderWithId.Id)
+	dbPath := path.Join(s.rootPath, payload.SpaceHeaderWithId.Id)
 	db, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
 		return
@@ -140,6 +140,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 		aclStorage:      aclStorage,
 		spaceSettingsId: payload.SpaceSettingsWithId.Id,
 		header:          payload.SpaceHeaderWithId,
+		service:         s,
 	}
 
 	_, err = store.CreateTreeStorage(treestorage.TreeStorageCreatePayload{
@@ -230,6 +231,9 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 }
 
 func (s *spaceStorage) WriteSpaceHash(hash string) error {
+	if s.service.onWriteHash != nil {
+		defer s.service.onWriteHash(context.Background(), s.spaceId, hash)
+	}
 	return s.objDb.Put(spaceHashKey, []byte(hash))
 }
 
@@ -243,5 +247,6 @@ func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
 
 func (s *spaceStorage) Close() (err error) {
 	log.With(zap.String("id", s.spaceId)).Debug("space storage closed")
+	defer s.service.unlockSpaceStorage(s.spaceId)
 	return s.objDb.Close()
 }
