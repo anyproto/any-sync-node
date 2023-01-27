@@ -18,6 +18,7 @@ func New() NodeStorage {
 
 type NodeStorage interface {
 	spacestorage.SpaceStorageProvider
+	SpaceStorage(spaceId string) (spacestorage.SpaceStorage, error)
 	AllSpaceIds() (ids []string, err error)
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
 }

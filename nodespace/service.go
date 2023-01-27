@@ -2,6 +2,7 @@ package nodespace
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync-node/storage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
@@ -13,6 +14,7 @@ import (
 	"github.com/anytypeio/any-sync/net/rpc/server"
 	"github.com/anytypeio/any-sync/net/streampool"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"time"
 )
@@ -37,7 +39,7 @@ type service struct {
 	spaceCache           ocache.OCache
 	commonSpace          commonspace.SpaceService
 	confService          nodeconf.Service
-	spaceStorageProvider spacestorage.SpaceStorageProvider
+	spaceStorageProvider storage.NodeStorage
 	streamPool           streampool.StreamPool
 }
 
@@ -45,7 +47,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.conf = a.MustComponent("config").(commonspace.ConfigGetter).GetSpace()
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.SpaceService)
 	s.confService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
+	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(storage.NodeStorage)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.Service).NewStreamPool(&streamHandler{s: s})
 	s.spaceCache = ocache.New(
 		s.loadSpace,
@@ -106,6 +108,19 @@ func (s *service) GetOrPickSpace(ctx context.Context, id string) (sp commonspace
 	}
 	sp = v.(commonspace.Space)
 	return
+}
+
+func (s *service) HandleMessage(ctx context.Context, senderId string, req *spacesyncproto.ObjectSyncMessage) (err error) {
+	var msg = &spacesyncproto.SpaceSubscription{}
+	if err = msg.Unmarshal(req.Payload); err != nil {
+		return
+	}
+	log.InfoCtx(ctx, "got subscription message", zap.Strings("spaceIds", msg.SpaceIds))
+	if msg.Action == spacesyncproto.SpaceSubscriptionAction_Subscribe {
+		return s.streamPool.AddTagsCtx(ctx, msg.SpaceIds...)
+	} else {
+		return s.streamPool.RemoveTagsCtx(ctx, msg.SpaceIds...)
+	}
 }
 
 func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {
