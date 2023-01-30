@@ -48,7 +48,12 @@ func (s *service) Init(a *app.App) (err error) {
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.SpaceService)
 	s.confService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(storage.NodeStorage)
-	s.streamPool = a.MustComponent(streampool.CName).(streampool.Service).NewStreamPool(&streamHandler{s: s})
+	s.streamPool = a.MustComponent(streampool.CName).(streampool.Service).NewStreamPool(&streamHandler{s: s}, streampool.StreamConfig{
+		SendQueueWorkers: 100,
+		SendQueueSize:    10000,
+		DialQueueWorkers: 4,
+		DialQueueSize:    1000,
+	})
 	s.spaceCache = ocache.New(
 		s.loadSpace,
 		ocache.WithLogger(log.Sugar()),

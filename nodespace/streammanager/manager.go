@@ -34,13 +34,14 @@ func (n *nodeStreamManager) init() {
 func (n *nodeStreamManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
 	if n.isResponsible(peerId) {
-		var p peer.Peer
-		p, err = n.p.pool.Get(ctx, peerId)
-		if err != nil {
-			return
-		}
-		log.InfoCtx(ctx, "sendPeer send", zap.String("peerId", peerId))
-		return n.p.streamPool.Send(ctx, msg, p)
+		return n.p.streamPool.Send(ctx, msg, func(ctx context.Context) ([]peer.Peer, error) {
+			log.InfoCtx(ctx, "sendPeer send", zap.String("peerId", peerId))
+			p, e := n.p.pool.Get(ctx, peerId)
+			if e != nil {
+				return nil, e
+			}
+			return []peer.Peer{p}, nil
+		})
 	}
 	log.InfoCtx(ctx, "sendPeer sendById", zap.String("peerId", peerId))
 	return n.p.streamPool.SendById(ctx, msg, peerId)
@@ -48,16 +49,9 @@ func (n *nodeStreamManager) SendPeer(ctx context.Context, peerId string, msg *sp
 
 func (n *nodeStreamManager) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
-	peers, err := n.getResponsiblePeers(ctx)
-	if err != nil {
-		return
-	}
-	var peerIds = make([]string, 0, len(peers))
-	for _, p := range peers {
-		peerIds = append(peerIds, p.Id())
-	}
-	log.InfoCtx(ctx, "sendResponsible", zap.Strings("peerIds", peerIds))
-	return n.p.streamPool.Send(ctx, msg, peers...)
+	return n.p.streamPool.Send(ctx, msg, func(ctx context.Context) (peers []peer.Peer, err error) {
+		return n.getResponsiblePeers(ctx)
+	})
 }
 
 func (n *nodeStreamManager) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
