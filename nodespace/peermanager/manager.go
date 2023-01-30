@@ -1,4 +1,4 @@
-package streammanager
+package peermanager
 
 import (
 	"context"
@@ -18,20 +18,20 @@ type responsiblePeer struct {
 	lastFail atomic.Time
 }
 
-type nodeStreamManager struct {
+type nodePeerManager struct {
 	spaceId          string
 	responsiblePeers []responsiblePeer
 	p                *provider
 }
 
-func (n *nodeStreamManager) init() {
+func (n *nodePeerManager) init() {
 	nodeIds := n.p.nodeconf.GetLast().NodeIds(n.spaceId)
 	for _, peerId := range nodeIds {
 		n.responsiblePeers = append(n.responsiblePeers, responsiblePeer{peerId: peerId})
 	}
 }
 
-func (n *nodeStreamManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (n *nodePeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
 	if n.isResponsible(peerId) {
 		return n.p.streamPool.Send(ctx, msg, func(ctx context.Context) ([]peer.Peer, error) {
@@ -47,14 +47,14 @@ func (n *nodeStreamManager) SendPeer(ctx context.Context, peerId string, msg *sp
 	return n.p.streamPool.SendById(ctx, msg, peerId)
 }
 
-func (n *nodeStreamManager) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (n *nodePeerManager) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
 	return n.p.streamPool.Send(ctx, msg, func(ctx context.Context) (peers []peer.Peer, err error) {
-		return n.getResponsiblePeers(ctx)
+		return n.getResponsiblePeers(ctx, n.p.pool)
 	})
 }
 
-func (n *nodeStreamManager) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (n *nodePeerManager) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
 	if e := n.SendResponsible(ctx, msg); e != nil {
 		log.InfoCtx(ctx, "broadcast sendResponsible error", zap.Error(e))
@@ -63,10 +63,14 @@ func (n *nodeStreamManager) Broadcast(ctx context.Context, msg *spacesyncproto.O
 	return n.p.streamPool.Broadcast(ctx, msg, n.spaceId)
 }
 
-func (n *nodeStreamManager) getResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
+func (n *nodePeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	return n.getResponsiblePeers(ctx, n.p.commonPool)
+}
+
+func (n *nodePeerManager) getResponsiblePeers(ctx context.Context, netPool pool.Pool) (peers []peer.Peer, err error) {
 	for _, rp := range n.responsiblePeers {
 		if time.Since(rp.lastFail.Load()) > reconnectTimeout {
-			p, e := n.p.pool.Get(ctx, rp.peerId)
+			p, e := netPool.Get(ctx, rp.peerId)
 			if e != nil {
 				log.InfoCtx(ctx, "can't connect to peer", zap.Error(err), zap.String("peerId", rp.peerId))
 				rp.lastFail.Store(time.Now())
@@ -81,7 +85,7 @@ func (n *nodeStreamManager) getResponsiblePeers(ctx context.Context) (peers []pe
 	return
 }
 
-func (n *nodeStreamManager) isResponsible(peerId string) bool {
+func (n *nodePeerManager) isResponsible(peerId string) bool {
 	for _, rp := range n.responsiblePeers {
 		if rp.peerId == peerId {
 			return true

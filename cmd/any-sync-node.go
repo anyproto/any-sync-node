@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/anytypeio/any-sync-node/nodespace/streammanager"
+	"github.com/anytypeio/any-sync-node/nodespace/peermanager"
 	"github.com/anytypeio/any-sync/net/streampool"
 
 	// import this to keep govvv in go.mod on mod tidy
@@ -108,7 +108,7 @@ func Bootstrap(a *app.App) {
 		Register(nodespace.New()).
 		Register(commonspace.New()).
 		Register(streampool.New()).
-		Register(streammanager.New()).
+		Register(peermanager.New()).
 		Register(server.New()).
 		Register(nodedebugrpc.New())
 }
