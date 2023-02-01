@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
 	"github.com/anytypeio/any-sync-node/nodespace/peermanager"
 	"github.com/anytypeio/any-sync/net/streampool"
 
@@ -99,6 +100,7 @@ func main() {
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
 		Register(metric.New()).
+		Register(nodehead.New()).
 		Register(storage.New()).
 		Register(nodecache.New(200)).
 		Register(nodeconf.New()).

@@ -2,6 +2,7 @@ package nodehead
 
 import (
 	"context"
+	"errors"
 	"github.com/anytypeio/any-sync-node/storage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/ldiff"
@@ -16,12 +17,17 @@ const CName = "node.nodespace.nodehead"
 
 var log = logger.NewNamed(CName)
 
+var (
+	ErrSpaceNotFound = errors.New("space not found")
+)
+
 func New() NodeHead {
 	return new(nodeHead)
 }
 
 type NodeHead interface {
-	SetHead(ctx context.Context, spaceId, head string) (part int, err error)
+	SetHead(spaceId, head string) (part int, err error)
+	GetHead(spaceId string) (head string, err error)
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
 	app.ComponentRunnable
 }
@@ -37,8 +43,8 @@ func (n *nodeHead) Init(a *app.App) (err error) {
 	n.partitions = map[int]ldiff.Diff{}
 	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service).GetLast()
 	n.spaceStore = a.MustComponent(spacestorage.CName).(storage.NodeStorage)
-	n.spaceStore.OnWriteHash(func(ctx context.Context, spaceId, hash string) {
-		if _, e := n.SetHead(ctx, spaceId, hash); e != nil {
+	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
+		if _, e := n.SetHead(spaceId, hash); e != nil {
 			log.Error("can't set head", zap.Error(e))
 		}
 	})
@@ -53,7 +59,7 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 	return nil
 }
 
-func (n *nodeHead) SetHead(ctx context.Context, spaceId, head string) (part int, err error) {
+func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
 	part = n.nodeconf.Partition(spaceId)
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -75,6 +81,22 @@ func (n *nodeHead) Ranges(ctx context.Context, part int, ranges []ldiff.Range, r
 		n.partitions[part] = ld
 	}
 	return ld.Ranges(ctx, ranges, resBuf)
+}
+
+func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
+	part := n.nodeconf.Partition(spaceId)
+	n.mu.Lock()
+	ld, ok := n.partitions[part]
+	if !ok {
+		n.mu.Unlock()
+		return "", ErrSpaceNotFound
+	}
+	n.mu.Unlock()
+	el, err := ld.Element(spaceId)
+	if err != nil {
+		return
+	}
+	return el.Head, nil
 }
 
 func (n *nodeHead) Close(ctx context.Context) (err error) {
