@@ -22,6 +22,8 @@ var log = logger.NewNamed(CName)
 
 var (
 	ErrSpaceNotFound = errors.New("space not found")
+
+	emptyLd = ldiff.New(16, 16)
 )
 
 func New() NodeHead {
@@ -32,6 +34,7 @@ func New() NodeHead {
 type NodeHead interface {
 	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
+	LDiff(partId int) ldiff.Diff
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
 	app.ComponentRunnable
 }
@@ -115,14 +118,18 @@ func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
 }
 
 func (n *nodeHead) Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
+	return n.LDiff(part).Ranges(ctx, ranges, resBuf)
+}
+
+func (n *nodeHead) LDiff(part int) (ld ldiff.Diff) {
 	n.mu.Lock()
-	defer n.mu.Unlock()
 	ld, ok := n.partitions[part]
 	if !ok {
-		ld = ldiff.New(16, 16)
-		n.partitions[part] = ld
+		n.mu.Unlock()
+		return emptyLd
 	}
-	return ld.Ranges(ctx, ranges, resBuf)
+	n.mu.Unlock()
+	return ld
 }
 
 func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {

@@ -3,14 +3,19 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"sync"
 )
 
 var ErrLocked = errors.New("space storage locked")
+
+const CName = spacestorage.CName
 
 func New() NodeStorage {
 	return &storageService{}
@@ -19,8 +24,10 @@ func New() NodeStorage {
 type NodeStorage interface {
 	spacestorage.SpaceStorageProvider
 	SpaceStorage(spaceId string) (spacestorage.SpaceStorage, error)
+	TryLockAndDo(spaceId string, do func() error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
+	StoreDir(spaceId string) (path string)
 }
 
 type lockSpace struct {
@@ -43,7 +50,7 @@ func (s *storageService) Init(a *app.App) (err error) {
 }
 
 func (s *storageService) Name() (name string) {
-	return spacestorage.CName
+	return CName
 }
 
 func (s *storageService) SpaceStorage(id string) (store spacestorage.SpaceStorage, err error) {
@@ -90,6 +97,11 @@ func (s *storageService) CreateSpaceStorage(payload spacestorage.SpaceStorageCre
 	return
 }
 
+func (s *storageService) TryLockAndDo(spaceId string, do func() error) (err error) {
+	_, err = s.checkLock(spaceId, do)
+	return err
+}
+
 func (s *storageService) checkLock(id string, openFunc func() error) (ls *lockSpace, err error) {
 	s.mu.Lock()
 	var ok bool
@@ -123,13 +135,19 @@ func (s *storageService) AllSpaceIds() (ids []string, err error) {
 	var files []string
 	fileInfo, err := os.ReadDir(s.rootPath)
 	if err != nil {
-		return files, err
+		return files, fmt.Errorf("can't read datadir '%v': %v", s.rootPath, err)
 	}
 
 	for _, file := range fileInfo {
-		files = append(files, file.Name())
+		if !strings.HasPrefix(file.Name(), ".") {
+			files = append(files, file.Name())
+		}
 	}
 	return files, nil
+}
+
+func (s *storageService) StoreDir(spaceId string) (path string) {
+	return filepath.Join(s.rootPath, spaceId)
 }
 
 func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, hash string)) {

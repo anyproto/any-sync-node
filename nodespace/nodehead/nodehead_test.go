@@ -7,6 +7,10 @@ import (
 	"github.com/anytypeio/any-sync-node/testutil/testnodeconf"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/ldiff"
+	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,8 +21,26 @@ import (
 
 var ctx = context.Background()
 
+func TestNodeHead_Run(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	fx := newFixture(t, tmpDir)
+	store := fx.a.MustComponent(storage.CName).(storage.NodeStorage)
+	ss, err := store.CreateSpaceStorage(spaceTestPayload())
+	require.NoError(t, err)
+	require.NoError(t, ss.WriteSpaceHash("123"))
+	require.NoError(t, ss.Close())
+	fx.Finish(t)
+
+	fx = newFixture(t, tmpDir)
+	defer fx.Finish(t)
+	assert.Len(t, fx.NodeHead.(*nodeHead).partitions, 1)
+}
+
 func TestNodeHead_SetHead(t *testing.T) {
-	fx := newFixture(t)
+	fx := newFixture(t, "")
 	defer fx.Finish(t)
 
 	getHash := func(part int) string {
@@ -45,7 +67,7 @@ func TestNodeHead_SetHead(t *testing.T) {
 }
 
 func TestNodeHead_Ranges(t *testing.T) {
-	fx := newFixture(t)
+	fx := newFixture(t, "")
 	defer fx.Finish(t)
 
 	t.Run("partition not exists", func(t *testing.T) {
@@ -61,7 +83,7 @@ func TestNodeHead_Ranges(t *testing.T) {
 }
 
 func TestNodeHead_GetSpaceHash(t *testing.T) {
-	fx := newFixture(t)
+	fx := newFixture(t, "")
 	defer fx.Finish(t)
 	hash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
 	_, err := fx.SetHead("space1", hash)
@@ -75,33 +97,42 @@ func TestNodeHead_GetSpaceHash(t *testing.T) {
 	assert.Equal(t, ErrSpaceNotFound, err)
 }
 
-func newFixture(t *testing.T) *fixture {
-	tmpDir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
+func newFixture(t *testing.T, dataPath string) *fixture {
+	var tmpDir string
+	if dataPath != "" {
+		tmpDir = dataPath
+	} else {
+		var err error
+		tmpDir, err = os.MkdirTemp("", "")
+		require.NoError(t, err)
+	}
 	fx := &fixture{
-		NodeHead: New(),
-		a:        new(app.App),
-		dataPath: tmpDir,
+		NodeHead:      New(),
+		a:             new(app.App),
+		dataPath:      tmpDir,
+		forceDataPath: dataPath != "",
 	}
 	accServ, confServ := testnodeconf.GenNodeConfig(3)
-	fx.a.Register(nodeconf.New()).
+	fx.a.Register(&config{Config: confServ, dataPath: tmpDir}).
+		Register(nodeconf.New()).
 		Register(accServ).
-		Register(&config{Config: confServ}).
-		Register(fx.NodeHead).
-		Register(storage.New())
+		Register(storage.New()).
+		Register(fx.NodeHead)
+
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
 }
 
 type fixture struct {
 	NodeHead
-	a        *app.App
-	dataPath string
+	a             *app.App
+	dataPath      string
+	forceDataPath bool
 }
 
 func (fx *fixture) Finish(t *testing.T) {
 	require.NoError(t, fx.a.Close(ctx))
-	if fx.dataPath != "" {
+	if !fx.forceDataPath && fx.dataPath != "" {
 		_ = os.RemoveAll(fx.dataPath)
 	}
 }
@@ -114,5 +145,25 @@ type config struct {
 func (c *config) GetStorage() storage.Config {
 	return storage.Config{
 		Path: c.dataPath,
+	}
+}
+
+func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
+	header := &spacesyncproto.RawSpaceHeaderWithId{
+		RawHeader: []byte("header"),
+		Id:        "headerId",
+	}
+	aclRoot := &aclrecordproto.RawAclRecordWithId{
+		Payload: []byte("aclRoot"),
+		Id:      "aclRootId",
+	}
+	settings := &treechangeproto.RawTreeChangeWithId{
+		RawChange: []byte("settings"),
+		Id:        "settingsId",
+	}
+	return spacestorage.SpaceStorageCreatePayload{
+		AclWithId:           aclRoot,
+		SpaceHeaderWithId:   header,
+		SpaceSettingsWithId: settings,
 	}
 }

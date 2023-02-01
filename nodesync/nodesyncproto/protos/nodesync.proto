@@ -6,14 +6,15 @@ option go_package = "nodesync/nodesyncproto";
 service NodeSync {
     // PartitionSync compares all spaces by given c-hash partition
     rpc PartitionSync(PartitionSyncRequest) returns (PartitionSyncResponse);
+    // ColdSync requests cold sync stream for fast space download
+    rpc ColdSync(ColdSyncRequest) returns (stream ColdSyncResponse);
 }
 
 // PartitionSyncRange presenting a request for one range
 message PartitionSyncRange {
-    uint64 partitionId = 1;
-    uint64 from = 2;
-    uint64 to = 3;
-    uint32 limit = 4;
+    uint64 from = 1;
+    uint64 to = 2;
+    uint32 limit = 3;
 }
 
 // PartitionSyncResult presenting a response for one range
@@ -31,11 +32,21 @@ message PartitionSyncResultElement {
 
 // HeadSyncRequest is a request for HeadSync
 message PartitionSyncRequest {
-    string spaceId = 1;
+    uint64 partitionId = 1;
     repeated PartitionSyncRange ranges = 2;
 }
 
 // PartitionSyncResponse is a response for HeadSync
 message PartitionSyncResponse {
     repeated PartitionSyncResult results = 1;
+}
+
+message ColdSyncRequest {
+    string spaceId = 1;
+}
+
+message ColdSyncResponse {
+    string filename = 2;
+    bytes data = 3;
+    uint32 crc32 = 4;
 }

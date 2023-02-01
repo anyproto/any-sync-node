@@ -66,6 +66,8 @@ storage:
     path: db
 metric:
     addr: ":7001"
+nodeSync:
+  syncOnStart: true
 log:
     production: false
     defaultLevel: ""

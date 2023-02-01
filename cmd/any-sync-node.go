@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
 	"github.com/anytypeio/any-sync-node/nodespace/peermanager"
+	"github.com/anytypeio/any-sync-node/nodesync"
+	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
 	"github.com/anytypeio/any-sync/net/streampool"
 	"github.com/anytypeio/any-sync/nodeconf"
 
@@ -104,6 +106,8 @@ func Bootstrap(a *app.App) {
 		Register(nodehead.New()).
 		Register(storage.New()).
 		Register(nodecache.New(200)).
+		Register(nodesync.New()).
+		Register(coldsync.New()).
 		Register(secureservice.New()).
 		Register(dialer.New()).
 		Register(pool.New()).

@@ -132,6 +132,9 @@ func (s *service) HandleMessage(ctx context.Context, senderId string, req *space
 }
 
 func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {
+	defer func() {
+		log.Info("space loaded", zap.Error(err))
+	}()
 	cc, err := s.commonSpace.NewSpace(ctx, id)
 	if err != nil {
 		return

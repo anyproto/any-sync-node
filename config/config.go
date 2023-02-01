@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/anytypeio/any-sync-node/nodesync"
 	"github.com/anytypeio/any-sync-node/storage"
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
@@ -36,9 +37,10 @@ type Config struct {
 	Storage    storage.Config        `yaml:"storage"`
 	Metric     metric.Config         `yaml:"metric"`
 	Log        logger.Config         `yaml:"log"`
+	NodeSync   nodesync.Config       `yaml:"nodeSync"`
 }
 
-func (c *Config) Init(a *app.App) (err error) {
+func (c Config) Init(a *app.App) (err error) {
 	return
 }
 
@@ -72,4 +74,8 @@ func (c Config) GetStorage() storage.Config {
 
 func (c Config) GetNodes() []nodeconf.NodeConfig {
 	return c.Nodes
+}
+
+func (c Config) GetNodeSync() nodesync.Config {
+	return c.NodeSync
 }
