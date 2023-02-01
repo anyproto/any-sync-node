@@ -32,7 +32,6 @@ type spaceStorage struct {
 }
 
 func newSpaceStorage(s *storageService, spaceId string) (store spacestorage.SpaceStorage, err error) {
-	log.With(zap.String("id", spaceId)).Debug("space storage opening with new")
 	dbPath := path.Join(s.rootPath, spaceId)
 	if _, err = os.Stat(dbPath); err != nil {
 		err = spacestorage.ErrSpaceStorageMissing
@@ -246,7 +245,6 @@ func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
 }
 
 func (s *spaceStorage) Close() (err error) {
-	log.With(zap.String("id", s.spaceId)).Debug("space storage closed")
 	defer s.service.unlockSpaceStorage(s.spaceId)
 	return s.objDb.Close()
 }

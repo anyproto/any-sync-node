@@ -8,9 +8,12 @@ import (
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"sync"
+	"time"
 )
 
 const CName = "node.nodespace.nodehead"
@@ -30,7 +33,7 @@ type NodeHead interface {
 	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
-	app.Component
+	app.ComponentRunnable
 }
 
 type nodeHead struct {
@@ -49,11 +52,53 @@ func (n *nodeHead) Init(a *app.App) (err error) {
 			log.Error("can't set head", zap.Error(e))
 		}
 	})
+	if m := a.Component(metric.CName); m != nil {
+		n.registerMetrics(m.(metric.Metric))
+	}
 	return
 }
 
 func (n *nodeHead) Name() (name string) {
 	return CName
+}
+
+func (n *nodeHead) Run(ctx context.Context) (err error) {
+	st := time.Now()
+	allSpaceIds, err := n.spaceStore.AllSpaceIds()
+	if err != nil {
+		return
+	}
+	log.Info("start loading heads...", zap.Int("spaces", len(allSpaceIds)))
+	for _, spaceId := range allSpaceIds {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		if e := n.loadHeadFromStore(ctx, spaceId); e != nil {
+			log.Warn("loadHeadFromStore error", zap.String("spaceId", spaceId), zap.Error(e))
+		}
+	}
+	log.Info("space heads loaded", zap.Int("spaces", len(allSpaceIds)), zap.Duration("dur", time.Since(st)))
+	return
+}
+
+func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err error) {
+	ss, err := n.spaceStore.SpaceStorage(spaceId)
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = ss.Close()
+	}()
+	hash, err := ss.ReadSpaceHash()
+	if err != nil {
+		return
+	}
+	if _, err = n.SetHead(spaceId, hash); err != nil {
+		return
+	}
+	return
 }
 
 func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
@@ -94,4 +139,37 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 		return
 	}
 	return el.Head, nil
+}
+
+func (n *nodeHead) registerMetrics(m metric.Metric) {
+	m.Registry().MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Namespace: "nodehead",
+		Subsystem: "partition",
+		Name:      "count",
+		Help:      "partitions count",
+	}, func() float64 {
+		n.mu.Lock()
+		defer n.mu.Unlock()
+		return float64(len(n.partitions))
+	}))
+	m.Registry().MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Namespace: "nodehead",
+		Subsystem: "space",
+		Name:      "count",
+		Help:      "space count",
+	}, func() float64 {
+		n.mu.Lock()
+		defer n.mu.Unlock()
+		var l int
+		for _, ld := range n.partitions {
+			if ld != nil {
+				l += ld.Len()
+			}
+		}
+		return float64(l)
+	}))
+}
+
+func (n *nodeHead) Close(ctx context.Context) (err error) {
+	return
 }

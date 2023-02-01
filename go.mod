@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/any-sync v0.0.8-0.20230201175820-aff2ecbca071
+	github.com/anytypeio/any-sync v0.0.8-0.20230201183847-f4c6679b0e3d
 	github.com/anytypeio/go-chash v0.0.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/stretchr/testify v1.8.1
