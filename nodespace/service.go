@@ -2,6 +2,7 @@ package nodespace
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
 	"github.com/anytypeio/any-sync-node/storage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
@@ -41,6 +42,7 @@ type service struct {
 	confService          nodeconf.Service
 	spaceStorageProvider storage.NodeStorage
 	streamPool           streampool.StreamPool
+	nodeHead             nodehead.NodeHead
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -48,6 +50,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.SpaceService)
 	s.confService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(storage.NodeStorage)
+	s.nodeHead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.Service).NewStreamPool(&streamHandler{s: s}, streampool.StreamConfig{
 		SendQueueWorkers: 100,
 		SendQueueSize:    10000,

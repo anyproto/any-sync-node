@@ -72,14 +72,7 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 func (r *rpcHandler) tryStoreHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
 	if len(req.Ranges) == 1 {
 		if req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64 {
-			ss, storeErr := r.s.spaceStorageProvider.SpaceStorage(req.SpaceId)
-			if storeErr != nil {
-				return
-			}
-			defer func() {
-				_ = ss.Close()
-			}()
-			hash, err := ss.ReadSpaceHash()
+			hash, err := r.s.nodeHead.GetHead(req.SpaceId)
 			if err != nil {
 				return
 			}
@@ -87,7 +80,7 @@ func (r *rpcHandler) tryStoreHeadSync(req *spacesyncproto.HeadSyncRequest) (resp
 			if err != nil {
 				return
 			}
-			log.Debug("got head sync with storage", zap.String("spaceId", req.SpaceId))
+			log.Debug("got head sync with nodehead", zap.String("spaceId", req.SpaceId))
 			return &spacesyncproto.HeadSyncResponse{
 				Results: []*spacesyncproto.HeadSyncResult{
 					{

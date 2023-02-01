@@ -25,11 +25,12 @@ func New() NodeHead {
 	return new(nodeHead)
 }
 
+// NodeHead keeps current state of all spaces by partitions
 type NodeHead interface {
 	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
-	app.ComponentRunnable
+	app.Component
 }
 
 type nodeHead struct {
@@ -53,10 +54,6 @@ func (n *nodeHead) Init(a *app.App) (err error) {
 
 func (n *nodeHead) Name() (name string) {
 	return CName
-}
-
-func (n *nodeHead) Run(ctx context.Context) (err error) {
-	return nil
 }
 
 func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
@@ -97,8 +94,4 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 		return
 	}
 	return el.Head, nil
-}
-
-func (n *nodeHead) Close(ctx context.Context) (err error) {
-	return nil
 }

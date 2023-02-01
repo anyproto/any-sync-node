@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
 	"github.com/anytypeio/any-sync-node/nodespace/peermanager"
 	"github.com/anytypeio/any-sync/net/streampool"
+	"github.com/anytypeio/any-sync/nodeconf"
 
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
@@ -24,7 +25,6 @@ import (
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/net/rpc/server"
 	"github.com/anytypeio/any-sync/net/secureservice"
-	"github.com/anytypeio/any-sync/nodeconf"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -100,10 +100,10 @@ func main() {
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
 		Register(metric.New()).
+		Register(nodeconf.New()).
 		Register(nodehead.New()).
 		Register(storage.New()).
 		Register(nodecache.New(200)).
-		Register(nodeconf.New()).
 		Register(secureservice.New()).
 		Register(dialer.New()).
 		Register(pool.New()).
