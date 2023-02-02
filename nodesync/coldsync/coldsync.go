@@ -6,11 +6,15 @@ import (
 	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
 	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/net/pool"
+	"go.uber.org/zap"
 	"os"
 )
 
 const CName = "node.nodesync.coldsync"
+
+var log = logger.NewNamed(CName)
 
 func New() ColdSync {
 	return new(coldSync)
@@ -77,6 +81,7 @@ func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nod
 	})
 	// TODO: if unable to lock - force headsync should be called
 	if err != nil {
+		log.Info("handle error", zap.Error(err))
 		return err
 	}
 	return nil
