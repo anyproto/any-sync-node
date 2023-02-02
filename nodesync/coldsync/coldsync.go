@@ -2,8 +2,9 @@ package coldsync
 
 import (
 	"context"
+	"fmt"
+	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
-	nodestorage "github.com/anytypeio/any-sync-node/storage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/net/pool"
 	"os"
@@ -38,15 +39,21 @@ func (c *coldSync) Name() (name string) {
 
 func (c *coldSync) Sync(ctx context.Context, spaceId, peerId string) (err error) {
 	return c.storage.TryLockAndDo(spaceId, func() error {
+		if c.storage.SpaceExists(spaceId) {
+			return fmt.Errorf("unable to cold sync: space exists")
+		}
 		return c.coldSync(ctx, spaceId, peerId)
 	})
 }
 
 func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err error) {
-	p, err := c.pool.Get(ctx, peerId)
+	p, err := c.pool.Dial(ctx, peerId)
 	if err != nil {
 		return
 	}
+	defer func() {
+		_ = p.Close()
+	}()
 	stream, err := nodesyncproto.NewDRPCNodeSyncClient(p).ColdSync(ctx, &nodesyncproto.ColdSyncRequest{
 		SpaceId: spaceId,
 	})
@@ -65,9 +72,14 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 }
 
 func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
-	return c.storage.TryLockAndDo(req.SpaceId, func() error {
+	err := c.storage.TryLockAndDo(req.SpaceId, func() error {
 		return c.coldSyncHandle(req.SpaceId, stream)
 	})
+	// TODO: if unable to lock - force headsync should be called
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *coldSync) coldSyncHandle(spaceId string, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {

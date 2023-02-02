@@ -3,7 +3,7 @@ package nodehead
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync-node/storage"
+	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
@@ -34,6 +34,7 @@ func New() NodeHead {
 type NodeHead interface {
 	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
+	ReloadHeadFromStore(spaceId string) error
 	LDiff(partId int) ldiff.Diff
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
 	app.ComponentRunnable
@@ -43,13 +44,13 @@ type nodeHead struct {
 	mu         sync.Mutex
 	partitions map[int]ldiff.Diff
 	nodeconf   nodeconf.Configuration
-	spaceStore storage.NodeStorage
+	spaceStore nodestorage.NodeStorage
 }
 
 func (n *nodeHead) Init(a *app.App) (err error) {
 	n.partitions = map[int]ldiff.Diff{}
 	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service).GetLast()
-	n.spaceStore = a.MustComponent(spacestorage.CName).(storage.NodeStorage)
+	n.spaceStore = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
 		if _, e := n.SetHead(spaceId, hash); e != nil {
 			log.Error("can't set head", zap.Error(e))
@@ -78,7 +79,7 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 			return ctx.Err()
 		default:
 		}
-		if e := n.loadHeadFromStore(ctx, spaceId); e != nil {
+		if e := n.loadHeadFromStore(spaceId); e != nil {
 			log.Warn("loadHeadFromStore error", zap.String("spaceId", spaceId), zap.Error(e))
 		}
 	}
@@ -86,7 +87,7 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err error) {
+func (n *nodeHead) loadHeadFromStore(spaceId string) (err error) {
 	ss, err := n.spaceStore.SpaceStorage(spaceId)
 	if err != nil {
 		return
@@ -146,6 +147,10 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 		return
 	}
 	return el.Head, nil
+}
+
+func (n *nodeHead) ReloadHeadFromStore(spaceId string) error {
+	return n.loadHeadFromStore(spaceId)
 }
 
 func (n *nodeHead) registerMetrics(m metric.Metric) {

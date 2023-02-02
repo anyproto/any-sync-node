@@ -1,4 +1,4 @@
-package storage
+package nodestorage
 
 type configGetter interface {
 	GetStorage() Config

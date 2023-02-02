@@ -91,7 +91,7 @@ func (n *nodeSync) Sync(ctx context.Context) (err error) {
 		}(p)
 	}
 	wg.Wait()
-	log.Info("nodesync done", zap.Duration("dut", time.Since(st)))
+	log.Info("nodesync done", zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
@@ -119,19 +119,22 @@ func (n *nodeSync) syncPeer(ctx context.Context, peerId string, partId int) (err
 	}
 	for _, newId := range newIds {
 		if e := n.coldSync(ctx, newId, peerId); e != nil {
-			log.Warn("can't sync space with peer", zap.String("spaceId", newId), zap.String("peerId", peerId), zap.Error(e))
+			log.Warn("can't coldSync space with peer", zap.String("spaceId", newId), zap.String("peerId", peerId), zap.Error(e))
 		}
 	}
 	for _, changedId := range changedIds {
 		if e := n.hotSync(ctx, changedId); e != nil {
-			log.Warn("can't sync space", zap.String("spaceId", changedId), zap.Error(e))
+			log.Warn("can't hotSync space", zap.String("spaceId", changedId), zap.Error(e))
 		}
 	}
 	return
 }
 
 func (n *nodeSync) coldSync(ctx context.Context, spaceId, peerId string) (err error) {
-	return n.coldsync.Sync(ctx, spaceId, peerId)
+	if err = n.coldsync.Sync(ctx, spaceId, peerId); err != nil {
+		return
+	}
+	return n.nodehead.ReloadHeadFromStore(spaceId)
 }
 
 func (n *nodeSync) hotSync(ctx context.Context, spaceId string) (err error) {

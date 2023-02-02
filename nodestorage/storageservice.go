@@ -1,4 +1,5 @@
-package storage
+//go:generate mockgen -destination mock_nodestorage/mock_nodestorage.go github.com/anytypeio/any-sync-node/nodestorage NodeStorage
+package nodestorage
 
 import (
 	"context"
@@ -98,7 +99,9 @@ func (s *storageService) CreateSpaceStorage(payload spacestorage.SpaceStorageCre
 }
 
 func (s *storageService) TryLockAndDo(spaceId string, do func() error) (err error) {
-	_, err = s.checkLock(spaceId, do)
+	if _, err = s.checkLock(spaceId, do); err == nil {
+		s.unlockSpaceStorage(spaceId)
+	}
 	return err
 }
 

@@ -3,7 +3,7 @@ package nodehead
 import (
 	"context"
 	"encoding/hex"
-	"github.com/anytypeio/any-sync-node/storage"
+	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync-node/testutil/testnodeconf"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/ldiff"
@@ -27,7 +27,7 @@ func TestNodeHead_Run(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	fx := newFixture(t, tmpDir)
-	store := fx.a.MustComponent(storage.CName).(storage.NodeStorage)
+	store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
 	ss, err := store.CreateSpaceStorage(spaceTestPayload())
 	require.NoError(t, err)
 	require.NoError(t, ss.WriteSpaceHash("123"))
@@ -116,7 +116,7 @@ func newFixture(t *testing.T, dataPath string) *fixture {
 	fx.a.Register(&config{Config: confServ, dataPath: tmpDir}).
 		Register(nodeconf.New()).
 		Register(accServ).
-		Register(storage.New()).
+		Register(nodestorage.New()).
 		Register(fx.NodeHead)
 
 	require.NoError(t, fx.a.Start(ctx))
@@ -142,8 +142,8 @@ type config struct {
 	dataPath string
 }
 
-func (c *config) GetStorage() storage.Config {
-	return storage.Config{
+func (c *config) GetStorage() nodestorage.Config {
+	return nodestorage.Config{
 		Path: c.dataPath,
 	}
 }

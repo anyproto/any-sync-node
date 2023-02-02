@@ -3,7 +3,7 @@ package nodespace
 import (
 	"context"
 	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
-	"github.com/anytypeio/any-sync-node/storage"
+	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
@@ -40,7 +40,7 @@ type service struct {
 	spaceCache           ocache.OCache
 	commonSpace          commonspace.SpaceService
 	confService          nodeconf.Service
-	spaceStorageProvider storage.NodeStorage
+	spaceStorageProvider nodestorage.NodeStorage
 	streamPool           streampool.StreamPool
 	nodeHead             nodehead.NodeHead
 }
@@ -49,7 +49,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.conf = a.MustComponent("config").(commonspace.ConfigGetter).GetSpace()
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.SpaceService)
 	s.confService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(storage.NodeStorage)
+	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	s.nodeHead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.Service).NewStreamPool(&streamHandler{s: s}, streampool.StreamConfig{
 		SendQueueWorkers: 100,

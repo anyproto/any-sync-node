@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"github.com/anytypeio/any-sync-node/nodespace"
-	nodestorage "github.com/anytypeio/any-sync-node/storage"
+	nodestorage "github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"

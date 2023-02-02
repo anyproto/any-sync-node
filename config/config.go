@@ -1,8 +1,8 @@
 package config
 
 import (
+	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync-node/nodesync"
-	"github.com/anytypeio/any-sync-node/storage"
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
@@ -34,7 +34,7 @@ type Config struct {
 	APIServer  net.Config            `yaml:"apiServer"`
 	Nodes      []nodeconf.NodeConfig `yaml:"nodes"`
 	Space      commonspace.Config    `yaml:"space"`
-	Storage    storage.Config        `yaml:"storage"`
+	Storage    nodestorage.Config    `yaml:"storage"`
 	Metric     metric.Config         `yaml:"metric"`
 	Log        logger.Config         `yaml:"log"`
 	NodeSync   nodesync.Config       `yaml:"nodeSync"`
@@ -68,7 +68,7 @@ func (c Config) GetSpace() commonspace.Config {
 	return c.Space
 }
 
-func (c Config) GetStorage() storage.Config {
+func (c Config) GetStorage() nodestorage.Config {
 	return c.Storage
 }
 

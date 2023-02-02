@@ -1,7 +1,6 @@
 package coldsync
 
 import (
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -15,22 +14,15 @@ import (
 )
 
 type streamReader struct {
-	dir          string
-	stream       nodesyncproto.DRPCNodeSync_ColdSyncClient
-	needFlush    bool
-	lastFilename string
-	lastFile     *os.File
-	lastGzip     *gzip.Reader
-	lastReader   *bufio.ReadWriter
-	pr           *io.PipeReader
-	pw           *io.PipeWriter
-	copyCh       chan error
+	dir    string
+	stream nodesyncproto.DRPCNodeSync_ColdSyncClient
+	saver  *fileSaver
 }
 
 func (sr *streamReader) Read(ctx context.Context) (err error) {
 	defer func() {
-		if err == io.EOF {
-			err = sr.flush(ctx)
+		if err == io.EOF && sr.saver != nil {
+			err = sr.saver.Close(ctx)
 		}
 	}()
 	for {
@@ -46,65 +38,91 @@ func (sr *streamReader) Read(ctx context.Context) (err error) {
 }
 
 func (sr *streamReader) writeChunk(ctx context.Context, msg *nodesyncproto.ColdSyncResponse) (err error) {
-	if sr.lastFilename != msg.Filename {
-		if err = sr.flush(ctx); err != nil {
+	if sr.saver == nil {
+		if sr.saver, err = sr.newFileSaver(msg.Filename); err != nil {
 			return
 		}
-		sr.lastFilename = msg.Filename
-		if sr.lastFile, err = os.Create(filepath.Join(sr.dir, sr.lastFilename)); err != nil {
+	} else if sr.saver.name != msg.Filename {
+		if err = sr.saver.Close(ctx); err != nil {
 			return
 		}
-		sr.pr, sr.pw = io.Pipe()
-		if sr.lastGzip, err = gzip.NewReader(sr.pr); err != nil {
+		if sr.saver, err = sr.newFileSaver(msg.Filename); err != nil {
 			return
 		}
-		go func() {
-			_, e := io.Copy(sr.lastFile, sr.lastGzip)
-			sr.copyCh <- e
-		}()
 	}
+	return sr.saver.AddChunk(msg)
+}
+
+func (sr *streamReader) newFileSaver(name string) (fs *fileSaver, err error) {
+	fs = &fileSaver{
+		name: name,
+		sr:   sr,
+	}
+	return fs, fs.init()
+}
+
+type fileSaver struct {
+	name string
+	sr   *streamReader
+	f    *os.File
+	pr   *io.PipeReader
+	pw   *io.PipeWriter
+
+	copierDone chan error
+}
+
+func (fs *fileSaver) init() (err error) {
+	fpath := filepath.Join(fs.sr.dir, fs.name)
+	if mkdirErr := os.MkdirAll(filepath.Dir(fpath), 0755); mkdirErr != nil {
+		if !os.IsExist(mkdirErr) {
+			return mkdirErr
+		}
+	}
+	if fs.f, err = os.Create(fpath); err != nil {
+		return err
+	}
+	fs.pr, fs.pw = io.Pipe()
+	fs.copierDone = make(chan error, 1)
+	go fs.copier()
+	return
+}
+
+func (fs *fileSaver) AddChunk(msg *nodesyncproto.ColdSyncResponse) (err error) {
 	if crc := crc32.ChecksumIEEE(msg.Data); crc != msg.Crc32 {
 		return fmt.Errorf("crc32 mismatched")
 	}
-	_, err = io.Copy(sr.pw, bytes.NewReader(msg.Data))
-	if err != nil {
-		return err
+	if _, err = io.Copy(fs.pw, bytes.NewReader(msg.Data)); err != nil {
+		return
 	}
 	return
 }
 
-func (sr *streamReader) flush(ctx context.Context) (err error) {
+func (fs *fileSaver) copier() {
+	gr, err := gzip.NewReader(fs.pr)
+	if err != nil {
+		fs.copierDone <- err
+		return
+	}
+	_, err = io.Copy(fs.f, gr)
+	fs.copierDone <- err
+}
+
+func (fs *fileSaver) Close(ctx context.Context) error {
 	var errs []error
-	if sr.needFlush {
-		select {
-		case err = <-sr.copyCh:
-			errs = append(errs, err)
-		case <-ctx.Done():
-			errs = append(errs, ctx.Err())
-		}
+
+	if err := fs.pw.Close(); err != nil {
+		errs = append(errs, err)
 	}
-	if sr.pw != nil {
-		if err = sr.pw.Close(); err != nil {
-			errs = append(errs, err)
-		}
-		sr.pw = nil
-		if err = sr.pr.Close(); err != nil {
-			errs = append(errs, err)
-		}
-		sr.pr = nil
+
+	select {
+	case err := <-fs.copierDone:
+		errs = append(errs, err)
+	case <-ctx.Done():
+		errs = append(errs, ctx.Err())
 	}
-	if sr.lastGzip != nil {
-		if err = sr.lastGzip.Close(); err != nil {
-			errs = append(errs, err)
-		}
-		sr.lastGzip = nil
+
+	if err := fs.f.Close(); err != nil {
+		errs = append(errs, err)
 	}
-	if sr.lastFile != nil {
-		if err = sr.lastFile.Close(); err != nil {
-			errs = append(errs, err)
-		}
-		sr.lastFile = nil
-	}
-	sr.needFlush = false
 	return multierr.Combine(errs...)
 }

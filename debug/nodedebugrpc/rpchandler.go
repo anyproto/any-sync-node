@@ -4,14 +4,14 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"github.com/anytypeio/any-sync-node/nodespace"
-	"github.com/anytypeio/any-sync-node/storage"
+	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 )
 
 type rpcHandler struct {
 	treeCache      treegetter.TreeGetter
 	spaceService   nodespace.Service
-	storageService storage.NodeStorage
+	storageService nodestorage.NodeStorage
 }
 
 func (r *rpcHandler) DumpTree(ctx context.Context, request *nodedebugrpcproto.DumpTreeRequest) (resp *nodedebugrpcproto.DumpTreeResponse, err error) {

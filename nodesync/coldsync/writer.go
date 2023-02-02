@@ -24,6 +24,9 @@ func (sw *streamWriter) Write() (err error) {
 		return
 	}
 	return filepath.Walk(sw.dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -43,13 +46,11 @@ func (sw *streamWriter) writeFile(path string) (err error) {
 	fw := sw.newFileWriter(filename)
 	bw := bufio.NewWriterSize(fw, chunkSize)
 	gw := gzip.NewWriter(bw)
-	defer func() {
-		_ = gw.Close()
-	}()
 	if _, err = io.Copy(gw, f); err != nil {
+		_ = gw.Close()
 		return
 	}
-	if err = gw.Flush(); err != nil {
+	if err = gw.Close(); err != nil {
 		return
 	}
 	if err = bw.Flush(); err != nil {
