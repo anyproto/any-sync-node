@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
+	"github.com/anytypeio/any-sync-node/nodehead"
 	"github.com/anytypeio/any-sync-node/nodespace/peermanager"
 	"github.com/anytypeio/any-sync-node/nodesync"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync"

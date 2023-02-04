@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_nodehead/mock_nodehead.go github.com/anytypeio/any-sync-node/nodehead NodeHead
 package nodehead
 
 import (

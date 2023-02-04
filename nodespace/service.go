@@ -3,7 +3,7 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
+	"github.com/anytypeio/any-sync-node/nodehead"
 	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"

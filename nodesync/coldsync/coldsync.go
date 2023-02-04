@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_coldsync/mock_coldsync.go github.com/anytypeio/any-sync-node/nodesync/coldsync ColdSync
 package coldsync
 
 import (

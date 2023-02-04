@@ -2,8 +2,9 @@ package nodesync
 
 import (
 	"context"
+	"fmt"
+	"github.com/anytypeio/any-sync-node/nodehead"
 	"github.com/anytypeio/any-sync-node/nodespace"
-	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
 	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
@@ -32,13 +33,15 @@ type NodeSync interface {
 }
 
 type nodeSync struct {
-	nodeconf  nodeconf.Service
-	nodehead  nodehead.NodeHead
-	nodespace nodespace.Service
-	coldsync  coldsync.ColdSync
-	pool      pool.Pool
-	conf      Config
-	peerId    string
+	nodeconf       nodeconf.Service
+	nodehead       nodehead.NodeHead
+	nodespace      nodespace.Service
+	coldsync       coldsync.ColdSync
+	pool           pool.Pool
+	conf           Config
+	peerId         string
+	syncMu         sync.Mutex
+	syncInProgress chan struct{}
 }
 
 func (n *nodeSync) Init(a *app.App) (err error) {
@@ -71,6 +74,21 @@ func (n *nodeSync) Run(ctx context.Context) (err error) {
 }
 
 func (n *nodeSync) Sync(ctx context.Context) (err error) {
+	n.syncMu.Lock()
+	if n.syncInProgress != nil {
+		n.syncMu.Unlock()
+		return fmt.Errorf("sync in progress")
+	} else {
+		n.syncInProgress = make(chan struct{})
+	}
+	n.syncMu.Unlock()
+	defer func() {
+		n.syncMu.Lock()
+		defer n.syncMu.Unlock()
+		close(n.syncInProgress)
+		n.syncInProgress = nil
+	}()
+
 	st := time.Now()
 	parts, err := n.getRelatePartitions()
 	if err != nil {
@@ -176,6 +194,16 @@ func (n *nodeSync) getRelateMembers(memb []chash.Member) (ids []string) {
 }
 
 func (n *nodeSync) Close(ctx context.Context) (err error) {
+	n.syncMu.Lock()
+	syncInProgress := n.syncInProgress
+	n.syncMu.Unlock()
+	if syncInProgress != nil {
+		select {
+		case <-syncInProgress:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 	return nil
 }
 

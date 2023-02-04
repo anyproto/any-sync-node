@@ -2,7 +2,7 @@ package nodesync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync-node/nodespace/nodehead"
+	"github.com/anytypeio/any-sync-node/nodehead"
 	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"golang.org/x/exp/slices"
