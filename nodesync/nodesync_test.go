@@ -31,6 +31,7 @@ func TestNodeSync_getRelatePartitions(t *testing.T) {
 	for _, p := range parts {
 		assert.Len(t, p.peers, 2)
 	}
+	t.Log(fx.NodeSync.(*nodeSync).syncStat)
 }
 
 func newFixture(t *testing.T) *fixture {
