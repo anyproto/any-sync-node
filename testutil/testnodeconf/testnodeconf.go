@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/testutil/accounttest"
 )
 
-func GenNodeConfig(num int) (accountService accountservice.Service, conf *Config) {
+func GenNodeConfig(num int) (conf *Config) {
 	conf = &Config{}
 	if num <= 0 {
 		num = 1
@@ -17,16 +17,15 @@ func GenNodeConfig(num int) (accountService accountservice.Service, conf *Config
 		if err := ac.Init(nil); err != nil {
 			panic(err)
 		}
-		if i == 0 {
-			accountService = ac
-		}
 		conf.nodes = append(conf.nodes, ac.NodeConf(nil))
+		conf.configs = append(conf.configs, ac)
 	}
-	return accountService, conf
+	return conf
 }
 
 type Config struct {
-	nodes []nodeconf.NodeConfig
+	nodes   []nodeconf.NodeConfig
+	configs []*accounttest.AccountTestService
 }
 
 func (c *Config) Init(a *app.App) (err error) { return }
@@ -34,4 +33,8 @@ func (c *Config) Name() string                { return "config" }
 
 func (c *Config) GetNodes() []nodeconf.NodeConfig {
 	return c.nodes
+}
+
+func (c *Config) GetAccountService(idx int) accountservice.Service {
+	return c.configs[idx]
 }

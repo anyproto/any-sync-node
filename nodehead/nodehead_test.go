@@ -112,10 +112,10 @@ func newFixture(t *testing.T, dataPath string) *fixture {
 		dataPath:      tmpDir,
 		forceDataPath: dataPath != "",
 	}
-	accServ, confServ := testnodeconf.GenNodeConfig(3)
+	confServ := testnodeconf.GenNodeConfig(3)
 	fx.a.Register(&config{Config: confServ, dataPath: tmpDir}).
 		Register(nodeconf.New()).
-		Register(accServ).
+		Register(confServ.GetAccountService(0)).
 		Register(nodestorage.New()).
 		Register(fx.NodeHead)
 

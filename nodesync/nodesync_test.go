@@ -9,7 +9,9 @@ import (
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync/mock_coldsync"
 	"github.com/anytypeio/any-sync-node/testutil/testnodeconf"
+	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/net/rpc/rpctest"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/golang/mock/gomock"
@@ -21,8 +23,76 @@ import (
 
 var ctx = context.Background()
 
+func TestNodeSync_Sync(t *testing.T) {
+	t.Run("offline sync", func(t *testing.T) {
+		fx := newFixture(t, 3)
+		defer fx.Finish(t)
+		assert.NoError(t, fx.Sync(ctx))
+		stat := fx.NodeSync.(*nodeSync).syncStat
+		partsErr := stat.PartsErrors.Load()
+		assert.NotEmpty(t, partsErr)
+		assert.Equal(t, partsErr, stat.PartsTotal.Load())
+		assert.Equal(t, partsErr, stat.PartsHandled.Load())
+	})
+	t.Run("partial sync", func(t *testing.T) {
+		nodeServ := testnodeconf.GenNodeConfig(2)
+		acc1 := nodeServ.GetAccountService(0)
+		fx1 := newFixtureWithNodeConf(t, acc1, nodeServ)
+		defer fx1.Finish(t)
+		acc2 := nodeServ.GetAccountService(1)
+		fx2 := newFixtureWithNodeConf(t, acc2, nodeServ)
+		defer fx2.Finish(t)
+		fx1.tp = fx1.tp.WithServer(fx2.ts)
+		emptyLdiff := ldiff.New(8, 8)
+
+		ld1 := ldiff.New(8, 8)
+		ld2 := ldiff.New(8, 8)
+
+		ld1.Set(
+			ldiff.Element{
+				Id: "sameId",
+			}, ldiff.Element{
+				Id:   "spaceA",
+				Head: "versionA",
+			}, ldiff.Element{
+				Id: "ld1Only",
+			},
+		)
+
+		ld2.Set(
+			ldiff.Element{
+				Id: "sameId",
+			}, ldiff.Element{
+				Id:   "spaceA",
+				Head: "versionB",
+			}, ldiff.Element{
+				Id: "ld2Only",
+			},
+		)
+
+		for i := 0; i < nodeconf.PartitionCount; i++ {
+			if i == 0 {
+				fx1.nodeHead.EXPECT().LDiff(i).Return(ld1)
+				fx2.nodeHead.EXPECT().LDiff(i).Return(ld2)
+			} else {
+				fx1.nodeHead.EXPECT().LDiff(i).Return(emptyLdiff)
+				fx2.nodeHead.EXPECT().LDiff(i).Return(emptyLdiff)
+			}
+		}
+
+		// cold update for ld2Only
+		fx1.coldSync.EXPECT().Sync(ctx, "ld2Only", acc2.Account().PeerId)
+		fx1.nodeHead.EXPECT().ReloadHeadFromStore("ld2Only").Return(nil)
+
+		// hot update for spaceA
+		fx1.nodeSpace.EXPECT().GetSpace(ctx, "spaceA").Return(nil, nil)
+
+		assert.NoError(t, fx1.Sync(ctx))
+	})
+}
+
 func TestNodeSync_getRelatePartitions(t *testing.T) {
-	fx := newFixture(t)
+	fx := newFixture(t, 8)
 	defer fx.Finish(t)
 	st := time.Now()
 	parts, err := fx.NodeSync.(*nodeSync).getRelatePartitions()
@@ -31,10 +101,9 @@ func TestNodeSync_getRelatePartitions(t *testing.T) {
 	for _, p := range parts {
 		assert.Len(t, p.peers, 2)
 	}
-	t.Log(fx.NodeSync.(*nodeSync).syncStat)
 }
 
-func newFixture(t *testing.T) *fixture {
+func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confServ *testnodeconf.Config) *fixture {
 	ctrl := gomock.NewController(t)
 	fx := &fixture{
 		ctrl:      ctrl,
@@ -44,7 +113,7 @@ func newFixture(t *testing.T) *fixture {
 		coldSync:  mock_coldsync.NewMockColdSync(ctrl),
 		a:         new(app.App),
 	}
-	accServ, confServ := testnodeconf.GenNodeConfig(9)
+
 	fx.nodeHead.EXPECT().Name().Return(nodehead.CName).AnyTimes()
 	fx.nodeHead.EXPECT().Init(gomock.Any()).AnyTimes()
 	fx.nodeHead.EXPECT().Run(gomock.Any()).AnyTimes()
@@ -55,8 +124,8 @@ func newFixture(t *testing.T) *fixture {
 	fx.nodeSpace.EXPECT().Close(gomock.Any()).AnyTimes()
 	fx.coldSync.EXPECT().Name().Return(coldsync.CName).AnyTimes()
 	fx.coldSync.EXPECT().Init(gomock.Any()).AnyTimes()
-	tp := rpctest.NewTestPool()
-	ts := rpctest.NewTestServer()
+	fx.tp = rpctest.NewTestPool()
+	fx.ts = rpctest.NewTestServer()
 	fx.a.Register(nodeconf.New()).
 		Register(accServ).
 		Register(&config{Config: confServ}).
@@ -64,10 +133,14 @@ func newFixture(t *testing.T) *fixture {
 		Register(fx.nodeHead).
 		Register(fx.nodeSpace).
 		Register(fx.coldSync).
-		Register(tp).
-		Register(ts)
+		Register(fx.tp).
+		Register(fx.ts)
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
+}
+func newFixture(t *testing.T, nodeCount int) *fixture {
+	confServ := testnodeconf.GenNodeConfig(nodeCount)
+	return newFixtureWithNodeConf(t, confServ.GetAccountService(0), confServ)
 }
 
 type fixture struct {
@@ -77,6 +150,8 @@ type fixture struct {
 	nodeHead  *mock_nodehead.MockNodeHead
 	nodeSpace *mock_nodespace.MockService
 	coldSync  *mock_coldsync.MockColdSync
+	tp        *rpctest.TestPool
+	ts        *rpctest.TesServer
 }
 
 func (fx *fixture) Finish(t *testing.T) {
@@ -89,6 +164,6 @@ type config struct {
 
 func (c config) GetNodeSync() Config {
 	return Config{
-		SyncOnStart: true,
+		SyncOnStart: false,
 	}
 }

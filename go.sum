@@ -48,6 +48,8 @@ github.com/anytypeio/any-sync v0.0.8-0.20230202182125-cc2a98bbadc3 h1:5pXpdFgPVW
 github.com/anytypeio/any-sync v0.0.8-0.20230202182125-cc2a98bbadc3/go.mod h1:mV4G+5MaTn7CMkYJ2joUDY7fsHLsSN9N/6kRFW443No=
 github.com/anytypeio/any-sync v0.0.8-0.20230204122034-163c0e405801 h1:AJXNwHjPNGxeoQqBhZ9CG38b3Bey5SvjA+A2zHcxHxE=
 github.com/anytypeio/any-sync v0.0.8-0.20230204122034-163c0e405801/go.mod h1:mV4G+5MaTn7CMkYJ2joUDY7fsHLsSN9N/6kRFW443No=
+github.com/anytypeio/any-sync v0.0.8-0.20230204164511-a4d26ab82d5f h1:wdk+2WLqjqKRARz90Be6i1zofyMxLgiEXYbMgtyr3CI=
+github.com/anytypeio/any-sync v0.0.8-0.20230204164511-a4d26ab82d5f/go.mod h1:mV4G+5MaTn7CMkYJ2joUDY7fsHLsSN9N/6kRFW443No=
 github.com/anytypeio/go-chash v0.0.2 h1:BSpyMC3HXNkf2eosQrHM4svov0DrvxL9tb4gnHbdmbA=
 github.com/anytypeio/go-chash v0.0.2/go.mod h1:G+R6q7jYgNa52NqcRhnNm28pogfWW+cuHtgBktrc2QA=
 github.com/awalterschulze/gographviz v2.0.3+incompatible h1:9sVEXJBJLwGX7EQVhLm2elIKCm7P2YHFC8v6096G09E=
