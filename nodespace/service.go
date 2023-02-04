@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_nodespace/mock_nodespace.go github.com/anytypeio/any-sync-node/nodespace Service
 package nodespace
 
 import (

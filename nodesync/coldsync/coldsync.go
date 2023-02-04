@@ -2,19 +2,26 @@ package coldsync
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"github.com/anytypeio/any-sync-node/nodespace"
 	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/net/pool"
 	"go.uber.org/zap"
+	"io"
 	"os"
 )
 
 const CName = "node.nodesync.coldsync"
 
 var log = logger.NewNamed(CName)
+
+var (
+	ErrSpaceExistsLocally = errors.New("space exists locally")
+	ErrRemoteSpaceLocked  = errors.New("remote space locked")
+)
 
 func New() ColdSync {
 	return new(coldSync)
@@ -27,13 +34,15 @@ type ColdSync interface {
 }
 
 type coldSync struct {
-	pool    pool.Pool
-	storage nodestorage.NodeStorage
+	pool      pool.Pool
+	storage   nodestorage.NodeStorage
+	nodespace nodespace.Service
 }
 
 func (c *coldSync) Init(a *app.App) (err error) {
 	c.pool = a.MustComponent(pool.CName).(pool.Service).NewPool("coldsync")
 	c.storage = a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
+	c.nodespace = a.MustComponent(nodespace.CName).(nodespace.Service)
 	return
 }
 
@@ -44,7 +53,7 @@ func (c *coldSync) Name() (name string) {
 func (c *coldSync) Sync(ctx context.Context, spaceId, peerId string) (err error) {
 	return c.storage.TryLockAndDo(spaceId, func() error {
 		if c.storage.SpaceExists(spaceId) {
-			return fmt.Errorf("unable to cold sync: space exists")
+			return ErrSpaceExistsLocally
 		}
 		return c.coldSync(ctx, spaceId, peerId)
 	})
@@ -70,7 +79,11 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 	}
 	if err = rd.Read(ctx); err != nil {
 		_ = os.RemoveAll(rd.dir)
-		return
+		if err == io.EOF {
+			return ErrRemoteSpaceLocked
+		} else {
+			return err
+		}
 	}
 	return os.Rename(rd.dir, c.storage.StoreDir(spaceId))
 }
@@ -79,7 +92,10 @@ func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nod
 	err := c.storage.TryLockAndDo(req.SpaceId, func() error {
 		return c.coldSyncHandle(req.SpaceId, stream)
 	})
-	// TODO: if unable to lock - force headsync should be called
+	if err == nodestorage.ErrLocked {
+		// TODO: we need to force headSync here
+		_, err = c.nodespace.GetSpace(stream.Context(), req.SpaceId)
+	}
 	if err != nil {
 		log.Info("handle error", zap.Error(err))
 		return err

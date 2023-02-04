@@ -3,6 +3,9 @@ package coldsync
 import (
 	"bytes"
 	"context"
+	"errors"
+	"github.com/anytypeio/any-sync-node/nodespace"
+	"github.com/anytypeio/any-sync-node/nodespace/mock_nodespace"
 	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync-node/nodestorage/mock_nodestorage"
 	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
@@ -38,7 +41,16 @@ func TestColdSync_Sync(t *testing.T) {
 		defer fxC.Finish(t)
 		defer fxS.Finish(t)
 		writeFiles(t, fxS.store.StoreDir(spaceId), testFiles...)
-
+		fxC.store.EXPECT().
+			TryLockAndDo(gomock.Any(), gomock.Any()).AnyTimes().
+			DoAndReturn(func(spaceId string, do func() error) (err error) {
+				return do()
+			})
+		fxS.store.EXPECT().
+			TryLockAndDo(gomock.Any(), gomock.Any()).AnyTimes().
+			DoAndReturn(func(spaceId string, do func() error) (err error) {
+				return do()
+			})
 		fxC.store.EXPECT().SpaceExists(spaceId).Return(false)
 
 		require.NoError(t, fxC.Sync(ctx, "spaceId", peerId))
@@ -50,6 +62,38 @@ func TestColdSync_Sync(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, bytes.Equal(cBytes, sBytes))
 		}
+	})
+	t.Run("remote space in cache", func(t *testing.T) {
+		var spaceId = "spaceId"
+		fxC, fxS, peerId := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+		fxC.store.EXPECT().
+			TryLockAndDo(gomock.Any(), gomock.Any()).AnyTimes().
+			DoAndReturn(func(spaceId string, do func() error) (err error) {
+				return do()
+			})
+		fxC.store.EXPECT().SpaceExists(spaceId).Return(false)
+		fxS.store.EXPECT().TryLockAndDo(gomock.Any(), gomock.Any()).Return(nodestorage.ErrLocked)
+		fxS.space.EXPECT().GetSpace(gomock.Any(), spaceId).Return(nil, nil)
+		err := fxC.Sync(ctx, "spaceId", peerId)
+		assert.Equal(t, ErrRemoteSpaceLocked, err)
+	})
+	t.Run("remote error", func(t *testing.T) {
+		var spaceId = "spaceId"
+		fxC, fxS, peerId := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+		fxC.store.EXPECT().
+			TryLockAndDo(gomock.Any(), gomock.Any()).AnyTimes().
+			DoAndReturn(func(spaceId string, do func() error) (err error) {
+				return do()
+			})
+		fxC.store.EXPECT().SpaceExists(spaceId).Return(false)
+		testErr := errors.New("test remote error")
+		fxS.store.EXPECT().TryLockAndDo(gomock.Any(), gomock.Any()).Return(testErr)
+		err := fxC.Sync(ctx, "spaceId", peerId)
+		assert.EqualError(t, err, testErr.Error())
 	})
 }
 
@@ -85,16 +129,17 @@ func newFixture(t *testing.T) (fx *fixture) {
 	fx.store = mock_nodestorage.NewMockNodeStorage(fx.ctrl)
 	fx.store.EXPECT().Name().Return(nodestorage.CName).AnyTimes()
 	fx.store.EXPECT().Init(gomock.Any()).AnyTimes()
-	fx.store.EXPECT().
-		TryLockAndDo(gomock.Any(), gomock.Any()).AnyTimes().
-		DoAndReturn(func(spaceId string, do func() error) (err error) {
-			return do()
-		})
 	fx.store.EXPECT().StoreDir(gomock.Any()).AnyTimes().
 		DoAndReturn(func(spaceId string) string {
 			return filepath.Join(fx.tmpDir, spaceId)
 		})
-	fx.a.Register(fx.ColdSync).Register(fx.tp).Register(fx.store)
+	fx.space = mock_nodespace.NewMockService(fx.ctrl)
+	fx.space.EXPECT().Name().Return(nodespace.CName).AnyTimes()
+	fx.space.EXPECT().Init(gomock.Any()).AnyTimes()
+	fx.space.EXPECT().Run(gomock.Any()).AnyTimes()
+	fx.space.EXPECT().Close(gomock.Any()).AnyTimes()
+
+	fx.a.Register(fx.ColdSync).Register(fx.tp).Register(fx.store).Register(fx.space)
 	require.NoError(t, nodesyncproto.DRPCRegisterNodeSync(ts, &testServer{cs: fx.ColdSync}))
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
@@ -107,6 +152,7 @@ type fixture struct {
 	store  *mock_nodestorage.MockNodeStorage
 	ctrl   *gomock.Controller
 	tmpDir string
+	space  *mock_nodespace.MockService
 }
 
 func (fx *fixture) Finish(t *testing.T) {
