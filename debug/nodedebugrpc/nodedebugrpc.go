@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"github.com/anytypeio/any-sync-node/nodespace"
 	nodestorage "github.com/anytypeio/any-sync-node/nodestorage"
+	"github.com/anytypeio/any-sync-node/nodesync"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
@@ -38,6 +39,7 @@ type nodeDebugRpc struct {
 	treeCache      treegetter.TreeGetter
 	spaceService   nodespace.Service
 	storageService nodestorage.NodeStorage
+	nodeSync       nodesync.NodeSync
 	*server.BaseDrpcServer
 }
 
@@ -47,6 +49,7 @@ func (s *nodeDebugRpc) Init(a *app.App) (err error) {
 	s.storageService = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	s.cfg = a.MustComponent("config").(configGetter).GetDebugNet()
 	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
+	s.nodeSync = a.MustComponent(nodesync.CName).(nodesync.NodeSync)
 	return nil
 }
 
@@ -68,7 +71,7 @@ func (s *nodeDebugRpc) Run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	return nodedebugrpcproto.DRPCRegisterNodeApi(s, &rpcHandler{s.treeCache, s.spaceService, s.storageService})
+	return nodedebugrpcproto.DRPCRegisterNodeApi(s, &rpcHandler{s: s})
 }
 
 func (s *nodeDebugRpc) Close(ctx context.Context) (err error) {

@@ -3,19 +3,15 @@ package nodedebugrpc
 import (
 	"context"
 	"github.com/anytypeio/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
-	"github.com/anytypeio/any-sync-node/nodespace"
-	"github.com/anytypeio/any-sync-node/nodestorage"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"time"
 )
 
 type rpcHandler struct {
-	treeCache      treegetter.TreeGetter
-	spaceService   nodespace.Service
-	storageService nodestorage.NodeStorage
+	s *nodeDebugRpc
 }
 
 func (r *rpcHandler) DumpTree(ctx context.Context, request *nodedebugrpcproto.DumpTreeRequest) (resp *nodedebugrpcproto.DumpTreeResponse, err error) {
-	tree, err := r.treeCache.GetTree(context.Background(), request.SpaceId, request.DocumentId)
+	tree, err := r.s.treeCache.GetTree(context.Background(), request.SpaceId, request.DocumentId)
 	if err != nil {
 		return
 	}
@@ -33,7 +29,7 @@ func (r *rpcHandler) DumpTree(ctx context.Context, request *nodedebugrpcproto.Du
 }
 
 func (r *rpcHandler) AllTrees(ctx context.Context, request *nodedebugrpcproto.AllTreesRequest) (resp *nodedebugrpcproto.AllTreesResponse, err error) {
-	space, err := r.spaceService.GetSpace(ctx, request.SpaceId)
+	space, err := r.s.spaceService.GetSpace(ctx, request.SpaceId)
 	if err != nil {
 		return
 	}
@@ -50,7 +46,7 @@ func (r *rpcHandler) AllTrees(ctx context.Context, request *nodedebugrpcproto.Al
 }
 
 func (r *rpcHandler) AllSpaces(ctx context.Context, request *nodedebugrpcproto.AllSpacesRequest) (resp *nodedebugrpcproto.AllSpacesResponse, err error) {
-	ids, err := r.storageService.AllSpaceIds()
+	ids, err := r.s.storageService.AllSpaceIds()
 	if err != nil {
 		return
 	}
@@ -59,7 +55,7 @@ func (r *rpcHandler) AllSpaces(ctx context.Context, request *nodedebugrpcproto.A
 }
 
 func (r *rpcHandler) TreeParams(ctx context.Context, request *nodedebugrpcproto.TreeParamsRequest) (resp *nodedebugrpcproto.TreeParamsResponse, err error) {
-	tree, err := r.treeCache.GetTree(context.Background(), request.SpaceId, request.DocumentId)
+	tree, err := r.s.treeCache.GetTree(context.Background(), request.SpaceId, request.DocumentId)
 	if err != nil {
 		return
 	}
@@ -68,4 +64,18 @@ func (r *rpcHandler) TreeParams(ctx context.Context, request *nodedebugrpcproto.
 		HeadIds: tree.Heads(),
 	}
 	return
+}
+
+func (r *rpcHandler) ForceNodeSync(ctx context.Context, request *nodedebugrpcproto.ForceNodeSyncRequest) (*nodedebugrpcproto.ForceNodeSyncResponse, error) {
+	var errCh = make(chan error, 1)
+	go func() {
+		errCh <- r.s.nodeSync.Sync(context.Background())
+	}()
+	select {
+	case <-time.After(time.Millisecond * 100):
+		return &nodedebugrpcproto.ForceNodeSyncResponse{}, nil
+	case err := <-errCh:
+		return nil, err
+	}
+
 }

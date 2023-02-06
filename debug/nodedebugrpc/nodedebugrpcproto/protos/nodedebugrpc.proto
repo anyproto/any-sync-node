@@ -8,6 +8,7 @@ service NodeApi {
     rpc TreeParams(TreeParamsRequest) returns(TreeParamsResponse);
     rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
     rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
+    rpc ForceNodeSync(ForceNodeSyncRequest) returns(ForceNodeSyncResponse);
 }
 
 message DumpTreeRequest {
@@ -48,3 +49,7 @@ message TreeParamsResponse {
     string rootId = 1;
     repeated string headIds = 2;
 }
+
+message ForceNodeSyncRequest {}
+
+message ForceNodeSyncResponse {}

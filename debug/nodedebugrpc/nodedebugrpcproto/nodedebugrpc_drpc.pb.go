@@ -44,6 +44,7 @@ type DRPCNodeApiClient interface {
 	TreeParams(ctx context.Context, in *TreeParamsRequest) (*TreeParamsResponse, error)
 	AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(ctx context.Context, in *AllSpacesRequest) (*AllSpacesResponse, error)
+	ForceNodeSync(ctx context.Context, in *ForceNodeSyncRequest) (*ForceNodeSyncResponse, error)
 }
 
 type drpcNodeApiClient struct {
@@ -92,11 +93,21 @@ func (c *drpcNodeApiClient) AllSpaces(ctx context.Context, in *AllSpacesRequest)
 	return out, nil
 }
 
+func (c *drpcNodeApiClient) ForceNodeSync(ctx context.Context, in *ForceNodeSyncRequest) (*ForceNodeSyncResponse, error) {
+	out := new(ForceNodeSyncResponse)
+	err := c.cc.Invoke(ctx, "/nodeapi.NodeApi/ForceNodeSync", drpcEncoding_File_debug_nodedebugrpc_nodedebugrpcproto_protos_nodedebugrpc_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCNodeApiServer interface {
 	DumpTree(context.Context, *DumpTreeRequest) (*DumpTreeResponse, error)
 	TreeParams(context.Context, *TreeParamsRequest) (*TreeParamsResponse, error)
 	AllTrees(context.Context, *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(context.Context, *AllSpacesRequest) (*AllSpacesResponse, error)
+	ForceNodeSync(context.Context, *ForceNodeSyncRequest) (*ForceNodeSyncResponse, error)
 }
 
 type DRPCNodeApiUnimplementedServer struct{}
@@ -117,9 +128,13 @@ func (s *DRPCNodeApiUnimplementedServer) AllSpaces(context.Context, *AllSpacesRe
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCNodeApiUnimplementedServer) ForceNodeSync(context.Context, *ForceNodeSyncRequest) (*ForceNodeSyncResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCNodeApiDescription struct{}
 
-func (DRPCNodeApiDescription) NumMethods() int { return 4 }
+func (DRPCNodeApiDescription) NumMethods() int { return 5 }
 
 func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -159,6 +174,15 @@ func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receive
 						in1.(*AllSpacesRequest),
 					)
 			}, DRPCNodeApiServer.AllSpaces, true
+	case 4:
+		return "/nodeapi.NodeApi/ForceNodeSync", drpcEncoding_File_debug_nodedebugrpc_nodedebugrpcproto_protos_nodedebugrpc_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCNodeApiServer).
+					ForceNodeSync(
+						ctx,
+						in1.(*ForceNodeSyncRequest),
+					)
+			}, DRPCNodeApiServer.ForceNodeSync, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -226,6 +250,22 @@ type drpcNodeApi_AllSpacesStream struct {
 }
 
 func (x *drpcNodeApi_AllSpacesStream) SendAndClose(m *AllSpacesResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_debug_nodedebugrpc_nodedebugrpcproto_protos_nodedebugrpc_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCNodeApi_ForceNodeSyncStream interface {
+	drpc.Stream
+	SendAndClose(*ForceNodeSyncResponse) error
+}
+
+type drpcNodeApi_ForceNodeSyncStream struct {
+	drpc.Stream
+}
+
+func (x *drpcNodeApi_ForceNodeSyncStream) SendAndClose(m *ForceNodeSyncResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_debug_nodedebugrpc_nodedebugrpcproto_protos_nodedebugrpc_proto{}); err != nil {
 		return err
 	}
