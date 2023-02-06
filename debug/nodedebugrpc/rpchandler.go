@@ -69,7 +69,7 @@ func (r *rpcHandler) TreeParams(ctx context.Context, request *nodedebugrpcproto.
 func (r *rpcHandler) ForceNodeSync(ctx context.Context, request *nodedebugrpcproto.ForceNodeSyncRequest) (*nodedebugrpcproto.ForceNodeSyncResponse, error) {
 	var errCh = make(chan error, 1)
 	go func() {
-		errCh <- r.s.nodeSync.Sync(context.Background())
+		errCh <- r.s.nodeSync.Sync()
 	}()
 	select {
 	case <-time.After(time.Millisecond * 100):

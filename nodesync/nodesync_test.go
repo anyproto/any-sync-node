@@ -27,7 +27,7 @@ func TestNodeSync_Sync(t *testing.T) {
 	t.Run("offline sync", func(t *testing.T) {
 		fx := newFixture(t, 3)
 		defer fx.Finish(t)
-		assert.NoError(t, fx.Sync(ctx))
+		assert.NoError(t, fx.Sync())
 		stat := fx.NodeSync.(*nodeSync).syncStat
 		partsErr := stat.PartsErrors.Load()
 		assert.NotEmpty(t, partsErr)
@@ -81,13 +81,13 @@ func TestNodeSync_Sync(t *testing.T) {
 		}
 
 		// cold update for ld2Only
-		fx1.coldSync.EXPECT().Sync(ctx, "ld2Only", acc2.Account().PeerId)
+		fx1.coldSync.EXPECT().Sync(gomock.Any(), "ld2Only", acc2.Account().PeerId)
 		fx1.nodeHead.EXPECT().ReloadHeadFromStore("ld2Only").Return(nil)
 
 		// hot update for spaceA
-		fx1.nodeSpace.EXPECT().GetSpace(ctx, "spaceA").Return(nil, nil)
+		fx1.nodeSpace.EXPECT().GetSpace(gomock.Any(), "spaceA").Return(nil, nil)
 
-		assert.NoError(t, fx1.Sync(ctx))
+		assert.NoError(t, fx1.Sync())
 	})
 }
 

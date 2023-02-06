@@ -29,7 +29,7 @@ func New() NodeSync {
 }
 
 type NodeSync interface {
-	Sync(ctx context.Context) (err error)
+	Sync() (err error)
 	app.ComponentRunnable
 }
 
@@ -43,6 +43,8 @@ type nodeSync struct {
 	peerId         string
 	syncMu         sync.Mutex
 	syncInProgress chan struct{}
+	syncCtx        context.Context
+	syncCtxCancel  context.CancelFunc
 	syncStat       *SyncStat
 }
 
@@ -55,6 +57,7 @@ func (n *nodeSync) Init(a *app.App) (err error) {
 	n.pool = a.MustComponent(pool.CName).(pool.Service).NewPool("nodesync")
 	n.conf = a.MustComponent("config").(configGetter).GetNodeSync()
 	n.syncStat = new(SyncStat)
+	n.syncCtx, n.syncCtxCancel = context.WithCancel(context.Background())
 	if m := a.Component(metric.CName); m != nil {
 		registerMetric(n.syncStat, m.(metric.Metric).Registry())
 	}
@@ -72,7 +75,7 @@ func (n *nodeSync) Name() (name string) {
 func (n *nodeSync) Run(ctx context.Context) (err error) {
 	if n.conf.SyncOnStart {
 		go func() {
-			if e := n.Sync(context.Background()); e != nil {
+			if e := n.Sync(); e != nil {
 				log.Warn("nodesync onStart failed", zap.Error(e))
 			}
 		}()
@@ -82,7 +85,7 @@ func (n *nodeSync) Run(ctx context.Context) (err error) {
 			ticker := time.NewTicker(time.Hour * time.Duration(n.conf.PeriodicSyncHours))
 			defer ticker.Stop()
 			for _ = range ticker.C {
-				if e := n.Sync(context.Background()); e != nil {
+				if e := n.Sync(); e != nil {
 					log.Warn("nodesync periodic failed", zap.Error(e))
 				}
 			}
@@ -91,7 +94,8 @@ func (n *nodeSync) Run(ctx context.Context) (err error) {
 	return nil
 }
 
-func (n *nodeSync) Sync(ctx context.Context) (err error) {
+func (n *nodeSync) Sync() (err error) {
+	ctx := n.syncCtx
 	n.syncMu.Lock()
 	if n.syncInProgress != nil {
 		n.syncMu.Unlock()
@@ -238,6 +242,9 @@ func (n *nodeSync) getRelateMembers(memb []chash.Member) (ids []string) {
 func (n *nodeSync) Close(ctx context.Context) (err error) {
 	n.syncMu.Lock()
 	syncInProgress := n.syncInProgress
+	if n.syncCtxCancel != nil {
+		n.syncCtxCancel()
+	}
 	n.syncMu.Unlock()
 	if syncInProgress != nil {
 		select {
