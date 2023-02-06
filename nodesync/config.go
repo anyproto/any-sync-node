@@ -5,5 +5,6 @@ type configGetter interface {
 }
 
 type Config struct {
-	SyncOnStart bool `yaml:"syncOnStart"`
+	SyncOnStart       bool `yaml:"syncOnStart"`
+	PeriodicSyncHours int  `yaml:"periodicSyncHours"`
 }

@@ -73,7 +73,18 @@ func (n *nodeSync) Run(ctx context.Context) (err error) {
 	if n.conf.SyncOnStart {
 		go func() {
 			if e := n.Sync(context.Background()); e != nil {
-				log.Warn("nodesync failed", zap.Error(e))
+				log.Warn("nodesync onStart failed", zap.Error(e))
+			}
+		}()
+	}
+	if n.conf.PeriodicSyncHours > 0 {
+		go func() {
+			ticker := time.NewTicker(time.Hour * time.Duration(n.conf.PeriodicSyncHours))
+			defer ticker.Stop()
+			for _ = range ticker.C {
+				if e := n.Sync(context.Background()); e != nil {
+					log.Warn("nodesync periodic failed", zap.Error(e))
+				}
 			}
 		}()
 	}
