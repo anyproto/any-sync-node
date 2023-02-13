@@ -61,13 +61,14 @@ nodes:
         - file
 space:
     gcTTL: 60
-    syncPeriod: 20
+    syncPeriod: 240
 storage:
     path: db
 metric:
     addr: ":7001"
 nodeSync:
   syncOnStart: true
+  periodicSyncHours: 2
 log:
     production: false
     defaultLevel: ""
