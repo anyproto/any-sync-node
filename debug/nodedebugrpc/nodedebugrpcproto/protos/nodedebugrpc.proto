@@ -9,6 +9,7 @@ service NodeApi {
     rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
     rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
     rpc ForceNodeSync(ForceNodeSyncRequest) returns(ForceNodeSyncResponse);
+    rpc NodesAddressesBySpace(NodesAddressesBySpaceRequest) returns(NodesAddressesBySpaceResponse);
 }
 
 message DumpTreeRequest {
@@ -53,3 +54,11 @@ message TreeParamsResponse {
 message ForceNodeSyncRequest {}
 
 message ForceNodeSyncResponse {}
+
+message NodesAddressesBySpaceRequest {
+    string spaceId = 1;
+}
+
+message NodesAddressesBySpaceResponse {
+    repeated string nodeAddresses = 1;
+}

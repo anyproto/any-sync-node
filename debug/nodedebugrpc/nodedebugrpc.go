@@ -13,6 +13,7 @@ import (
 	"github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/rpc/server"
 	"github.com/anytypeio/any-sync/net/secureservice"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"storj.io/drpc"
 )
 
@@ -40,6 +41,7 @@ type nodeDebugRpc struct {
 	spaceService   nodespace.Service
 	storageService nodestorage.NodeStorage
 	nodeSync       nodesync.NodeSync
+	nodeConf       nodeconf.Service
 	*server.BaseDrpcServer
 }
 
@@ -50,6 +52,7 @@ func (s *nodeDebugRpc) Init(a *app.App) (err error) {
 	s.cfg = a.MustComponent("config").(configGetter).GetDebugNet()
 	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	s.nodeSync = a.MustComponent(nodesync.CName).(nodesync.NodeSync)
+	s.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	return nil
 }
 
