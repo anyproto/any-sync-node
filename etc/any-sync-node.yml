@@ -1,5 +1,6 @@
 grpcServer:
     server:
+        identityHandshake: true
         listenAddrs:
             - 127.0.0.1:4430
     stream:
