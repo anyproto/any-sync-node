@@ -85,6 +85,8 @@ func (r *rpcHandler) tryStoreHeadSync(req *spacesyncproto.HeadSyncRequest) (resp
 				Results: []*spacesyncproto.HeadSyncResult{
 					{
 						Hash: hashB,
+						// this makes diff not compareResults and create new batch directly (see (d *diff) Diff)
+						Count: 1,
 					},
 				},
 			}
