@@ -65,6 +65,7 @@ func (c *treeCache) Name() (name string) {
 }
 
 func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr objecttree.ObjectTree, err error) {
+	// TODO: check that tree is in space
 	ctx = context.WithValue(ctx, spaceKey, spaceId)
 	value, err := c.cache.Get(ctx, id)
 	if err != nil {

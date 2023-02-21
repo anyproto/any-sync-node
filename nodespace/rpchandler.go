@@ -98,7 +98,7 @@ func (r *rpcHandler) tryStoreHeadSync(req *spacesyncproto.HeadSyncRequest) (resp
 func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) (err error) {
 	peerId, err := peer.CtxPeerId(stream.Context())
 	defer func() {
-		log.Warn("incoming stream error", zap.Error(err), zap.String("peerId", peerId))
+		log.Debug("incoming stream error", zap.Error(err), zap.String("peerId", peerId))
 	}()
 
 	if err != nil {
