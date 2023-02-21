@@ -14,7 +14,7 @@ build:
 	CGO_ENABLED=$(CGO_ENABLED) go build -v $(TAGS) -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
 
 test:
-	go test ./... --cover
+	go test ./... --cover $(TAGS)
 
 proto:
 	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. nodesync/nodesyncproto/protos/*.proto
