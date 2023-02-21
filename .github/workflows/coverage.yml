@@ -33,10 +33,10 @@ jobs:
       # }}
 
       - name: deps
-        run: make deps
+        run: make deps CGO_ENABLED=0
 
       - name: unit tests
-        run: make test
+        run: make test CGO_ENABLED=0
 
       - name: Quality Gate - Test coverage shall be above threshold
         env:

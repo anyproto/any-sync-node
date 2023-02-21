@@ -35,13 +35,13 @@ jobs:
 
       # build {{
       - name: deps
-        run: make deps
+        run: make deps CGO_ENABLED=0
 
       - name: unit tests
-        run: make test
+        run: make test CGO_ENABLED=0
 
       - name: build
-        run: make build
+        run: make build CGO_ENABLED=0
       # }}
 
       - name: get release version
