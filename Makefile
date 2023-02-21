@@ -4,7 +4,7 @@ export PATH:=deps:$(PATH)
 
 build:
 	@$(eval FLAGS := $$(shell PATH=$(PATH) govvv -flags -pkg github.com/anytypeio/any-sync/app))
-	go build -v -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
+	CGO_ENABLED=0 go build -v -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
 
 test:
 	go test ./... --cover
@@ -15,7 +15,7 @@ proto:
 
 deps:
 	go mod download
-	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
-	go build -o deps/protoc-gen-gogofaster github.com/gogo/protobuf/protoc-gen-gogofaster
-	go build -o deps github.com/ahmetb/govvv
+	CGO_ENABLED=0 go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
+	CGO_ENABLED=0 go build -o deps/protoc-gen-gogofaster github.com/gogo/protobuf/protoc-gen-gogofaster
+	CGO_ENABLED=0 go build -o deps github.com/ahmetb/govvv
 
