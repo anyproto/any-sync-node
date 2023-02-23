@@ -44,10 +44,8 @@ github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
-github.com/anytypeio/any-sync v0.0.14 h1:wqcWGHhMZnK3m5PszG2ASaGe93N33naK/ggQDaHZO/s=
-github.com/anytypeio/any-sync v0.0.14/go.mod h1:K6JnWYs4KpcX/E/m/sh9UhOplupkV6dM4cwWBZYaHo8=
-github.com/anytypeio/any-sync v0.0.15-0.20230223200831-3cd292db5b2d h1:U5qGB79Fhxpvr9pgzpih3eBseBlgOeXs5MM0AhIa7+Q=
-github.com/anytypeio/any-sync v0.0.15-0.20230223200831-3cd292db5b2d/go.mod h1:K6JnWYs4KpcX/E/m/sh9UhOplupkV6dM4cwWBZYaHo8=
+github.com/anytypeio/any-sync v0.0.15-0.20230223225809-7960297ea283 h1:xAVOF8bPAkmtrjcUPOLlO8UR+DPFMWBNP13FmFLALpo=
+github.com/anytypeio/any-sync v0.0.15-0.20230223225809-7960297ea283/go.mod h1:K6JnWYs4KpcX/E/m/sh9UhOplupkV6dM4cwWBZYaHo8=
 github.com/anytypeio/go-chash v0.0.2 h1:BSpyMC3HXNkf2eosQrHM4svov0DrvxL9tb4gnHbdmbA=
 github.com/anytypeio/go-chash v0.0.2/go.mod h1:G+R6q7jYgNa52NqcRhnNm28pogfWW+cuHtgBktrc2QA=
 github.com/awalterschulze/gographviz v2.0.3+incompatible h1:9sVEXJBJLwGX7EQVhLm2elIKCm7P2YHFC8v6096G09E=
