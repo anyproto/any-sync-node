@@ -169,6 +169,18 @@ func createSpaceStorage(s *storageService, payload spacestorage.SpaceStorageCrea
 	return
 }
 
+func (s *spaceStorage) SetSpaceDeleted() error {
+	return s.objDb.Put(s.keys.SpaceDeletedKey(), s.keys.SpaceDeletedKey())
+}
+
+func (s *spaceStorage) IsSpaceDeleted() (bool, error) {
+	res, err := s.objDb.Get(s.keys.SpaceDeletedKey())
+	if err != nil {
+		return false, err
+	}
+	return res != nil, err
+}
+
 func (s *spaceStorage) Id() string {
 	return s.spaceId
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/metric"
@@ -32,6 +33,7 @@ func New() Service {
 type Service interface {
 	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
 	GetOrPickSpace(ctx context.Context, id string) (commonspace.Space, error)
+	DeleteSpace(ctx context.Context, spaceId, changeId string, changePayload []byte) (err error)
 	StreamPool() streampool.StreamPool
 	app.ComponentRunnable
 }
@@ -130,6 +132,21 @@ func (s *service) HandleMessage(ctx context.Context, senderId string, req *space
 	} else {
 		return s.streamPool.RemoveTagsCtx(ctx, msg.SpaceIds...)
 	}
+}
+
+func (s *service) DeleteSpace(ctx context.Context, spaceId, changeId string, changePayload []byte) (err error) {
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return
+	}
+	space, err := s.spaceCache.Get(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	return space.(commonspace.Space).DeleteSpace(ctx, peerId, &treechangeproto.RawTreeChangeWithId{
+		RawChange: changePayload,
+		Id:        changeId,
+	})
 }
 
 func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {

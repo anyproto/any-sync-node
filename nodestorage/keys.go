@@ -61,8 +61,8 @@ func newSpaceKeys(spaceId string) spaceKeys {
 var (
 	spaceIdKey         = []byte("spaceId")
 	spaceSettingsIdKey = []byte("spaceSettingsId")
-
-	spaceHashKey = []byte("spaceHash")
+	deletedKey         = []byte("spaceDeleted")
+	spaceHashKey       = []byte("spaceHash")
 )
 
 func (s spaceKeys) SpaceIdKey() []byte {
@@ -75,6 +75,10 @@ func (s spaceKeys) HeaderKey() []byte {
 
 func (s spaceKeys) SpaceSettingsIdKey() []byte {
 	return spaceSettingsIdKey
+}
+
+func (s spaceKeys) SpaceDeletedKey() []byte {
+	return deletedKey
 }
 
 func (s spaceKeys) TreeDeletedKey(id string) []byte {

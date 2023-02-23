@@ -65,6 +65,7 @@ func (n *nodeSync) Init(a *app.App) (err error) {
 	return nodesyncproto.DRPCRegisterNodeSync(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{
 		nodeRemoteDiffHandler: &nodeRemoteDiffHandler{nodehead: n.nodehead},
 		coldSync:              n.coldsync,
+		nodeSpace:             n.nodespace,
 	})
 }
 
