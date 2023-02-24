@@ -11,6 +11,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/metric"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -86,4 +87,9 @@ func (c *treeCache) DeleteTree(ctx context.Context, spaceId, treeId string) (err
 	}
 	_, err = c.cache.Remove(treeId)
 	return
+}
+
+func (c *treeCache) DeleteSpace(ctx context.Context, spaceId string) error {
+	log.Debug("space deleted", zap.String("spaceId", spaceId))
+	return nil
 }
