@@ -48,6 +48,8 @@ github.com/anytypeio/any-sync v0.0.15-0.20230224224205-8d25922f27cd h1:Dem3TJ6S0
 github.com/anytypeio/any-sync v0.0.15-0.20230224224205-8d25922f27cd/go.mod h1:K6JnWYs4KpcX/E/m/sh9UhOplupkV6dM4cwWBZYaHo8=
 github.com/anytypeio/any-sync v0.0.15-0.20230224225145-be253bb01b3e h1:4+D1yY4wdi4yReTB7l/AYEAhC2j9Afo7m5w4TbRRwZU=
 github.com/anytypeio/any-sync v0.0.15-0.20230224225145-be253bb01b3e/go.mod h1:K6JnWYs4KpcX/E/m/sh9UhOplupkV6dM4cwWBZYaHo8=
+github.com/anytypeio/any-sync v0.0.16-0.20230226082218-679b068dfa72 h1:FEuFPrMgURuMmTrFW/ms3TjaPKhwaTpWCZ2lHUqtkY8=
+github.com/anytypeio/any-sync v0.0.16-0.20230226082218-679b068dfa72/go.mod h1:jUu8YIgJAHUV+YR9bD5IXwM0DgJHr3FeYe84X2XLFkg=
 github.com/anytypeio/go-chash v0.0.2 h1:BSpyMC3HXNkf2eosQrHM4svov0DrvxL9tb4gnHbdmbA=
 github.com/anytypeio/go-chash v0.0.2/go.mod h1:G+R6q7jYgNa52NqcRhnNm28pogfWW+cuHtgBktrc2QA=
 github.com/awalterschulze/gographviz v2.0.3+incompatible h1:9sVEXJBJLwGX7EQVhLm2elIKCm7P2YHFC8v6096G09E=
@@ -234,6 +236,7 @@ github.com/multiformats/go-multibase v0.1.1 h1:3ASCDsuLX8+j4kx58qnJ4YFq/JWTJpCyD
 github.com/multiformats/go-multibase v0.1.1/go.mod h1:ZEjHE+IsUrgp5mhlEAYjMtZwK1k4haNkcaPg9aoe1a8=
 github.com/multiformats/go-multicodec v0.7.0 h1:rTUjGOwjlhGHbEMbPoSUJowG1spZTVsITRANCjKTUAQ=
 github.com/multiformats/go-multicodec v0.7.0/go.mod h1:GUC8upxSBE4oG+q3kWZRw/+6yC1BqO550bjhWsJbZlw=
+github.com/multiformats/go-multicodec v0.8.0/go.mod h1:GUC8upxSBE4oG+q3kWZRw/+6yC1BqO550bjhWsJbZlw=
 github.com/multiformats/go-multihash v0.2.1 h1:aem8ZT0VA2nCHHk7bPJ1BjUbHNciqZC/d16Vve9l108=
 github.com/multiformats/go-multihash v0.2.1/go.mod h1:WxoMcYG85AZVQUyRyo9s4wULvW5qrI9vb2Lt6evduFc=
 github.com/multiformats/go-multistream v0.3.3 h1:d5PZpjwRgVlbwfdTDjife7XszfZd8KYWfROYFlGcR8o=
@@ -406,6 +409,7 @@ golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd/go.mod h1:CfG3xpIq0wQ8r1q4Su
 golang.org/x/net v0.0.0-20220225172249-27dd8689420f/go.mod h1:CfG3xpIq0wQ8r1q4Su4UZFWDARRcnwPjda9FqA0JpMk=
 golang.org/x/net v0.6.0 h1:L4ZwwTvKW9gr0ZMS1yrHD9GZhIuVjOBBnaKH+SPQK0Q=
 golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
+golang.org/x/net v0.7.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
 golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
 golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
