@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync-node/nodehead"
 	"github.com/anytypeio/any-sync-node/nodestorage"
+	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
@@ -32,7 +33,6 @@ func New() Service {
 
 type Service interface {
 	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
-	GetOrPickSpace(ctx context.Context, id string) (commonspace.Space, error)
 	DeleteSpace(ctx context.Context, spaceId, changeId string, changePayload []byte) (err error)
 	StreamPool() streampool.StreamPool
 	app.ComponentRunnable
@@ -90,37 +90,6 @@ func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, e
 	return v.(commonspace.Space), nil
 }
 
-func (s *service) GetOrPickSpace(ctx context.Context, id string) (sp commonspace.Space, err error) {
-	var v ocache.Object
-	peerId, err := peer.CtxPeerId(ctx)
-	if err != nil {
-		return
-	}
-	// if we are getting request from our fellow node
-	// don't try to wake the space, otherwise it can be possible
-	// that node would be waking up infinitely, depending on
-	// OCache ttl and HeadSync period
-	if slices.Contains(s.confService.GetLast().NodeIds(id), peerId) {
-		v, err = s.spaceCache.Pick(ctx, id)
-		if err != nil {
-			// safely checking that we don't have the space storage
-			// this should not open the database in case of node
-			if !s.spaceStorageProvider.SpaceExists(id) {
-				err = spacesyncproto.ErrSpaceMissing
-			}
-			return
-		}
-	} else {
-		// if the request is from the client it is safe to wake up the node
-		v, err = s.spaceCache.Get(ctx, id)
-		if err != nil {
-			return
-		}
-	}
-	sp = v.(commonspace.Space)
-	return
-}
-
 func (s *service) HandleMessage(ctx context.Context, senderId string, req *spacesyncproto.ObjectSyncMessage) (err error) {
 	var msg = &spacesyncproto.SpaceSubscription{}
 	if err = msg.Unmarshal(req.Payload); err != nil {
@@ -139,11 +108,15 @@ func (s *service) DeleteSpace(ctx context.Context, spaceId, changeId string, cha
 	if err != nil {
 		return
 	}
+	if !slices.Contains(s.confService.GetLast().CoordinatorPeers(), peerId) {
+		err = nodesyncproto.ErrExpectedCoordinator
+		return
+	}
 	space, err := s.spaceCache.Get(ctx, spaceId)
 	if err != nil {
 		return
 	}
-	return space.(commonspace.Space).DeleteSpace(ctx, peerId, &treechangeproto.RawTreeChangeWithId{
+	return space.(commonspace.Space).DeleteSpace(ctx, &treechangeproto.RawTreeChangeWithId{
 		RawChange: changePayload,
 		Id:        changeId,
 	})

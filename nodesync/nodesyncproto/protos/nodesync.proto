@@ -3,6 +3,12 @@ package anyNodeSync;
 
 option go_package = "nodesync/nodesyncproto";
 
+enum ErrCodes {
+    Unexpected = 0;
+    ExpectedCoordinator = 1;
+    ErrorOffset = 1000;
+}
+
 service NodeSync {
     // PartitionSync compares all spaces by given c-hash partition
     rpc PartitionSync(PartitionSyncRequest) returns (PartitionSyncResponse);

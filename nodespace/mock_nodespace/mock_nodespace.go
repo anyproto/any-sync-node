@@ -51,19 +51,18 @@ func (mr *MockServiceMockRecorder) Close(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockService)(nil).Close), arg0)
 }
 
-// GetOrPickSpace mocks base method.
-func (m *MockService) GetOrPickSpace(arg0 context.Context, arg1 string) (commonspace.Space, error) {
+// DeleteSpace mocks base method.
+func (m *MockService) DeleteSpace(arg0 context.Context, arg1, arg2 string, arg3 []byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOrPickSpace", arg0, arg1)
-	ret0, _ := ret[0].(commonspace.Space)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "DeleteSpace", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// GetOrPickSpace indicates an expected call of GetOrPickSpace.
-func (mr *MockServiceMockRecorder) GetOrPickSpace(arg0, arg1 interface{}) *gomock.Call {
+// DeleteSpace indicates an expected call of DeleteSpace.
+func (mr *MockServiceMockRecorder) DeleteSpace(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrPickSpace", reflect.TypeOf((*MockService)(nil).GetOrPickSpace), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpace", reflect.TypeOf((*MockService)(nil).DeleteSpace), arg0, arg1, arg2, arg3)
 }
 
 // GetSpace mocks base method.
