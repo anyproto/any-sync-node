@@ -8,7 +8,6 @@ import (
 	"github.com/anytypeio/any-sync-node/nodespace/peermanager"
 	"github.com/anytypeio/any-sync-node/nodesync"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
-	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
 	"github.com/anytypeio/any-sync/net/dialer"
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/net/streampool"
@@ -111,7 +110,6 @@ func Bootstrap(a *app.App) {
 		Register(nodecache.New(200)).
 		Register(coldsync.New()).
 		Register(nodesync.New()).
-		Register(credentialprovider.New()).
 		Register(secureservice.New()).
 		Register(nodespace.New()).
 		Register(commonspace.New()).
