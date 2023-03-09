@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/any-sync v0.0.17
+	github.com/anytypeio/any-sync v0.0.20-0.20230309221120-067ad8cf16e5
 	github.com/anytypeio/go-chash v0.0.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
@@ -15,7 +15,7 @@ require (
 	go.uber.org/multierr v1.9.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3
-	golang.org/x/net v0.7.0
+	golang.org/x/net v0.8.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32
 )
@@ -29,6 +29,7 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-graphviz v0.1.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -64,7 +65,7 @@ require (
 	github.com/zeebo/errs v1.3.0 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
