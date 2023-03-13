@@ -85,7 +85,7 @@ func (c *treeCache) DeleteTree(ctx context.Context, spaceId, treeId string) (err
 	if err != nil {
 		return
 	}
-	_, err = c.cache.Remove(treeId)
+	_, err = c.cache.Remove(ctx, treeId)
 	return
 }
 
