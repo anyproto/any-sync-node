@@ -205,7 +205,7 @@ func (n *nodeSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 func (n *nodeSync) hotSync(ctx context.Context, spaceId string) (err error) {
 	// just wakeup a space
 	// TODO: time sleep to avoid extreme memory consumption (need to decide something better)
-	time.Sleep(time.Second)
+	time.Sleep(time.Second / 3)
 	_, err = n.nodespace.GetSpace(ctx, spaceId)
 	return
 }
