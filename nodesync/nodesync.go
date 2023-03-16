@@ -181,6 +181,7 @@ func (n *nodeSync) syncPeer(ctx context.Context, peerId string, partId int) (err
 	if err != nil {
 		return
 	}
+	log.Debug("syncing with peer", zap.String("peerId", peerId), zap.Int("changed", len(changedIds)), zap.Int("new", len(newIds)))
 	for _, newId := range newIds {
 		if e := n.coldSync(ctx, newId, peerId); e != nil {
 			log.Warn("can't coldSync space with peer", zap.String("spaceId", newId), zap.String("peerId", peerId), zap.Error(e))

@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/util/periodicsync"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"sync"
 	"time"
@@ -37,7 +38,7 @@ type hotSync struct {
 
 func (h *hotSync) Init(a *app.App) (err error) {
 	h.maxSynced = 300
-	h.idle = time.Second * 20
+	h.idle = time.Second * 10
 	h.syncQueue = map[string]struct{}{}
 	h.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	h.periodicSync = periodicsync.NewPeriodicSync(10, 0, h.checkCache, log)
@@ -75,12 +76,15 @@ func (h *hotSync) UpdateQueue(changedIds []string) {
 }
 
 func (h *hotSync) checkCache(ctx context.Context) (err error) {
+	log.Debug("checking cache", zap.Int("space queue len", len(h.spaceQueue)), zap.Int("sync queue len", len(h.syncQueue)))
 	removed := h.removeIdleSpaces(ctx)
+	log.Debug("removed inactive", zap.Int("removed", removed))
 	h.mx.Lock()
-	newBatchLen := h.maxSynced - (len(h.syncQueue) - removed)
-	cp := make([]string, 0, newBatchLen)
-	copy(cp, h.spaceQueue[:newBatchLen])
-	h.spaceQueue = h.spaceQueue[newBatchLen:]
+	newBatchLen := h.maxSynced - len(h.syncQueue)
+	cp := make([]string, newBatchLen)
+	m := min(newBatchLen, len(h.spaceQueue))
+	copy(cp, h.spaceQueue[:m])
+	h.spaceQueue = h.spaceQueue[m:]
 	h.mx.Unlock()
 
 	for _, id := range cp {
@@ -108,4 +112,12 @@ func (h *hotSync) removeIdleSpaces(ctx context.Context) (removed int) {
 		}
 	}
 	return
+}
+
+func min(x int, y int) int {
+	if x < y {
+		return x
+	} else {
+		return y
+	}
 }
