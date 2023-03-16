@@ -64,7 +64,7 @@ jobs:
           EXPOSE 443
           EXPOSE 8000
           EXPOSE 8080
-          CMD ["./${{ github.event.repository.name }} -c /etc/${{ github.event.repository.name }}/config.yml"]
+          #CMD ["./${{ github.event.repository.name }} -c /etc/${{ github.event.repository.name }}/config.yml"]
           EOF
 
       - name: Debug
