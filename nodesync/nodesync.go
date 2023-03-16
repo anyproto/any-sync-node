@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/any-sync-node/nodehead"
 	"github.com/anytypeio/any-sync-node/nodespace"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
+	"github.com/anytypeio/any-sync-node/nodesync/hotsync"
 	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
@@ -38,6 +39,7 @@ type nodeSync struct {
 	nodehead       nodehead.NodeHead
 	nodespace      nodespace.Service
 	coldsync       coldsync.ColdSync
+	hotsync        hotsync.HotSync
 	pool           pool.Pool
 	conf           Config
 	peerId         string
@@ -53,6 +55,7 @@ func (n *nodeSync) Init(a *app.App) (err error) {
 	n.nodehead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	n.nodespace = a.MustComponent(nodespace.CName).(nodespace.Service)
 	n.coldsync = a.MustComponent(coldsync.CName).(coldsync.ColdSync)
+	n.hotsync = a.MustComponent(hotsync.CName).(hotsync.HotSync)
 	n.peerId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
 	n.pool = a.MustComponent(pool.CName).(pool.Service).NewPool("nodesync")
 	n.conf = a.MustComponent("config").(configGetter).GetNodeSync()
@@ -185,13 +188,8 @@ func (n *nodeSync) syncPeer(ctx context.Context, peerId string, partId int) (err
 		}
 		n.syncStat.ColdSyncHandled.Add(1)
 	}
-	for _, changedId := range changedIds {
-		if e := n.hotSync(ctx, changedId); e != nil {
-			log.Warn("can't hotSync space", zap.String("spaceId", changedId), zap.Error(e))
-			n.syncStat.HotSyncErrors.Add(1)
-		}
-		n.syncStat.HotSyncHandled.Add(1)
-	}
+	n.hotsync.UpdateQueue(changedIds)
+	// TODO: add syncstat n.syncStat.HotSyncErrors.Add(1)
 	return
 }
 
@@ -200,14 +198,6 @@ func (n *nodeSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 		return
 	}
 	return n.nodehead.ReloadHeadFromStore(spaceId)
-}
-
-func (n *nodeSync) hotSync(ctx context.Context, spaceId string) (err error) {
-	// just wakeup a space
-	// TODO: time sleep to avoid extreme memory consumption (need to decide something better)
-	time.Sleep(time.Second / 3)
-	_, err = n.nodespace.GetSpace(ctx, spaceId)
-	return
 }
 
 func (n *nodeSync) getRelatePartitions() (parts []part, err error) {

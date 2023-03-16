@@ -34,6 +34,7 @@ func New() Service {
 type Service interface {
 	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
 	DeleteSpace(ctx context.Context, spaceId, changeId string, changePayload []byte) (err error)
+	Cache() ocache.OCache
 	StreamPool() streampool.StreamPool
 	app.ComponentRunnable
 }
@@ -142,4 +143,8 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 
 func (s *service) Close(ctx context.Context) (err error) {
 	return s.spaceCache.Close()
+}
+
+func (s *service) Cache() ocache.OCache {
+	return s.spaceCache
 }
