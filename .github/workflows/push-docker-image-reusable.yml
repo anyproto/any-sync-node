@@ -34,12 +34,12 @@ jobs:
           file: ${{ env.ARTIFACT_PREFIX }}.tgz
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      #- name: Download release asset arm64
-      #  uses: dsaltares/fetch-gh-release-asset@master
-      #  with:
-      #    version: tags/${{ inputs.release }}
-      #    file: ${{ env.ARTIFACT_PREFIX }}-arm64.tar.gz
-      #    token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download release asset arm64
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          version: tags/${{ inputs.release }}
+          file: ${{ env.ARTIFACT_PREFIX }}.tgz
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Unpack archive amd64
         run: |
@@ -47,11 +47,11 @@ jobs:
           rm -f ${{ env.ARTIFACT_PREFIX }}.tgz
           mv ${{ github.event.repository.name }} ${{ github.event.repository.name }}-amd64
 
-      #- name: Unpack archive arm64
-      #  run: |
-      #    tar -zxf ${{ env.ARTIFACT_PREFIX }}-arm64.tar.gz
-      #    rm -f ${{ env.ARTIFACT_PREFIX }}-arm64.tar.gz
-      #    mv grpc-server grpc-server-arm64
+      - name: Unpack archive arm64
+        run: |
+          tar -zxf ${{ env.ARTIFACT_PREFIX }}.tgz
+          rm -f ${{ env.ARTIFACT_PREFIX }}.tgz
+          mv ${{ github.event.repository.name }} ${{ github.event.repository.name }}-arm64
 
       - name: Generate Dockerfile
         run: |
@@ -62,6 +62,7 @@ jobs:
           COPY ${{ github.event.repository.name }}-\$TARGETARCH ${{ github.event.repository.name }}
           EXPOSE 443
           EXPOSE 8000
+          EXPOSE 8080
           CMD ["./${{ github.event.repository.name }} -c /etc/${{ github.event.repository.name }}/config.yml"]
           EOF
 
@@ -83,8 +84,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          #platforms: linux/amd64,linux/arm64
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
