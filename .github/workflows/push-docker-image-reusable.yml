@@ -41,10 +41,11 @@ jobs:
           file: ${{ env.ARTIFACT_PREFIX }}.tgz
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # тут пока нет отдельной сборки под arm, поэтому просто два раза распаковываем один и тот же архив
       - name: Unpack archive amd64
         run: |
           tar -zxf ${{ env.ARTIFACT_PREFIX }}.tgz
-          rm -f ${{ env.ARTIFACT_PREFIX }}.tgz
+          #rm -f ${{ env.ARTIFACT_PREFIX }}.tgz
           mv ${{ github.event.repository.name }} ${{ github.event.repository.name }}-amd64
 
       - name: Unpack archive arm64
