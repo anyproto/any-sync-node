@@ -81,9 +81,9 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	log.Debug("removed inactive", zap.Int("removed", removed))
 	h.mx.Lock()
 	newBatchLen := h.maxSynced - len(h.syncQueue)
-	cp := make([]string, newBatchLen)
 	m := min(newBatchLen, len(h.spaceQueue))
-	copy(cp, h.spaceQueue[:m])
+	var cp []string
+	cp = append(cp, h.spaceQueue[:m]...)
 	h.spaceQueue = h.spaceQueue[m:]
 	h.mx.Unlock()
 
