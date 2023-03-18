@@ -1,11 +1,9 @@
 .PHONY: proto build test deps
 export GOPRIVATE=github.com/anytypeio
 export PATH:=deps:$(PATH)
-CGO_ENABLED:=1
-GOOS:=linux
-GOARCH:=amd64
-export GOOS=$(GOOS)
-export GOARCH=$(GOARCH)
+export CGO_ENABLED:=1
+export GOOS:=linux
+export GOARCH:=amd64
 
 ifeq ($(CGO_ENABLED), 0)
 	TAGS:=-tags nographviz
@@ -15,7 +13,7 @@ endif
 
 build:
 	@$(eval FLAGS := $$(shell PATH=$(PATH) govvv -flags -pkg github.com/anytypeio/any-sync/app))
-	CGO_ENABLED=$(CGO_ENABLED) go build -v $(TAGS) -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
+	go build -v $(TAGS) -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
 
 test:
 	go test ./... --cover $(TAGS)
@@ -26,7 +24,7 @@ proto:
 
 deps:
 	go mod download
-	CGO_ENABLED=$(CGO_ENABLED) go build $(TAGS) -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
-	CGO_ENABLED=$(CGO_ENABLED) go build $(TAGS) -o deps/protoc-gen-gogofaster github.com/gogo/protobuf/protoc-gen-gogofaster
-	CGO_ENABLED=$(CGO_ENABLED) go build $(TAGS) -o deps github.com/ahmetb/govvv
+	go build $(TAGS) -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
+	go build $(TAGS) -o deps/protoc-gen-gogofaster github.com/gogo/protobuf/protoc-gen-gogofaster
+	go build $(TAGS) -o deps github.com/ahmetb/govvv
 
