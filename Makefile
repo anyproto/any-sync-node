@@ -4,8 +4,8 @@ export PATH:=deps:$(PATH)
 CGO_ENABLED=1
 GOOS=linux
 GOARCH=amd64
-export GOOS=$(( GOOS ))
-export GOARCH=$(( GOARCH ))
+export GOOS=$((GOOS))
+export GOARCH=$((GOARCH))
 
 ifeq ($(CGO_ENABLED), 0)
 	TAGS:=-tags nographviz
