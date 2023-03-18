@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/any-sync-node/nodespace"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/util/periodicsync"
 	"go.uber.org/zap"
@@ -27,17 +28,20 @@ func New() HotSync {
 }
 
 type hotSync struct {
-	spaceQueue   []string
-	syncQueue    map[string]struct{}
-	idle         time.Duration
-	maxSynced    int
+	spaceQueue       []string
+	syncQueue        map[string]struct{}
+	idle             time.Duration
+	simultaneousSync int
+	maxCacheSize     int
+
 	spaceService nodespace.Service
 	periodicSync periodicsync.PeriodicSync
 	mx           sync.Mutex
 }
 
 func (h *hotSync) Init(a *app.App) (err error) {
-	h.maxSynced = 300
+	h.simultaneousSync = 100
+	h.maxCacheSize = 1000
 	h.idle = time.Second * 10
 	h.syncQueue = map[string]struct{}{}
 	h.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
@@ -77,14 +81,13 @@ func (h *hotSync) UpdateQueue(changedIds []string) {
 
 func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	log.Debug("checking cache", zap.Int("space queue len", len(h.spaceQueue)), zap.Int("sync queue len", len(h.syncQueue)))
-	removed := h.removeIdleSpaces(ctx)
+	removed := h.checkRemoved(ctx)
 	log.Debug("removed inactive", zap.Int("removed", removed))
 	h.mx.Lock()
-	newBatchLen := h.maxSynced - len(h.syncQueue)
-	m := min(newBatchLen, len(h.spaceQueue))
+	newBatchLen := h.batchLen()
 	var cp []string
-	cp = append(cp, h.spaceQueue[:m]...)
-	h.spaceQueue = h.spaceQueue[m:]
+	cp = append(cp, h.spaceQueue[:newBatchLen]...)
+	h.spaceQueue = h.spaceQueue[newBatchLen:]
 	h.mx.Unlock()
 
 	for _, id := range cp {
@@ -97,16 +100,16 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	return nil
 }
 
-func (h *hotSync) removeIdleSpaces(ctx context.Context) (removed int) {
+func (h *hotSync) checkRemoved(ctx context.Context) (removed int) {
 	cache := h.spaceService.Cache()
-	for id := range h.syncQueue {
-		v, err := cache.Pick(ctx, id)
-		if err != nil {
-			continue
-		}
+	allIds := map[string]struct{}{}
+	cache.ForEach(func(v ocache.Object) (isContinue bool) {
 		spc := v.(commonspace.Space)
-		if time.Now().Sub(spc.LastUsage()) >= h.idle {
-			_, _ = cache.Remove(ctx, id)
+		allIds[spc.Id()] = struct{}{}
+		return true
+	})
+	for id := range h.syncQueue {
+		if _, exists := allIds[id]; !exists {
 			removed++
 			delete(h.syncQueue, id)
 		}
@@ -114,8 +117,24 @@ func (h *hotSync) removeIdleSpaces(ctx context.Context) (removed int) {
 	return
 }
 
+func (h *hotSync) batchLen() int {
+	// here taking new batch of simultaneously syncing spaces, but not more than space left
+	cacheLen := h.spaceService.Cache().Len()
+	spaceLeft := max(0, h.maxCacheSize-cacheLen)
+	newBatchLen := h.simultaneousSync - len(h.syncQueue)
+	return min(min(spaceLeft, newBatchLen), len(h.spaceQueue))
+}
+
 func min(x int, y int) int {
 	if x < y {
+		return x
+	} else {
+		return y
+	}
+}
+
+func max(x int, y int) int {
+	if x > y {
 		return x
 	} else {
 		return y
