@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/anytypeio/any-sync-node/nodestorage"
 	"github.com/anytypeio/any-sync-node/nodesync"
+	"github.com/anytypeio/any-sync-node/nodesync/hotsync"
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
@@ -78,4 +79,8 @@ func (c Config) GetNodes() []nodeconf.NodeConfig {
 
 func (c Config) GetNodeSync() nodesync.Config {
 	return c.NodeSync
+}
+
+func (c Config) GetHotSync() hotsync.Config {
+	return c.NodeSync.HotSync
 }

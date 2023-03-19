@@ -8,6 +8,8 @@ import (
 	"github.com/anytypeio/any-sync-node/nodespace/mock_nodespace"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync/mock_coldsync"
+	"github.com/anytypeio/any-sync-node/nodesync/hotsync"
+	"github.com/anytypeio/any-sync-node/nodesync/hotsync/mock_hotsync"
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/ldiff"
@@ -84,9 +86,8 @@ func TestNodeSync_Sync(t *testing.T) {
 		fx1.coldSync.EXPECT().Sync(gomock.Any(), "ld2Only", acc2.Account().PeerId)
 		fx1.nodeHead.EXPECT().ReloadHeadFromStore("ld2Only").Return(nil)
 
-		// hot update for spaceA
-		fx1.nodeSpace.EXPECT().GetSpace(gomock.Any(), "spaceA").Return(nil, nil)
-
+		// hot update for spaceA )
+		fx1.hotSync.EXPECT().UpdateQueue([]string{"spaceA"})
 		assert.NoError(t, fx1.Sync())
 	})
 }
@@ -111,6 +112,7 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 		nodeHead:  mock_nodehead.NewMockNodeHead(ctrl),
 		nodeSpace: mock_nodespace.NewMockService(ctrl),
 		coldSync:  mock_coldsync.NewMockColdSync(ctrl),
+		hotSync:   mock_hotsync.NewMockHotSync(ctrl),
 		a:         new(app.App),
 	}
 
@@ -124,6 +126,12 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 	fx.nodeSpace.EXPECT().Close(gomock.Any()).AnyTimes()
 	fx.coldSync.EXPECT().Name().Return(coldsync.CName).AnyTimes()
 	fx.coldSync.EXPECT().Init(gomock.Any()).AnyTimes()
+	fx.hotSync.EXPECT().Name().Return(hotsync.CName).AnyTimes()
+	fx.hotSync.EXPECT().Init(gomock.Any()).AnyTimes()
+	fx.hotSync.EXPECT().Run(gomock.Any()).AnyTimes()
+	fx.hotSync.EXPECT().Close(gomock.Any()).AnyTimes()
+	fx.hotSync.EXPECT().SetMetric(gomock.Any(), gomock.Any()).AnyTimes()
+	//fx.hotSync.EXPECT().UpdateQueue(gomock.Any()).AnyTimes()
 	fx.tp = rpctest.NewTestPool()
 	fx.ts = rpctest.NewTestServer()
 	fx.a.Register(nodeconf.New()).
@@ -133,6 +141,7 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 		Register(fx.nodeHead).
 		Register(fx.nodeSpace).
 		Register(fx.coldSync).
+		Register(fx.hotSync).
 		Register(fx.tp).
 		Register(fx.ts)
 	require.NoError(t, fx.a.Start(ctx))
@@ -150,6 +159,7 @@ type fixture struct {
 	nodeHead  *mock_nodehead.MockNodeHead
 	nodeSpace *mock_nodespace.MockService
 	coldSync  *mock_coldsync.MockColdSync
+	hotSync   *mock_hotsync.MockHotSync
 	tp        *rpctest.TestPool
 	ts        *rpctest.TesServer
 }

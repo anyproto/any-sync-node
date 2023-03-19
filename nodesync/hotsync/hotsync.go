@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_hotsync/mock_hotsync.go github.com/anytypeio/any-sync-node/nodesync/hotsync HotSync
 package hotsync
 
 import (
@@ -6,33 +7,40 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
-	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/util/periodicsync"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"sync"
-	"time"
+	"sync/atomic"
 )
 
 var log = logger.NewNamed(CName)
 
-const CName = "node.nodesync.hotsync"
+const (
+	defaultSimRequests = 300
+	CName              = "node.nodesync.hotsync"
+)
 
 type HotSync interface {
 	app.ComponentRunnable
 	UpdateQueue(changedIds []string)
+	SetMetric(hit, miss *atomic.Uint32)
 }
 
 func New() HotSync {
 	return new(hotSync)
 }
 
+type idProvider interface {
+	Id() string
+}
+
 type hotSync struct {
 	spaceQueue       []string
 	syncQueue        map[string]struct{}
-	idle             time.Duration
 	simultaneousSync int
-	maxCacheSize     int
+	hit              *atomic.Uint32
+	miss             *atomic.Uint32
 
 	spaceService nodespace.Service
 	periodicSync periodicsync.PeriodicSync
@@ -40,9 +48,10 @@ type hotSync struct {
 }
 
 func (h *hotSync) Init(a *app.App) (err error) {
-	h.simultaneousSync = 100
-	h.maxCacheSize = 1000
-	h.idle = time.Second * 10
+	h.simultaneousSync = a.MustComponent("config").(configGetter).GetHotSync().SimultaneousRequests
+	if h.simultaneousSync == 0 {
+		h.simultaneousSync = defaultSimRequests
+	}
 	h.syncQueue = map[string]struct{}{}
 	h.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	h.periodicSync = periodicsync.NewPeriodicSync(10, 0, h.checkCache, log)
@@ -61,6 +70,10 @@ func (h *hotSync) Run(ctx context.Context) (err error) {
 func (h *hotSync) Close(ctx context.Context) (err error) {
 	h.periodicSync.Close()
 	return
+}
+
+func (h *hotSync) SetMetric(hit, miss *atomic.Uint32) {
+	h.hit, h.miss = hit, miss
 }
 
 func (h *hotSync) UpdateQueue(changedIds []string) {
@@ -89,12 +102,13 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	cp = append(cp, h.spaceQueue[:newBatchLen]...)
 	h.spaceQueue = h.spaceQueue[newBatchLen:]
 	h.mx.Unlock()
-
 	for _, id := range cp {
 		_, err = h.spaceService.GetSpace(ctx, id)
 		if err != nil {
+			h.hit.Add(1)
 			continue
 		}
+		h.miss.Add(1)
 		h.syncQueue[id] = struct{}{}
 	}
 	return nil
@@ -104,7 +118,7 @@ func (h *hotSync) checkRemoved(ctx context.Context) (removed int) {
 	cache := h.spaceService.Cache()
 	allIds := map[string]struct{}{}
 	cache.ForEach(func(v ocache.Object) (isContinue bool) {
-		spc := v.(commonspace.Space)
+		spc := v.(idProvider)
 		allIds[spc.Id()] = struct{}{}
 		return true
 	})
@@ -118,23 +132,12 @@ func (h *hotSync) checkRemoved(ctx context.Context) (removed int) {
 }
 
 func (h *hotSync) batchLen() int {
-	// here taking new batch of simultaneously syncing spaces, but not more than space left
-	cacheLen := h.spaceService.Cache().Len()
-	spaceLeft := max(0, h.maxCacheSize-cacheLen)
 	newBatchLen := h.simultaneousSync - len(h.syncQueue)
-	return min(min(spaceLeft, newBatchLen), len(h.spaceQueue))
+	return min(newBatchLen, len(h.spaceQueue))
 }
 
 func min(x int, y int) int {
 	if x < y {
-		return x
-	} else {
-		return y
-	}
-}
-
-func max(x int, y int) int {
-	if x > y {
 		return x
 	} else {
 		return y

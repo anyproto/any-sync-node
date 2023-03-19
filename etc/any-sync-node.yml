@@ -55,6 +55,8 @@ storage:
 metric:
     addr: ":7001"
 nodeSync:
+  hotSync:
+    simultaneousRequests: 400
   syncOnStart: true
   periodicSyncHours: 2
 log:

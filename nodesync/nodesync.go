@@ -60,6 +60,7 @@ func (n *nodeSync) Init(a *app.App) (err error) {
 	n.pool = a.MustComponent(pool.CName).(pool.Service).NewPool("nodesync")
 	n.conf = a.MustComponent("config").(configGetter).GetNodeSync()
 	n.syncStat = new(SyncStat)
+	n.hotsync.SetMetric(&n.syncStat.HotSyncHandled, &n.syncStat.HotSyncErrors)
 	n.syncCtx, n.syncCtxCancel = context.WithCancel(context.Background())
 	if m := a.Component(metric.CName); m != nil {
 		registerMetric(n.syncStat, m.(metric.Metric).Registry())
@@ -189,8 +190,9 @@ func (n *nodeSync) syncPeer(ctx context.Context, peerId string, partId int) (err
 		}
 		n.syncStat.ColdSyncHandled.Add(1)
 	}
-	n.hotsync.UpdateQueue(changedIds)
-	// TODO: add syncstat n.syncStat.HotSyncErrors.Add(1)
+	if len(changedIds) > 0 {
+		n.hotsync.UpdateQueue(changedIds)
+	}
 	return
 }
 

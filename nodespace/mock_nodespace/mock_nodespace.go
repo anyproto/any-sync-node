@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	app "github.com/anytypeio/any-sync/app"
+	ocache "github.com/anytypeio/any-sync/app/ocache"
 	commonspace "github.com/anytypeio/any-sync/commonspace"
 	streampool "github.com/anytypeio/any-sync/net/streampool"
 	gomock "github.com/golang/mock/gomock"
@@ -35,6 +36,20 @@ func NewMockService(ctrl *gomock.Controller) *MockService {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
+}
+
+// Cache mocks base method.
+func (m *MockService) Cache() ocache.OCache {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Cache")
+	ret0, _ := ret[0].(ocache.OCache)
+	return ret0
+}
+
+// Cache indicates an expected call of Cache.
+func (mr *MockServiceMockRecorder) Cache() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cache", reflect.TypeOf((*MockService)(nil).Cache))
 }
 
 // Close mocks base method.
