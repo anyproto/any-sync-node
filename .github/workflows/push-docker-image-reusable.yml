@@ -31,27 +31,27 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: tags/${{ inputs.release }}
-          file: ${{ env.ARTIFACT_PREFIX }}.tgz
+          file: ${{ env.ARTIFACT_PREFIX }}.linux-amd64.tgz
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download release asset arm64
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: tags/${{ inputs.release }}
-          file: ${{ env.ARTIFACT_PREFIX }}.tgz
+          file: ${{ env.ARTIFACT_PREFIX }}.linux-arm64.tgz
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # тут пока нет отдельной сборки под arm, поэтому просто два раза распаковываем один и тот же архив
       - name: Unpack archive amd64
         run: |
-          tar -zxf ${{ env.ARTIFACT_PREFIX }}.tgz
-          #rm -f ${{ env.ARTIFACT_PREFIX }}.tgz
+          tar -zxf ${{ env.ARTIFACT_PREFIX }}.linux-amd64.tgz
+          rm -f ${{ env.ARTIFACT_PREFIX }}.linux-amd64.tgz
           mv ${{ github.event.repository.name }} ${{ github.event.repository.name }}-amd64
 
       - name: Unpack archive arm64
         run: |
-          tar -zxf ${{ env.ARTIFACT_PREFIX }}.tgz
-          rm -f ${{ env.ARTIFACT_PREFIX }}.tgz
+          tar -zxf ${{ env.ARTIFACT_PREFIX }}.linux-arm64.tgz
+          rm -f ${{ env.ARTIFACT_PREFIX }}.linux-arm64.tgz
           mv ${{ github.event.repository.name }} ${{ github.event.repository.name }}-arm64
 
       - name: Generate Dockerfile
