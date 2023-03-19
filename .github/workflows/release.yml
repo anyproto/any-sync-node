@@ -35,6 +35,11 @@ jobs:
           - linux
         go-version:
           - 1.19
+        include:
+          - arch: amd64
+            rpm_arch: x86_64
+          - arch: arm64
+            rpm_arch: aarch64
     env:
       GOPRIVATE: github.com/anytypeio
     steps:
@@ -88,7 +93,7 @@ jobs:
       - name: create package rpm
         uses: bpicode/github-action-fpm@master
         with:
-          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type rpm --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --architecture ${{ matrix.arch }} --exclude '*/.gitignore' --exclude '*/.git' --input-type dir"
+          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type rpm --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --architecture ${{ matrix.rpm_arch }} --exclude '*/.gitignore' --exclude '*/.git' --input-type dir"
           fpm_args: "./bin"
       # }}
 
@@ -133,7 +138,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.${{ matrix.arch }}.rpm
-          asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.${{ matrix.arch }}.rpm
+          asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.${{ matrix.rpm_arch }}.rpm
+          asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.${{ matrix.rpm_arch }}.rpm
           asset_content_type: application/octet-stream
       # }}
