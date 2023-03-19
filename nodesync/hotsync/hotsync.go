@@ -8,8 +8,8 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/util/periodicsync"
+	"github.com/anytypeio/any-sync/util/slice"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 	"sync"
 	"sync/atomic"
 )
@@ -79,17 +79,8 @@ func (h *hotSync) SetMetric(hit, miss *atomic.Uint32) {
 func (h *hotSync) UpdateQueue(changedIds []string) {
 	h.mx.Lock()
 	defer h.mx.Unlock()
-	slices.Sort(changedIds)
-	for _, id := range h.spaceQueue {
-		if idx, exists := slices.BinarySearch(changedIds, id); exists {
-			changedIds[idx] = ""
-		}
-	}
-	for _, id := range changedIds {
-		if id != "" {
-			h.spaceQueue = append(h.spaceQueue, id)
-		}
-	}
+	added := slice.Difference(changedIds, h.spaceQueue)
+	h.spaceQueue = append(h.spaceQueue, added...)
 }
 
 func (h *hotSync) checkCache(ctx context.Context) (err error) {
