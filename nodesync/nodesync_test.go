@@ -86,7 +86,7 @@ func TestNodeSync_Sync(t *testing.T) {
 		fx1.coldSync.EXPECT().Sync(gomock.Any(), "ld2Only", acc2.Account().PeerId)
 		fx1.nodeHead.EXPECT().ReloadHeadFromStore("ld2Only").Return(nil)
 
-		// hot update for spaceA )
+		// hot update for spaceA
 		fx1.hotSync.EXPECT().UpdateQueue([]string{"spaceA"})
 		assert.NoError(t, fx1.Sync())
 	})
@@ -131,7 +131,6 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 	fx.hotSync.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.hotSync.EXPECT().Close(gomock.Any()).AnyTimes()
 	fx.hotSync.EXPECT().SetMetric(gomock.Any(), gomock.Any()).AnyTimes()
-	//fx.hotSync.EXPECT().UpdateQueue(gomock.Any()).AnyTimes()
 	fx.tp = rpctest.NewTestPool()
 	fx.ts = rpctest.NewTestServer()
 	fx.a.Register(nodeconf.New()).
