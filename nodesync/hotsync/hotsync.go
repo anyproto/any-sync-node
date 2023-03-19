@@ -107,10 +107,10 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	for _, id := range cp {
 		_, err = h.spaceService.GetSpace(ctx, id)
 		if err != nil {
-			h.hit.Add(1)
+			h.miss.Add(1)
 			continue
 		}
-		h.miss.Add(1)
+		h.hit.Add(1)
 		h.syncQueue[id] = struct{}{}
 	}
 	return nil
