@@ -96,12 +96,14 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	log.Debug("checking cache", zap.Int("space queue len", len(h.spaceQueue)), zap.Int("sync queue len", len(h.syncQueue)))
 	removed := h.checkRemoved(ctx)
 	log.Debug("removed inactive", zap.Int("removed", removed))
+
 	h.mx.Lock()
-	newBatchLen := h.batchLen()
+	newBatchLen := min(h.simultaneousSync-len(h.syncQueue), len(h.spaceQueue))
 	var cp []string
 	cp = append(cp, h.spaceQueue[:newBatchLen]...)
 	h.spaceQueue = h.spaceQueue[newBatchLen:]
 	h.mx.Unlock()
+
 	for _, id := range cp {
 		_, err = h.spaceService.GetSpace(ctx, id)
 		if err != nil {
@@ -129,11 +131,6 @@ func (h *hotSync) checkRemoved(ctx context.Context) (removed int) {
 		}
 	}
 	return
-}
-
-func (h *hotSync) batchLen() int {
-	newBatchLen := h.simultaneousSync - len(h.syncQueue)
-	return min(newBatchLen, len(h.spaceQueue))
 }
 
 func min(x int, y int) int {

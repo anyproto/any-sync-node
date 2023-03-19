@@ -89,11 +89,6 @@ func (c *treeCache) DeleteTree(ctx context.Context, spaceId, treeId string) (err
 	return
 }
 
-func (c *treeCache) RemoveTree(ctx context.Context, spaceId, treeId string) error {
-	_, err := c.cache.Remove(ctx, treeId)
-	return err
-}
-
 func (c *treeCache) DeleteSpace(ctx context.Context, spaceId string) error {
 	log.Debug("space deleted", zap.String("spaceId", spaceId))
 	return nil
