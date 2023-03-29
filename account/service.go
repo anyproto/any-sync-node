@@ -5,17 +5,15 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
-	"github.com/anytypeio/any-sync/util/keys"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 )
 
 type service struct {
-	accountData *accountdata.AccountData
+	accountData *accountdata.AccountKeys
 	peerId      string
 }
 
-func (s *service) Account() *accountdata.AccountData {
+func (s *service) Account() *accountdata.AccountKeys {
 	return s.accountData
 }
 
@@ -26,42 +24,21 @@ func New() app.Component {
 func (s *service) Init(a *app.App) (err error) {
 	acc := a.MustComponent(config.CName).(commonaccount.ConfigGetter).GetAccount()
 
-	decodedEncryptionKey, err := keys.DecodeKeyFromString(
-		acc.EncryptionKey,
-		encryptionkey.NewEncryptionRsaPrivKeyFromBytes,
-		nil)
-	if err != nil {
-		return err
-	}
-
-	decodedSigningKey, err := keys.DecodeKeyFromString(
+	decodedSigningKey, err := crypto.DecodeKeyFromString(
 		acc.SigningKey,
-		signingkey.NewSigningEd25519PrivKeyFromBytes,
+		crypto.UnmarshalEd25519PrivateKey,
 		nil)
 	if err != nil {
 		return err
 	}
-
-	decodedPeerKey, err := keys.DecodeKeyFromString(
+	decodedPeerKey, err := crypto.DecodeKeyFromString(
 		acc.PeerKey,
-		signingkey.NewSigningEd25519PrivKeyFromBytes,
+		crypto.UnmarshalEd25519PrivateKey,
 		nil)
 	if err != nil {
 		return err
 	}
-
-	identity, err := decodedSigningKey.GetPublic().Raw()
-	if err != nil {
-		return err
-	}
-
-	s.accountData = &accountdata.AccountData{
-		Identity: identity,
-		PeerKey:  decodedPeerKey,
-		SignKey:  decodedSigningKey,
-		EncKey:   decodedEncryptionKey,
-		PeerId:   acc.PeerId,
-	}
+	s.accountData = accountdata.New(decodedPeerKey, decodedSigningKey)
 
 	return nil
 }
