@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/any-sync v0.0.28
+	github.com/anytypeio/any-sync v0.0.30-0.20230403082128-7258df1c2d6f
 	github.com/anytypeio/go-chash v0.0.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
@@ -33,7 +33,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-graphviz v0.1.0 // indirect
+	github.com/goccy/go-graphviz v0.1.1 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/huandu/skiplist v1.2.0 // indirect
@@ -67,8 +67,8 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	github.com/zeebo/errs v1.3.0 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
-	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
+	golang.org/x/crypto v0.7.0 // indirect
+	golang.org/x/image v0.6.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect

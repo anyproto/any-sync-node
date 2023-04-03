@@ -38,7 +38,7 @@ func (s *service) Init(a *app.App) (err error) {
 	if err != nil {
 		return err
 	}
-	s.accountData = accountdata.New(decodedPeerKey, decodedSigningKey)
+	s.accountData = accountdata.New(decodedPeerKey, decodedSigningKey, nil)
 
 	return nil
 }
