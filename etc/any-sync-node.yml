@@ -46,7 +46,7 @@ network:
       types:
         - file
   creationTime: 2023-04-13T20:29:23.453806629+02:00
-networkStorePath: /
+networkStorePath: .
 space:
     gcTTL: 60
     syncPeriod: 240
