@@ -204,7 +204,7 @@ func (n *nodeSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 }
 
 func (n *nodeSync) getRelatePartitions() (parts []part, err error) {
-	ch := n.nodeconf.GetLast().CHash()
+	ch := n.nodeconf.CHash()
 	for i := 0; i < ch.PartitionCount(); i++ {
 		memb, e := ch.GetPartitionMembers(i)
 		if e != nil {

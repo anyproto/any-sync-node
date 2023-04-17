@@ -25,7 +25,7 @@ type nodePeerManager struct {
 }
 
 func (n *nodePeerManager) init() {
-	nodeIds := n.p.nodeconf.GetLast().NodeIds(n.spaceId)
+	nodeIds := n.p.nodeconf.NodeIds(n.spaceId)
 	for _, peerId := range nodeIds {
 		n.responsiblePeers = append(n.responsiblePeers, responsiblePeer{peerId: peerId})
 	}

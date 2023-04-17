@@ -109,7 +109,7 @@ func (s *service) DeleteSpace(ctx context.Context, spaceId, changeId string, cha
 	if err != nil {
 		return
 	}
-	if !slices.Contains(s.confService.GetLast().CoordinatorPeers(), peerId) {
+	if !slices.Contains(s.confService.CoordinatorPeers(), peerId) {
 		err = nodesyncproto.ErrExpectedCoordinator
 		return
 	}

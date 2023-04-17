@@ -9,10 +9,13 @@ import (
 	"github.com/anytypeio/any-sync-node/nodesync"
 	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
 	"github.com/anytypeio/any-sync-node/nodesync/hotsync"
+	"github.com/anytypeio/any-sync/coordinator/coordinatorclient"
+	"github.com/anytypeio/any-sync/coordinator/nodeconfsource"
 	"github.com/anytypeio/any-sync/net/dialer"
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/net/streampool"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anytypeio/any-sync/nodeconf/nodeconfstore"
 
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
@@ -102,6 +105,9 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
+		Register(coordinatorclient.New()).
+		Register(nodeconfstore.New()).
+		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
 		Register(dialer.New()).
 		Register(pool.New()).

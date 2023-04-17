@@ -44,13 +44,13 @@ type NodeHead interface {
 type nodeHead struct {
 	mu         sync.Mutex
 	partitions map[int]ldiff.Diff
-	nodeconf   nodeconf.Configuration
+	nodeconf   nodeconf.NodeConf
 	spaceStore nodestorage.NodeStorage
 }
 
 func (n *nodeHead) Init(a *app.App) (err error) {
 	n.partitions = map[int]ldiff.Diff{}
-	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service).GetLast()
+	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	n.spaceStore = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
 		if _, e := n.SetHead(spaceId, hash); e != nil {

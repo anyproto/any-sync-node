@@ -81,13 +81,12 @@ func (r *rpcHandler) ForceNodeSync(ctx context.Context, request *nodedebugrpcpro
 }
 
 func (r *rpcHandler) NodesAddressesBySpace(ctx context.Context, request *nodedebugrpcproto.NodesAddressesBySpaceRequest) (resp *nodedebugrpcproto.NodesAddressesBySpaceResponse, err error) {
-	lastConf := r.s.nodeConf.GetLast()
+	lastConf := r.s.nodeConf
 	nodeIds := lastConf.NodeIds(request.SpaceId)
 
 	var respAddresses []string
-	peerAddresses := lastConf.Addresses()
-	for _, value := range nodeIds {
-		nodeAddresses := peerAddresses[value]
+	for _, nodeId := range nodeIds {
+		nodeAddresses, _ := lastConf.PeerAddresses(nodeId)
 
 		for _, nodeAddress := range nodeAddresses {
 			respAddresses = append(respAddresses, nodeAddress)

@@ -30,15 +30,16 @@ func NewFromFile(path string) (c *Config, err error) {
 }
 
 type Config struct {
-	GrpcServer net.Config            `yaml:"grpcServer"`
-	Account    commonaccount.Config  `yaml:"account"`
-	APIServer  net.Config            `yaml:"apiServer"`
-	Nodes      []nodeconf.NodeConfig `yaml:"nodes"`
-	Space      commonspace.Config    `yaml:"space"`
-	Storage    nodestorage.Config    `yaml:"storage"`
-	Metric     metric.Config         `yaml:"metric"`
-	Log        logger.Config         `yaml:"log"`
-	NodeSync   nodesync.Config       `yaml:"nodeSync"`
+	GrpcServer       net.Config             `yaml:"grpcServer"`
+	Account          commonaccount.Config   `yaml:"account"`
+	APIServer        net.Config             `yaml:"apiServer"`
+	Network          nodeconf.Configuration `yaml:"network"`
+	NetworkStorePath string                 `yaml:"networkStorePath"`
+	Space            commonspace.Config     `yaml:"space"`
+	Storage          nodestorage.Config     `yaml:"storage"`
+	Metric           metric.Config          `yaml:"metric"`
+	Log              logger.Config          `yaml:"log"`
+	NodeSync         nodesync.Config        `yaml:"nodeSync"`
 }
 
 func (c Config) Init(a *app.App) (err error) {
@@ -73,8 +74,12 @@ func (c Config) GetStorage() nodestorage.Config {
 	return c.Storage
 }
 
-func (c Config) GetNodes() []nodeconf.NodeConfig {
-	return c.Nodes
+func (c Config) GetNodeConf() nodeconf.Configuration {
+	return c.Network
+}
+
+func (c Config) GetNodeConfStorePath() string {
+	return c.NetworkStorePath
 }
 
 func (c Config) GetNodeSync() nodesync.Config {
