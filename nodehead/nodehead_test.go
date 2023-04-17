@@ -11,7 +11,10 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anytypeio/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anytypeio/any-sync/testutil/testnodeconf"
+	"github.com/anytypeio/go-chash"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math"
@@ -106,15 +109,33 @@ func newFixture(t *testing.T, dataPath string) *fixture {
 		tmpDir, err = os.MkdirTemp("", "")
 		require.NoError(t, err)
 	}
+	ctrl := gomock.NewController(t)
 	fx := &fixture{
 		NodeHead:      New(),
 		a:             new(app.App),
 		dataPath:      tmpDir,
 		forceDataPath: dataPath != "",
+		nodeConf:      mock_nodeconf.NewMockService(ctrl),
+		ctrl:          ctrl,
 	}
 	confServ := testnodeconf.GenNodeConfig(3)
+	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	fx.nodeConf.EXPECT().Init(fx.a).AnyTimes()
+	fx.nodeConf.EXPECT().Run(ctx).AnyTimes()
+	fx.nodeConf.EXPECT().Close(ctx).AnyTimes()
+	ch, _ := chash.New(chash.Config{
+		PartitionCount:    3000,
+		ReplicationFactor: 3,
+	})
+	for _, n := range confServ.GetNodeConf().Nodes {
+		require.NoError(t, ch.AddMembers(member{n.PeerId}))
+	}
+	fx.nodeConf.EXPECT().Partition(gomock.Any()).DoAndReturn(func(spaceId string) int {
+		return ch.GetPartition(nodeconf.ReplKey(spaceId))
+	}).AnyTimes()
+
 	fx.a.Register(&config{Config: confServ, dataPath: tmpDir}).
-		Register(nodeconf.New()).
+		Register(fx.nodeConf).
 		Register(confServ.GetAccountService(0)).
 		Register(nodestorage.New()).
 		Register(fx.NodeHead)
@@ -128,6 +149,8 @@ type fixture struct {
 	a             *app.App
 	dataPath      string
 	forceDataPath bool
+	ctrl          *gomock.Controller
+	nodeConf      *mock_nodeconf.MockService
 }
 
 func (fx *fixture) Finish(t *testing.T) {
@@ -166,4 +189,16 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 		SpaceHeaderWithId:   header,
 		SpaceSettingsWithId: settings,
 	}
+}
+
+type member struct {
+	id string
+}
+
+func (m member) Id() string {
+	return m.id
+}
+
+func (m member) Capacity() float64 {
+	return 1
 }

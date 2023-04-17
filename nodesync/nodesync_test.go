@@ -15,7 +15,9 @@ import (
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/net/rpc/rpctest"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anytypeio/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anytypeio/any-sync/testutil/testnodeconf"
+	"github.com/anytypeio/go-chash"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,6 +115,7 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 		nodeSpace: mock_nodespace.NewMockService(ctrl),
 		coldSync:  mock_coldsync.NewMockColdSync(ctrl),
 		hotSync:   mock_hotsync.NewMockHotSync(ctrl),
+		nodeConf:  mock_nodeconf.NewMockService(ctrl),
 		a:         new(app.App),
 	}
 
@@ -120,20 +123,37 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 	fx.nodeHead.EXPECT().Init(gomock.Any()).AnyTimes()
 	fx.nodeHead.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.nodeHead.EXPECT().Close(gomock.Any()).AnyTimes()
+
 	fx.nodeSpace.EXPECT().Name().Return(nodespace.CName).AnyTimes()
 	fx.nodeSpace.EXPECT().Init(gomock.Any()).AnyTimes()
 	fx.nodeSpace.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.nodeSpace.EXPECT().Close(gomock.Any()).AnyTimes()
+
 	fx.coldSync.EXPECT().Name().Return(coldsync.CName).AnyTimes()
 	fx.coldSync.EXPECT().Init(gomock.Any()).AnyTimes()
+
 	fx.hotSync.EXPECT().Name().Return(hotsync.CName).AnyTimes()
 	fx.hotSync.EXPECT().Init(gomock.Any()).AnyTimes()
 	fx.hotSync.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.hotSync.EXPECT().Close(gomock.Any()).AnyTimes()
 	fx.hotSync.EXPECT().SetMetric(gomock.Any(), gomock.Any()).AnyTimes()
+
+	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	fx.nodeConf.EXPECT().Init(fx.a).AnyTimes()
+	fx.nodeConf.EXPECT().Run(ctx).AnyTimes()
+	fx.nodeConf.EXPECT().Close(ctx).AnyTimes()
+	ch, _ := chash.New(chash.Config{
+		PartitionCount:    3000,
+		ReplicationFactor: 3,
+	})
+	for _, n := range confServ.GetNodeConf().Nodes {
+		require.NoError(t, ch.AddMembers(member{n.PeerId}))
+	}
+	fx.nodeConf.EXPECT().CHash().AnyTimes().Return(ch)
+
 	fx.tp = rpctest.NewTestPool()
 	fx.ts = rpctest.NewTestServer()
-	fx.a.Register(nodeconf.New()).
+	fx.a.Register(fx.nodeConf).
 		Register(accServ).
 		Register(&config{Config: confServ}).
 		Register(fx.NodeSync).
@@ -159,6 +179,7 @@ type fixture struct {
 	nodeSpace *mock_nodespace.MockService
 	coldSync  *mock_coldsync.MockColdSync
 	hotSync   *mock_hotsync.MockHotSync
+	nodeConf  *mock_nodeconf.MockService
 	tp        *rpctest.TestPool
 	ts        *rpctest.TesServer
 }
@@ -175,4 +196,16 @@ func (c config) GetNodeSync() Config {
 	return Config{
 		SyncOnStart: false,
 	}
+}
+
+type member struct {
+	id string
+}
+
+func (m member) Id() string {
+	return m.id
+}
+
+func (m member) Capacity() float64 {
+	return 1
 }
