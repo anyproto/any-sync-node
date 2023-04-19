@@ -9,7 +9,7 @@ import (
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/metric"
 	"go.uber.org/zap"
 	"time"
@@ -28,7 +28,7 @@ type treeCache struct {
 	nodeService nodespace.Service
 }
 
-func New(ttl int) treegetter.TreeGetter {
+func New(ttl int) treemanager.TreeManager {
 	return &treeCache{
 		gcttl: ttl,
 	}
@@ -62,7 +62,7 @@ func (c *treeCache) Init(a *app.App) (err error) {
 }
 
 func (c *treeCache) Name() (name string) {
-	return treegetter.CName
+	return treemanager.CName
 }
 
 func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr objecttree.ObjectTree, err error) {

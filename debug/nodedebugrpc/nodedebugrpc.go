@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/any-sync-node/nodesync"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/rpc/server"
@@ -37,7 +37,7 @@ type NodeDebugRpc interface {
 type nodeDebugRpc struct {
 	transport      secureservice.SecureService
 	cfg            net.Config
-	treeCache      treegetter.TreeGetter
+	treeCache      treemanager.TreeManager
 	spaceService   nodespace.Service
 	storageService nodestorage.NodeStorage
 	nodeSync       nodesync.NodeSync
@@ -46,7 +46,7 @@ type nodeDebugRpc struct {
 }
 
 func (s *nodeDebugRpc) Init(a *app.App) (err error) {
-	s.treeCache = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
+	s.treeCache = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	s.storageService = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	s.cfg = a.MustComponent("config").(configGetter).GetDebugNet()

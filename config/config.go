@@ -67,6 +67,7 @@ func (c Config) GetMetric() metric.Config {
 }
 
 func (c Config) GetSpace() commonspace.Config {
+	c.Space.TreeInMemoryData = true
 	return c.Space
 }
 
