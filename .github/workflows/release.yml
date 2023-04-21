@@ -24,6 +24,7 @@ jobs:
           draft: false
           prerelease: false
   build:
+    name: build release
     runs-on: ubuntu-22.04
     needs: create_release
     strategy:
