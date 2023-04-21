@@ -6,6 +6,6 @@ name: push-docker-image-release
 
 jobs:
   push-docker-image-release:
-    uses: anytypeio/any-sync-node/.github/workflows/push-docker-image-reusable.yml@main
+    uses: anytypeio/any-sync-node/.github/workflows/push-docker-image-reusable.yml@ci
     with:
       release: ${{ github.event.release.tag_name }}
