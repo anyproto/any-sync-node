@@ -16,9 +16,8 @@ import (
 )
 
 var (
-	defPogrebOptions    = &pogreb.Options{BackgroundCompactionInterval: time.Minute * 5}
-	log                 = logger.NewNamed("storage.spacestorage")
-	spaceValidationFunc = spacestorage.ValidateSpaceStorageCreatePayload
+	defPogrebOptions = &pogreb.Options{BackgroundCompactionInterval: time.Minute * 5}
+	log              = logger.NewNamed("storage.spacestorage")
 )
 
 type spaceStorage struct {
@@ -120,10 +119,6 @@ func createSpaceStorage(s *storageService, payload spacestorage.SpaceStorageCrea
 	}
 	if has {
 		err = spacestorage.ErrSpaceStorageExists
-		return
-	}
-	err = spaceValidationFunc(payload)
-	if err != nil {
 		return
 	}
 
