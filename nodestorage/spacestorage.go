@@ -181,6 +181,15 @@ func (s *spaceStorage) IsSpaceDeleted() (bool, error) {
 	return res != nil, err
 }
 
+func (s *spaceStorage) HasTree(id string) (bool, error) {
+	keys := newTreeKeys(id)
+	heads, err := s.objDb.Get(keys.HeadsKey())
+	if err != nil {
+		return false, err
+	}
+	return heads != nil, nil
+}
+
 func (s *spaceStorage) Id() string {
 	return s.spaceId
 }
