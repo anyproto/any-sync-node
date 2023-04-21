@@ -57,13 +57,11 @@ jobs:
           # syntax=docker/dockerfile:1
           FROM ubuntu:23.04
           ARG TARGETARCH
-          COPY ${{ github.event.repository.name }}-\$TARGETARCH ${{ github.event.repository.name }}
           COPY ${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb .
           RUN apt-get install -y ./${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb
           EXPOSE 443
           EXPOSE 8000
           EXPOSE 8080
-          #CMD ["./${{ github.event.repository.name }} -c /etc/${{ github.event.repository.name }}/config.yml"]
           EOF
 
       - name: Debug
