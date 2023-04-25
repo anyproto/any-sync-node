@@ -74,7 +74,7 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 		log.Debug("space validation failed", zap.Error(err))
 		return nil, spacesyncproto.ErrReceiptInvalid
 	}
-	err = coordinatorproto.CheckReceipt(peerId, spaceId, accountMarshalled, r.s.confService.CoordinatorPeers(), receipt)
+	err = coordinatorproto.CheckReceipt(peerId, spaceId, accountMarshalled, r.s.confService.Configuration().NetworkId, receipt)
 	if err != nil {
 		log.Debug("space validation failed", zap.Error(err))
 		return nil, spacesyncproto.ErrReceiptInvalid
