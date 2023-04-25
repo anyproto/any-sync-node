@@ -13,8 +13,7 @@ import (
 )
 
 type rpcHandler struct {
-	s             *service
-	coordinatorId string
+	s *service
 }
 
 func (r *rpcHandler) SpacePull(ctx context.Context, request *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
