@@ -58,7 +58,7 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 	if err != nil {
 		return
 	}
-	spaceId := req.GetPayload().GetSpaceHeader().GetId()
+	spaceId := req.Payload.GetSpaceHeader().GetId()
 	log := log.With(zap.String("spaceId", spaceId), zap.String("accountId", accountIdentity.Account()))
 	// checking if the node is responsible for the space and the client is pushing
 	err = checkResponsible(ctx, r.s.confService, spaceId)
@@ -87,11 +87,11 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 		return nil, spacesyncproto.ErrReceiptInvalid
 	}
 	description := commonspace.SpaceDescription{
-		SpaceHeader:          req.GetPayload().GetSpaceHeader(),
-		AclId:                req.GetPayload().GetAclPayloadId(),
-		AclPayload:           req.GetPayload().GetAclPayload(),
-		SpaceSettingsPayload: req.GetPayload().GetSpaceSettingsPayload(),
-		SpaceSettingsId:      req.GetPayload().GetSpaceSettingsPayloadId(),
+		SpaceHeader:          req.Payload.GetSpaceHeader(),
+		AclId:                req.Payload.GetAclPayloadId(),
+		AclPayload:           req.Payload.GetAclPayload(),
+		SpaceSettingsPayload: req.Payload.GetSpaceSettingsPayload(),
+		SpaceSettingsId:      req.Payload.GetSpaceSettingsPayloadId(),
 	}
 	ctx = context.WithValue(ctx, commonspace.AddSpaceCtxKey, description)
 	// calling GetSpace to add space inside the cache, so we this action would be synchronised
