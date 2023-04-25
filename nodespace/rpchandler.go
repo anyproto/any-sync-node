@@ -5,16 +5,29 @@ import (
 	"encoding/hex"
 	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"math"
 )
 
 type rpcHandler struct {
-	s *service
+	s             *service
+	coordinatorId string
 }
 
 func (r *rpcHandler) SpacePull(ctx context.Context, request *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
+	accountIdentity, err := peer.CtxPubKey(ctx)
+	if err != nil {
+		return
+	}
+	log := log.With(zap.String("spaceId", request.Id), zap.String("accountId", accountIdentity.Account()))
+	err = checkResponsible(ctx, r.s.confService, request.Id)
+	if err != nil {
+		log.Debug("space requested from not responsible peer", zap.Error(err))
+		return nil, spacesyncproto.ErrPeerIsNotResponsible
+	}
 	sp, err := r.s.GetSpace(ctx, request.Id)
 	if err != nil {
 		if err != spacesyncproto.ErrSpaceMissing {
@@ -42,12 +55,42 @@ func (r *rpcHandler) SpacePull(ctx context.Context, request *spacesyncproto.Spac
 }
 
 func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePushRequest) (resp *spacesyncproto.SpacePushResponse, err error) {
+	accountIdentity, err := peer.CtxPubKey(ctx)
+	if err != nil {
+		return
+	}
+	accountMarshalled, err := peer.CtxIdentity(ctx)
+	if err != nil {
+		return
+	}
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return
+	}
+	spaceId := req.GetPayload().GetSpaceHeader().GetId()
+	log := log.With(zap.String("spaceId", spaceId), zap.String("accountId", accountIdentity.Account()))
+	receipt := &coordinatorproto.SpaceReceiptWithSignature{}
+	err = proto.Unmarshal(req.Credential, receipt)
+	if err != nil {
+		log.Debug("space validation failed", zap.Error(err))
+		return nil, spacesyncproto.ErrReceiptInvalid
+	}
+	err = coordinatorproto.CheckReceipt(peerId, spaceId, accountMarshalled, r.s.confService.CoordinatorPeers(), receipt)
+	if err != nil {
+		log.Debug("space validation failed", zap.Error(err))
+		return nil, spacesyncproto.ErrReceiptInvalid
+	}
+	err = checkResponsible(ctx, r.s.confService, spaceId)
+	if err != nil {
+		log.Debug("space sent to not responsible peer", zap.Error(err))
+		return nil, spacesyncproto.ErrPeerIsNotResponsible
+	}
 	description := commonspace.SpaceDescription{
-		SpaceHeader:          req.Payload.SpaceHeader,
-		AclId:                req.Payload.AclPayloadId,
-		AclPayload:           req.Payload.AclPayload,
-		SpaceSettingsPayload: req.Payload.SpaceSettingsPayload,
-		SpaceSettingsId:      req.Payload.SpaceSettingsPayloadId,
+		SpaceHeader:          req.GetPayload().GetSpaceHeader(),
+		AclId:                req.GetPayload().GetAclPayloadId(),
+		AclPayload:           req.GetPayload().GetAclPayload(),
+		SpaceSettingsPayload: req.GetPayload().GetSpaceSettingsPayload(),
+		SpaceSettingsId:      req.GetPayload().GetSpaceSettingsPayloadId(),
 	}
 	ctx = context.WithValue(ctx, commonspace.AddSpaceCtxKey, description)
 	_, err = r.s.GetSpace(ctx, description.SpaceHeader.GetId())
@@ -59,6 +102,18 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 }
 
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	accountIdentity, err := peer.CtxPubKey(ctx)
+	if err != nil {
+		return
+	}
+	err = checkResponsible(ctx, r.s.confService, req.SpaceId)
+	if err != nil {
+		log.Debug("head sync sent to not responsible peer",
+			zap.Error(err),
+			zap.String("spaceId", req.SpaceId),
+			zap.String("accountId", accountIdentity.Account()))
+		return nil, spacesyncproto.ErrPeerIsNotResponsible
+	}
 	if resp = r.tryStoreHeadSync(req); resp != nil {
 		return
 	}
