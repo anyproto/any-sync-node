@@ -58,6 +58,14 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 	if err != nil {
 		return
 	}
+	spaceId := req.GetPayload().GetSpaceHeader().GetId()
+	log := log.With(zap.String("spaceId", spaceId), zap.String("accountId", accountIdentity.Account()))
+	// checking if the node is responsible for the space and the client is pushing
+	err = checkResponsible(ctx, r.s.confService, spaceId)
+	if err != nil {
+		log.Debug("space sent to not responsible peer", zap.Error(err))
+		return nil, spacesyncproto.ErrPeerIsNotResponsible
+	}
 	accountMarshalled, err := peer.CtxIdentity(ctx)
 	if err != nil {
 		return
@@ -66,23 +74,17 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 	if err != nil {
 		return
 	}
-	spaceId := req.GetPayload().GetSpaceHeader().GetId()
-	log := log.With(zap.String("spaceId", spaceId), zap.String("accountId", accountIdentity.Account()))
 	receipt := &coordinatorproto.SpaceReceiptWithSignature{}
 	err = proto.Unmarshal(req.Credential, receipt)
 	if err != nil {
 		log.Debug("space validation failed", zap.Error(err))
 		return nil, spacesyncproto.ErrReceiptInvalid
 	}
+	// checking if the receipt is valid and properly signed
 	err = coordinatorproto.CheckReceipt(peerId, spaceId, accountMarshalled, r.s.confService.Configuration().NetworkId, receipt)
 	if err != nil {
 		log.Debug("space validation failed", zap.Error(err))
 		return nil, spacesyncproto.ErrReceiptInvalid
-	}
-	err = checkResponsible(ctx, r.s.confService, spaceId)
-	if err != nil {
-		log.Debug("space sent to not responsible peer", zap.Error(err))
-		return nil, spacesyncproto.ErrPeerIsNotResponsible
 	}
 	description := commonspace.SpaceDescription{
 		SpaceHeader:          req.GetPayload().GetSpaceHeader(),
@@ -92,6 +94,7 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 		SpaceSettingsId:      req.GetPayload().GetSpaceSettingsPayloadId(),
 	}
 	ctx = context.WithValue(ctx, commonspace.AddSpaceCtxKey, description)
+	// calling GetSpace to add space inside the cache, so we this action would be synchronised
 	_, err = r.s.GetSpace(ctx, description.SpaceHeader.GetId())
 	if err != nil {
 		return
