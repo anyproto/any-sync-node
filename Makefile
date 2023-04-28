@@ -2,8 +2,8 @@
 export GOPRIVATE=github.com/anytypeio
 export PATH:=deps:$(PATH)
 export CGO_ENABLED:=1
-export GOOS:=linux
-export GOARCH:=amd64
+export GOOS:=$( shell go env GOOS )
+export GOARCH:=$( shell go env GOARCH )
 
 ifeq ($(CGO_ENABLED), 0)
 	TAGS:=-tags nographviz
