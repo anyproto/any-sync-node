@@ -38,6 +38,10 @@ func (s *streamHandler) HandleMessage(ctx context.Context, peerId string, msg dr
 		err = errUnexpectedMessage
 		return
 	}
+	ctx = peer.CtxWithPeerId(ctx, peerId)
+	if syncMsg.SpaceId == "" {
+		return s.s.HandleMessage(ctx, peerId, syncMsg)
+	}
 	err = checkResponsible(ctx, s.s.confService, syncMsg.SpaceId)
 	if err != nil {
 		log.Debug("message sent to not responsible peer",
@@ -45,10 +49,6 @@ func (s *streamHandler) HandleMessage(ctx context.Context, peerId string, msg dr
 			zap.String("spaceId", syncMsg.SpaceId),
 			zap.String("peerId", peerId))
 		return spacesyncproto.ErrPeerIsNotResponsible
-	}
-	ctx = peer.CtxWithPeerId(ctx, peerId)
-	if syncMsg.SpaceId == "" {
-		return s.s.HandleMessage(ctx, peerId, syncMsg)
 	}
 
 	space, err := s.s.GetSpace(ctx, syncMsg.SpaceId)
