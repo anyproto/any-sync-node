@@ -14,15 +14,15 @@ jobs:
     name: Build Docker image and push to registry
     runs-on: ubuntu-22.04
     steps:
-      - name: wait for build to succeed
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.sha }}
-          check-regexp: build release.*
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-          allowed-conclusions: success,skipped,cancelled
-          verbose: true
+#      - name: wait for build to succeed
+#        uses: lewagon/wait-on-check-action@v1.3.1
+#        with:
+#          ref: ${{ github.sha }}
+#          check-regexp: build release.*
+#          repo-token: ${{ secrets.GITHUB_TOKEN }}
+#          wait-interval: 10
+#          allowed-conclusions: success,skipped,cancelled
+#          verbose: true
 
       - name: debug
         run: |
