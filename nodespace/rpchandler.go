@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
-	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 	"math"
 )
 
@@ -66,25 +66,16 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 		log.Debug("space sent to not responsible peer", zap.Error(err))
 		return nil, spacesyncproto.ErrPeerIsNotResponsible
 	}
-	accountMarshalled, err := peer.CtxIdentity(ctx)
-	if err != nil {
-		return
-	}
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {
 		return
 	}
-	receipt := &coordinatorproto.SpaceReceiptWithSignature{}
-	err = proto.Unmarshal(req.Credential, receipt)
-	if err != nil {
-		log.Debug("space validation failed", zap.Error(err))
-		return nil, spacesyncproto.ErrReceiptInvalid
-	}
-	// checking if the receipt is valid and properly signed
-	err = coordinatorproto.CheckReceipt(peerId, spaceId, accountMarshalled, r.s.confService.Configuration().NetworkId, receipt)
-	if err != nil {
-		log.Debug("space validation failed", zap.Error(err))
-		return nil, spacesyncproto.ErrReceiptInvalid
+
+	if !slices.Contains(r.s.confService.NodeTypes(peerId), nodeconf.NodeTypeTree) {
+		// check receipt only for client request
+		if err = checkReceipt(ctx, r.s.confService, spaceId, req.Credential); err != nil {
+			return nil, err
+		}
 	}
 	description := commonspace.SpaceDescription{
 		SpaceHeader:          req.Payload.GetSpaceHeader(),

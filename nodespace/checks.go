@@ -3,8 +3,11 @@ package nodespace
 import (
 	"context"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 )
 
 // checkResponsible returns err if we are connecting with client, and we are not responsible for the space
@@ -18,4 +21,28 @@ func checkResponsible(ctx context.Context, confService nodeconf.Service, spaceId
 		return spacesyncproto.ErrPeerIsNotResponsible
 	}
 	return
+}
+
+func checkReceipt(ctx context.Context, confService nodeconf.Service, spaceId string, credential []byte) (err error) {
+	accountMarshalled, err := peer.CtxIdentity(ctx)
+	if err != nil {
+		return
+	}
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return
+	}
+	receipt := &coordinatorproto.SpaceReceiptWithSignature{}
+	err = proto.Unmarshal(credential, receipt)
+	if err != nil {
+		log.Debug("space validation failed", zap.Error(err))
+		return spacesyncproto.ErrReceiptInvalid
+	}
+	// checking if the receipt is valid and properly signed
+	err = coordinatorproto.CheckReceipt(peerId, spaceId, accountMarshalled, confService.Configuration().NetworkId, receipt)
+	if err != nil {
+		log.Debug("space validation failed", zap.Error(err))
+		return spacesyncproto.ErrReceiptInvalid
+	}
+	return nil
 }
