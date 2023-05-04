@@ -5,29 +5,40 @@ import (
 	"encoding/hex"
 	"github.com/anytypeio/any-sync/commonspace"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"math"
+	"time"
 )
 
 type rpcHandler struct {
 	s *service
 }
 
-func (r *rpcHandler) SpacePull(ctx context.Context, request *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
+func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.spacePull",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(req.Id),
+			zap.Error(err),
+		)
+	}()
 	accountIdentity, err := peer.CtxPubKey(ctx)
 	if err != nil {
 		return
 	}
-	log := log.With(zap.String("spaceId", request.Id), zap.String("accountId", accountIdentity.Account()))
-	err = checkResponsible(ctx, r.s.confService, request.Id)
+	log := log.With(zap.String("spaceId", req.Id), zap.String("accountId", accountIdentity.Account()))
+	err = checkResponsible(ctx, r.s.confService, req.Id)
 	if err != nil {
 		log.Debug("space requested from not responsible peer", zap.Error(err))
-		return nil, spacesyncproto.ErrPeerIsNotResponsible
+		err = spacesyncproto.ErrPeerIsNotResponsible
+		return nil, err
 	}
-	sp, err := r.s.GetSpace(ctx, request.Id)
+	sp, err := r.s.GetSpace(ctx, req.Id)
 	if err != nil {
 		if err != spacesyncproto.ErrSpaceMissing {
 			err = spacesyncproto.ErrUnexpected
@@ -54,17 +65,36 @@ func (r *rpcHandler) SpacePull(ctx context.Context, request *spacesyncproto.Spac
 }
 
 func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePushRequest) (resp *spacesyncproto.SpacePushResponse, err error) {
+	var spaceId string
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.spacePush",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(spaceId),
+			zap.Error(err),
+		)
+	}()
+	if req.Payload != nil {
+		spaceId = req.Payload.GetSpaceHeader().GetId()
+	}
+
+	if spaceId == "" {
+		err = spacesyncproto.ErrUnexpected
+		return
+	}
+
 	accountIdentity, err := peer.CtxPubKey(ctx)
 	if err != nil {
 		return
 	}
-	spaceId := req.Payload.GetSpaceHeader().GetId()
+
 	log := log.With(zap.String("spaceId", spaceId), zap.String("accountId", accountIdentity.Account()))
 	// checking if the node is responsible for the space and the client is pushing
 	err = checkResponsible(ctx, r.s.confService, spaceId)
 	if err != nil {
 		log.Debug("space sent to not responsible peer", zap.Error(err))
-		return nil, spacesyncproto.ErrPeerIsNotResponsible
+		err = spacesyncproto.ErrPeerIsNotResponsible
+		return nil, err
 	}
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {
@@ -95,6 +125,14 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 }
 
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.headSync",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(req.SpaceId),
+			zap.Error(err),
+		)
+	}()
 	accountIdentity, err := peer.CtxPubKey(ctx)
 	if err != nil {
 		return
@@ -144,14 +182,11 @@ func (r *rpcHandler) tryStoreHeadSync(req *spacesyncproto.HeadSyncRequest) (resp
 }
 
 func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) (err error) {
-	peerId, err := peer.CtxPeerId(stream.Context())
 	defer func() {
-		log.Debug("incoming stream error", zap.Error(err), zap.String("peerId", peerId))
+		log.DebugCtx(stream.Context(), "incoming stream error")
 	}()
 
-	if err != nil {
-		return err
-	}
-	log.Debug("open incoming stream", zap.String("peerId", peerId))
-	return r.s.streamPool.ReadStream(peerId, stream)
+	log.DebugCtx(stream.Context(), "open incoming stream")
+	err = r.s.streamPool.ReadStream(stream)
+	return
 }

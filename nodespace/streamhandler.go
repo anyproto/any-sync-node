@@ -24,6 +24,7 @@ type streamHandler struct {
 
 func (s *streamHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
 	log.DebugCtx(ctx, "open outgoing stream", zap.String("peerId", p.Id()))
+	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	if stream, err = spacesyncproto.NewDRPCSpaceSyncClient(p).ObjectSyncStream(ctx); err != nil {
 		log.WarnCtx(ctx, "open outgoing stream error", zap.String("peerId", p.Id()), zap.Error(err))
 		return
@@ -60,6 +61,7 @@ func (s *streamHandler) HandleMessage(ctx context.Context, peerId string, msg dr
 		Deadline: time.Now().Add(time.Minute),
 		SenderId: peerId,
 		Message:  syncMsg,
+		PeerCtx:  ctx,
 	})
 	return
 }

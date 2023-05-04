@@ -47,6 +47,7 @@ type service struct {
 	spaceStorageProvider nodestorage.NodeStorage
 	streamPool           streampool.StreamPool
 	nodeHead             nodehead.NodeHead
+	metric               metric.Metric
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -68,6 +69,7 @@ func (s *service) Init(a *app.App) (err error) {
 		ocache.WithTTL(time.Duration(s.conf.GCTTL)*time.Second),
 		ocache.WithPrometheus(a.MustComponent(metric.CName).(metric.Metric).Registry(), "space", "cache"),
 	)
+	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	return spacesyncproto.DRPCRegisterSpaceSync(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s})
 }
 
