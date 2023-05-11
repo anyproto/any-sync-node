@@ -5,19 +5,19 @@ go 1.19
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anytypeio/any-sync v0.0.43
+	github.com/anytypeio/any-sync v0.0.45
 	github.com/anytypeio/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
-	github.com/prometheus/client_golang v1.15.0
+	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/atomic v1.10.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230420155640-133eef4313cb
-	golang.org/x/net v0.9.0
+	golang.org/x/net v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
-	storj.io/drpc v0.0.32
+	storj.io/drpc v0.0.33
 )
 
 require (
@@ -42,7 +42,7 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.27.1 // indirect
+	github.com/libp2p/go-libp2p v0.27.2 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
@@ -67,7 +67,7 @@ require (
 	github.com/zeebo/errs v1.3.0 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/image v0.6.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )

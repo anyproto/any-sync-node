@@ -136,7 +136,7 @@ func (t *treeStorage) HasChange(ctx context.Context, id string) (bool, error) {
 	return t.db.Has(t.keys.RawChangeKey(id))
 }
 
-func (t *treeStorage) TransactionAdd(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
+func (t *treeStorage) AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
 	for _, ch := range changes {
 		if err := t.AddRawChange(ch); err != nil {
 			return err
