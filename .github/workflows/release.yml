@@ -68,13 +68,13 @@ jobs:
 
       # build {{
       - name: deps
-        run: make deps CGO_ENABLED=0 GOARCH=${{ matrix.arch }}
+        run: make deps CGO_ENABLED=0 BUILD_GOARCH=${{ matrix.arch }}
 
       - name: unit tests
         run: make test CGO_ENABLED=0
 
       - name: build
-        run: make build CGO_ENABLED=0 GOARCH=${{ matrix.arch }}
+        run: make build CGO_ENABLED=0 BUILD_GOARCH=${{ matrix.arch }}
       # }}
 
       - name: get release version

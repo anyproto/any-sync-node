@@ -1,9 +1,10 @@
 .PHONY: proto build test deps
+SHELL=/bin/bash
 export GOPRIVATE=github.com/anytypeio
 export PATH:=deps:$(PATH)
 export CGO_ENABLED:=1
-export GOOS:=$( shell go env GOOS )
-export GOARCH:=$( shell go env GOARCH )
+BUILD_GOOS:=$(shell go env GOOS)
+BUILD_GOARCH:=$(shell go env GOARCH)
 
 ifeq ($(CGO_ENABLED), 0)
 	TAGS:=-tags nographviz
@@ -13,7 +14,7 @@ endif
 
 build:
 	@$(eval FLAGS := $$(shell PATH=$(PATH) govvv -flags -pkg github.com/anytypeio/any-sync/app))
-	go build -v $(TAGS) -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
+	GOOS=$(BUILD_GOOS) GOARCH=$(BUILD_GOARCH) go build -v $(TAGS) -o bin/any-sync-node -ldflags "$(FLAGS)" github.com/anytypeio/any-sync-node/cmd
 
 test:
 	go test ./... --cover $(TAGS)
