@@ -86,17 +86,38 @@ jobs:
       - name: create archives
         run: |
           zip --junk-paths ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.zip bin/*
-          tar --create --gzip --verbose --exclude='.gitignore' --file=${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.tgz --directory=bin/ .
+          tar \
+            --create \
+            --gzip \
+            --verbose \
+            --exclude='.gitignore' \
+            --file=${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.tgz \
+            --directory=bin/ \
+            .
       - name: create package deb
         uses: bpicode/github-action-fpm@master
         with:
-          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type deb --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --architecture ${{ matrix.arch }} --exclude '*/.gitignore' --exclude '*/.git' --input-type dir"
-          fpm_args: "./bin"
+          fpm_opts:
+            --name ${{ github.event.repository.name }}
+            --version ${{ steps.release-version.outputs.RELEASE_VERSION }}
+            --architecture ${{ matrix.arch }}
+            --exclude '*/.gitignore'
+            --exclude '*/.git'
+            --input-type dir
+            --output-type deb
+          fpm_args: ./bin
       - name: create package rpm
         uses: bpicode/github-action-fpm@master
         with:
-          fpm_opts: "--debug --name ${{ github.event.repository.name }} --output-type rpm --version ${{ steps.release-version.outputs.RELEASE_VERSION }} --architecture ${{ matrix.rpm_arch }} --exclude '*/.gitignore' --exclude '*/.git' --input-type dir"
-          fpm_args: "./bin"
+          fpm_opts:
+            --name ${{ github.event.repository.name }}
+            --version ${{ steps.release-version.outputs.RELEASE_VERSION }}
+            --architecture ${{ matrix.rpm_arch }}
+            --exclude '*/.gitignore'
+            --exclude '*/.git'
+            --input-type dir
+            --output-type rpm
+          fpm_args: ./bin
       # }}
 
       - name: debug
