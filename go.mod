@@ -11,7 +11,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.2
-	go.uber.org/atomic v1.10.0
+	go.uber.org/atomic v1.11.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230420155640-133eef4313cb
