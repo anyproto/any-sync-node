@@ -57,8 +57,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	s.nodeHead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.Service).NewStreamPool(&streamHandler{s: s}, streampool.StreamConfig{
-		SendQueueWorkers: 100,
-		SendQueueSize:    10000,
+		SendQueueSize:    100,
 		DialQueueWorkers: 4,
 		DialQueueSize:    1000,
 	})

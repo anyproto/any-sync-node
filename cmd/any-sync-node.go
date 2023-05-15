@@ -112,6 +112,7 @@ func Bootstrap(a *app.App) {
 		Register(dialer.New()).
 		Register(pool.New()).
 		Register(metric.New()).
+		Register(streampool.New()).
 		Register(nodehead.New()).
 		Register(nodestorage.New()).
 		Register(nodecache.New(200)).
@@ -121,7 +122,6 @@ func Bootstrap(a *app.App) {
 		Register(secureservice.New()).
 		Register(nodespace.New()).
 		Register(commonspace.New()).
-		Register(streampool.New()).
 		Register(peermanager.New()).
 		Register(server.New()).
 		Register(nodedebugrpc.New())
