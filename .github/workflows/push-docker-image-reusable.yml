@@ -87,3 +87,15 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ inputs.release }}
+      - name: Trigger integration tests
+        uses: convictional/trigger-workflow-and-wait@v1.6.1
+        with:
+          owner: anytypeio
+          repo: go-anytype-infrastructure-experiments
+          github_token: ${{ secrets.ANYTYPE_PAT }}
+          workflow_file_name: run_integration_tests.yml
+          ref: main
+          wait_interval: 10
+          client_payload: '{}'
+          trigger_workflow: true
+          wait_workflow: false
