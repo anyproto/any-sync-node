@@ -92,7 +92,7 @@ jobs:
         with:
           owner: anytypeio
           repo: go-anytype-infrastructure-experiments
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.ANYTYPE_PAT }}
           workflow_file_name: run_integration_tests.yml
           ref: main
           wait_interval: 10
