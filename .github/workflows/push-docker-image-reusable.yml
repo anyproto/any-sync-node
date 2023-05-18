@@ -6,9 +6,8 @@ on:
         type: string
         required: true
         default: v0.0.1
-
 name: push-docker-image
-
+permissions: write-all
 jobs:
   push-docker-image:
     name: Build Docker image and push to registry
@@ -91,5 +90,5 @@ jobs:
         run: |
           curl --request POST \
           --url 'https://api.github.com/repos/anytypeio/go-anytype-infrastructure-experiments/dispatches' \
-          --header 'authorization: Bearer ${{ secrets.ANYTYPE_PAT }}' \
+          --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
           --data '{"event_type": ${{ github.event.release.tag_name }}}'
