@@ -16,7 +16,6 @@ import (
 	"github.com/anytypeio/any-sync/net/streampool"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/nodeconf/nodeconfstore"
-
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
 	"github.com/anytypeio/any-sync-node/account"
@@ -52,6 +51,8 @@ func main() {
 	flag.Parse()
 
 	if *flagVersion {
+		fmt.Println(app.AppName)
+		fmt.Println(app.Version())
 		fmt.Println(app.VersionDescription())
 		return
 	}
