@@ -126,10 +126,12 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
 	st := time.Now()
+	var deepHeadSync bool
 	defer func() {
 		r.s.metric.RequestLog(ctx, "space.headSync",
 			metric.TotalDur(time.Since(st)),
 			metric.SpaceId(req.SpaceId),
+			zap.Bool("deepHeadSync", deepHeadSync),
 			zap.Error(err),
 		)
 	}()
@@ -145,9 +147,10 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 			zap.String("accountId", accountIdentity.Account()))
 		return nil, spacesyncproto.ErrPeerIsNotResponsible
 	}
-	if resp = r.tryStoreHeadSync(req); resp != nil {
+	if resp = r.tryNodeHeadSync(req); resp != nil {
 		return
 	}
+	deepHeadSync = true
 	sp, err := r.s.GetSpace(ctx, req.SpaceId)
 	if err != nil {
 		return
@@ -155,7 +158,7 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 	return sp.HeadSync().HandleRangeRequest(ctx, req)
 }
 
-func (r *rpcHandler) tryStoreHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
+func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
 	if len(req.Ranges) == 1 {
 		if req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64 {
 			hash, err := r.s.nodeHead.GetHead(req.SpaceId)
