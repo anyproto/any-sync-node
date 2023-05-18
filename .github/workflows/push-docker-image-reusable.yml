@@ -91,4 +91,4 @@ jobs:
           curl --request POST \
           --url 'https://api.github.com/repos/anytypeio/go-anytype-infrastructure-experiments/dispatches' \
           --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
-          --data '{"event_type": ${{ github.event.release.tag_name }}}'
+          --data '{"event_type": "on-release"}'
