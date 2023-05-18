@@ -1,0 +1,13 @@
+on: push
+name: testeeee
+jobs:
+  testeeee:
+    name: Testeee
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Curl
+        run: |
+          curl --request POST \
+          --url 'https://api.github.com/repos/anytypeio/go-anytype-infrastructure-experiments/dispatches' \
+          --header 'authorization: Bearer ${{ secrets.ANYTYPE_PAT }}' \
+          --data '{"event_type": "hello"}'
