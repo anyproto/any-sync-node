@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/net/streampool"
@@ -88,7 +89,7 @@ func (n *nodePeerManager) getResponsiblePeers(ctx context.Context, netPool pool.
 		}
 	}
 	if len(peers) == 0 {
-		return nil, pool.ErrUnableToConnect
+		return nil, net.ErrUnableToConnect
 	}
 	return
 }
