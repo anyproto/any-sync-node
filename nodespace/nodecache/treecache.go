@@ -93,3 +93,7 @@ func (c *treeCache) DeleteSpace(ctx context.Context, spaceId string) error {
 	log.Debug("space deleted", zap.String("spaceId", spaceId))
 	return nil
 }
+
+func (c *treeCache) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {
+	return nil
+}
