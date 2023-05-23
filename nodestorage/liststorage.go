@@ -3,8 +3,8 @@ package nodestorage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 )
 
 type listStorage struct {

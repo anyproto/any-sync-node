@@ -1,14 +1,14 @@
-//go:generate mockgen -destination mock_hotsync/mock_hotsync.go github.com/anytypeio/any-sync-node/nodesync/hotsync HotSync
+//go:generate mockgen -destination mock_hotsync/mock_hotsync.go github.com/anyproto/any-sync-node/nodesync/hotsync HotSync
 package hotsync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync-node/nodespace"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/app/ocache"
-	"github.com/anytypeio/any-sync/util/periodicsync"
-	"github.com/anytypeio/any-sync/util/slice"
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/util/periodicsync"
+	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
 	"sync"
 	"sync/atomic"

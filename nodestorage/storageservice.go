@@ -1,12 +1,12 @@
-//go:generate mockgen -destination mock_nodestorage/mock_nodestorage.go github.com/anytypeio/any-sync-node/nodestorage NodeStorage
+//go:generate mockgen -destination mock_nodestorage/mock_nodestorage.go github.com/anyproto/any-sync-node/nodestorage NodeStorage
 package nodestorage
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"os"
 	"path"
 	"path/filepath"

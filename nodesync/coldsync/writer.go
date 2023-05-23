@@ -3,7 +3,7 @@ package coldsync
 import (
 	"bufio"
 	"compress/gzip"
-	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 	"hash/crc32"
 	"io"
 	"io/fs"

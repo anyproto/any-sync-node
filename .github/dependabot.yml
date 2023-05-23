@@ -10,5 +10,5 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      - dependency-name: "github.com/anytypeio/any-sync"
+      - dependency-name: "github.com/anyproto/any-sync"
       

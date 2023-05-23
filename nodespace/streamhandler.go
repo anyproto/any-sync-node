@@ -2,9 +2,9 @@ package nodespace
 
 import (
 	"errors"
-	"github.com/anytypeio/any-sync/commonspace"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
-	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/net/peer"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"storj.io/drpc"

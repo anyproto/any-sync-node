@@ -3,8 +3,8 @@ package hotsync
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync-node/nodespace/mock_nodespace"
-	"github.com/anytypeio/any-sync/app/ocache"
+	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
+	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"sync/atomic"

@@ -1,16 +1,16 @@
-//go:generate mockgen -destination mock_nodehead/mock_nodehead.go github.com/anytypeio/any-sync-node/nodehead NodeHead
+//go:generate mockgen -destination mock_nodehead/mock_nodehead.go github.com/anyproto/any-sync-node/nodehead NodeHead
 package nodehead
 
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync-node/nodestorage"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/ldiff"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/metric"
-	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anyproto/any-sync-node/nodestorage"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"sync"

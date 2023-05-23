@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 	"go.uber.org/multierr"
 	"hash/crc32"
 	"io"

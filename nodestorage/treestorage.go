@@ -3,8 +3,8 @@ package nodestorage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
 
 type treeStorage struct {

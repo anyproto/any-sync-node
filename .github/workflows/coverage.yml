@@ -13,7 +13,7 @@ jobs:
         go-version:
           - 1.19.5
     env:
-      GOPRIVATE: github.com/anytypeio
+      GOPRIVATE: github.com/anyproto
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4

@@ -43,7 +43,7 @@ jobs:
           - arch: arm64
             rpm_arch: aarch64
     env:
-      GOPRIVATE: github.com/anytypeio
+      GOPRIVATE: github.com/anyproto
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3

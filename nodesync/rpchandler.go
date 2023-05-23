@@ -2,9 +2,9 @@ package nodesync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync-node/nodespace"
-	"github.com/anytypeio/any-sync-node/nodesync/coldsync"
-	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync-node/nodesync/coldsync"
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
 
 var _ nodesyncproto.DRPCNodeSyncServer = (*rpcHandler)(nil)

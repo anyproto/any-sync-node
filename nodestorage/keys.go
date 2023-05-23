@@ -2,7 +2,7 @@ package nodestorage
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"strings"
 )
 

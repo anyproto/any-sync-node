@@ -1,16 +1,16 @@
 package config
 
 import (
-	"github.com/anytypeio/any-sync-node/nodestorage"
-	"github.com/anytypeio/any-sync-node/nodesync"
-	"github.com/anytypeio/any-sync-node/nodesync/hotsync"
-	commonaccount "github.com/anytypeio/any-sync/accountservice"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace"
-	"github.com/anytypeio/any-sync/metric"
-	"github.com/anytypeio/any-sync/net"
-	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anyproto/any-sync-node/nodestorage"
+	"github.com/anyproto/any-sync-node/nodesync"
+	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	commonaccount "github.com/anyproto/any-sync/accountservice"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/nodeconf"
 	"gopkg.in/yaml.v3"
 	"os"
 )

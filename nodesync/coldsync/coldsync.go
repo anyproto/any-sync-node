@@ -1,15 +1,15 @@
-//go:generate mockgen -destination mock_coldsync/mock_coldsync.go github.com/anytypeio/any-sync-node/nodesync/coldsync ColdSync
+//go:generate mockgen -destination mock_coldsync/mock_coldsync.go github.com/anyproto/any-sync-node/nodesync/coldsync ColdSync
 package coldsync
 
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync-node/nodespace"
-	"github.com/anytypeio/any-sync-node/nodestorage"
-	"github.com/anytypeio/any-sync-node/nodesync/nodesyncproto"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync-node/nodestorage"
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/net/pool"
 	"go.uber.org/zap"
 	"io"
 	"os"

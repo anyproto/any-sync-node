@@ -2,7 +2,7 @@ package nodedebugrpc
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
+	"github.com/anyproto/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"time"
 )
 

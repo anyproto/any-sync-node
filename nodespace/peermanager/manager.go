@@ -2,12 +2,12 @@ package peermanager
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
-	"github.com/anytypeio/any-sync/net"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/net/pool"
-	"github.com/anytypeio/any-sync/net/streampool"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/streampool"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"storj.io/drpc"

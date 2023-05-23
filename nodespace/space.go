@@ -2,7 +2,7 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace"
 )
 
 func newNodeSpace(cc commonspace.Space) (*nodeSpace, error) {
