@@ -6,6 +6,8 @@ on:
 
 name: release
 
+permissions: write-all
+
 jobs:
   create_release:
     name: create release
