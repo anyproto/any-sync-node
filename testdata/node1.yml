@@ -1,0 +1,66 @@
+grpcServer:
+    server:
+        listenAddrs:
+            - 127.0.0.1:4430
+    stream:
+        timeoutMilliseconds: 1000
+        maxMsgSizeMb: 256
+account:
+    peerId: 12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu
+    peerKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
+    signingKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
+apiServer:
+    server:
+        listenAddrs:
+            - 127.0.0.1:8080
+    stream:
+        timeoutMilliseconds: 1000
+        maxMsgSizeMb: 256
+network:
+  id: 64384a038e697b7fce2f447e
+  networkId: N4N1wDHFpFpovXBqdbq2TDXE9tXdXbtV1eTJFpKJW4YeaJqR
+  nodes:
+    - peerId: 12D3KooWKLCajM89S8unbt3tgGbRLgmiWnFZT3adn9A5pQciBSLa
+      addresses:
+        - "127.0.0.1:4830"
+      types:
+        - coordinator
+    - peerId: 12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu
+      addresses:
+        - 127.0.0.1:4430
+      types:
+        - tree
+    - peerId: 12D3KooWKgVN2kW8xw5Uvm2sLUnkeUNQYAvcWvF58maTzev7FjPi
+      addresses:
+        - 127.0.0.1:4431
+      types:
+        - tree
+    - peerId: 12D3KooWCUPYuMnQhu9yREJgQyjcz8zWY83rZGmDLwb9YR6QkbZX
+      addresses:
+        - 127.0.0.1:4432
+      types:
+        - tree
+    - peerId: 12D3KooWQxiZ5a7vcy4DTJa8Gy1eVUmwb5ojN4SrJC9Rjxzigw6C
+      addresses:
+        - 127.0.0.1:4730
+      types:
+        - file
+  creationTime: 2023-04-13T20:29:23.453806629+02:00
+networkStorePath: .
+networkUpdateIntervalSec: 600
+space:
+    gcTTL: 60
+    syncPeriod: 240
+storage:
+    path: db/1
+metric:
+    addr: ":7001"
+nodeSync:
+  hotSync:
+    simultaneousRequests: 400
+  syncOnStart: true
+  periodicSyncHours: 2
+log:
+    production: false
+    defaultLevel: ""
+    namedLevels: {}
