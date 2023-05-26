@@ -14,12 +14,7 @@ type nodeSpace struct {
 }
 
 func (s *nodeSpace) Init(ctx context.Context) (err error) {
-	err = s.Space.Init(ctx)
-	if err != nil {
-		return
-	}
-	s.Space.HeadSync().Run()
-	return
+	return s.Space.Init(ctx)
 }
 
 func (s *nodeSpace) Close() (err error) {
