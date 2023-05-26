@@ -28,6 +28,10 @@ type treeCache struct {
 	nodeService nodespace.Service
 }
 
+func (c *treeCache) NewTreeSyncer(spaceId string) treemanager.TreeSyncer {
+	return NewTreeSyncer(spaceId, c)
+}
+
 func New(ttl int) treemanager.TreeManager {
 	return &treeCache{
 		gcttl: ttl,
