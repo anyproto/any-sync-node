@@ -2,7 +2,9 @@ package peermanager
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
@@ -25,6 +27,14 @@ type nodePeerManager struct {
 	spaceId          string
 	responsiblePeers []responsiblePeer
 	p                *provider
+}
+
+func (n *nodePeerManager) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (n *nodePeerManager) Name() (name string) {
+	return peermanager.CName
 }
 
 func (n *nodePeerManager) init() {

@@ -11,9 +11,11 @@ import (
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
-	"github.com/anyproto/any-sync/net/dialer"
+	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/streampool"
+	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/nodeconfstore"
 	// import this to keep govvv in go.mod on mod tidy
@@ -28,7 +30,6 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"go.uber.org/zap"
 	"net/http"
@@ -110,9 +111,11 @@ func Bootstrap(a *app.App) {
 		Register(nodeconfstore.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
-		Register(dialer.New()).
-		Register(pool.New()).
 		Register(metric.New()).
+		Register(server.New()).
+		Register(peerservice.New()).
+		Register(yamux.New()).
+		Register(pool.New()).
 		Register(streampool.New()).
 		Register(nodehead.New()).
 		Register(nodestorage.New()).
@@ -124,6 +127,5 @@ func Bootstrap(a *app.App) {
 		Register(nodespace.New()).
 		Register(commonspace.New()).
 		Register(peermanager.New()).
-		Register(server.New()).
 		Register(nodedebugrpc.New())
 }

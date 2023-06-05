@@ -7,9 +7,9 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
-	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/metric"
 	"go.uber.org/zap"
 	"time"
@@ -28,8 +28,8 @@ type treeCache struct {
 	nodeService nodespace.Service
 }
 
-func (c *treeCache) NewTreeSyncer(spaceId string) treemanager.TreeSyncer {
-	return NewTreeSyncer(spaceId, c)
+func (c *treeCache) NewTreeSyncer(spaceId string, manager treemanager.TreeManager) treemanager.TreeSyncer {
+	return NewTreeSyncer(spaceId, manager)
 }
 
 func New(ttl int) treemanager.TreeManager {
@@ -55,7 +55,7 @@ func (c *treeCache) Init(a *app.App) (err error) {
 			if err != nil {
 				return
 			}
-			return space.BuildTree(ctx, id, commonspace.BuildTreeOpts{})
+			return space.TreeBuilder().BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{})
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),

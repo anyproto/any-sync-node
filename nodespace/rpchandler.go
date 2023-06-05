@@ -18,6 +18,39 @@ type rpcHandler struct {
 	s *service
 }
 
+func (r *rpcHandler) ObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.objectSync",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(req.SpaceId),
+			metric.ObjectId(req.ObjectId),
+			zap.Error(err),
+		)
+	}()
+	accountIdentity, err := peer.CtxPubKey(ctx)
+	if err != nil {
+		return
+	}
+	err = checkResponsible(ctx, r.s.confService, req.SpaceId)
+	if err != nil {
+		log.Debug("object sync sent to not responsible peer",
+			zap.Error(err),
+			zap.String("spaceId", req.SpaceId),
+			zap.String("accountId", accountIdentity.Account()))
+		return nil, spacesyncproto.ErrPeerIsNotResponsible
+	}
+	sp, err := r.s.GetSpace(ctx, req.SpaceId)
+	if err != nil {
+		if err != spacesyncproto.ErrSpaceMissing {
+			err = spacesyncproto.ErrUnexpected
+		}
+		return
+	}
+	resp, err = sp.HandleSyncRequest(ctx, req)
+	return
+}
+
 func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
 	st := time.Now()
 	defer func() {
@@ -155,7 +188,8 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 	if err != nil {
 		return
 	}
-	return sp.HeadSync().HandleRangeRequest(ctx, req)
+	resp, err = sp.HandleRangeRequest(ctx, req)
+	return
 }
 
 func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {

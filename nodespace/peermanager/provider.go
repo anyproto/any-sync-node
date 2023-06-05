@@ -28,9 +28,7 @@ type provider struct {
 
 func (p *provider) Init(a *app.App) (err error) {
 	p.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	commonPool := a.MustComponent(pool.CName).(pool.Service)
-	p.commonPool = commonPool
-	p.pool = commonPool.NewPool("space_stream")
+	p.pool = a.MustComponent(pool.CName).(pool.Service)
 	p.streamPool = a.MustComponent(nodespace.CName).(nodespace.Service).StreamPool()
 	return nil
 }

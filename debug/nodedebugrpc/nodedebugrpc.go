@@ -2,7 +2,6 @@ package nodedebugrpc
 
 import (
 	"context"
-	"github.com/anyproto/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"github.com/anyproto/any-sync-node/nodespace"
 	nodestorage "github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync"
@@ -11,7 +10,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/nodeconf"
 	"storj.io/drpc"
@@ -22,7 +20,7 @@ const CName = "node.debug.nodedebugrpc"
 var log = logger.NewNamed(CName)
 
 func New() NodeDebugRpc {
-	return &nodeDebugRpc{BaseDrpcServer: server.NewBaseDrpcServer()}
+	return &nodeDebugRpc{}
 }
 
 type configGetter interface {
@@ -42,7 +40,11 @@ type nodeDebugRpc struct {
 	storageService nodestorage.NodeStorage
 	nodeSync       nodesync.NodeSync
 	nodeConf       nodeconf.Service
-	*server.BaseDrpcServer
+}
+
+func (s *nodeDebugRpc) Register(srv interface{}, desc drpc.Description) error {
+	// TODO: implement debug rpc
+	return nil
 }
 
 func (s *nodeDebugRpc) Init(a *app.App) (err error) {
@@ -61,21 +63,9 @@ func (s *nodeDebugRpc) Name() (name string) {
 }
 
 func (s *nodeDebugRpc) Run(ctx context.Context) (err error) {
-	params := server.Params{
-		BufferSizeMb:  s.cfg.Stream.MaxMsgSizeMb,
-		TimeoutMillis: s.cfg.Stream.TimeoutMilliseconds,
-		ListenAddrs:   s.cfg.Server.ListenAddrs,
-		Wrapper: func(handler drpc.Handler) drpc.Handler {
-			return handler
-		},
-	}
-	err = s.BaseDrpcServer.Run(ctx, params)
-	if err != nil {
-		return
-	}
-	return nodedebugrpcproto.DRPCRegisterNodeApi(s, &rpcHandler{s: s})
+	return nil
 }
 
 func (s *nodeDebugRpc) Close(ctx context.Context) (err error) {
-	return s.BaseDrpcServer.Close(ctx)
+	return nil
 }

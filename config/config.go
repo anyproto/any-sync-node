@@ -7,9 +7,10 @@ import (
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -36,11 +37,12 @@ type Config struct {
 	Network                  nodeconf.Configuration `yaml:"network"`
 	NetworkStorePath         string                 `yaml:"networkStorePath"`
 	NetworkUpdateIntervalSec int                    `yaml:"networkUpdateIntervalSec"`
-	Space                    commonspace.Config     `yaml:"space"`
+	Space                    config.Config          `yaml:"space"`
 	Storage                  nodestorage.Config     `yaml:"storage"`
 	Metric                   metric.Config          `yaml:"metric"`
 	Log                      logger.Config          `yaml:"log"`
 	NodeSync                 nodesync.Config        `yaml:"nodeSync"`
+	Yamux                    yamux.Config           `yaml:"yamux"`
 }
 
 func (c Config) Init(a *app.App) (err error) {
@@ -67,7 +69,7 @@ func (c Config) GetMetric() metric.Config {
 	return c.Metric
 }
 
-func (c Config) GetSpace() commonspace.Config {
+func (c Config) GetSpace() config.Config {
 	return c.Space
 }
 
@@ -93,4 +95,8 @@ func (c Config) GetNodeSync() nodesync.Config {
 
 func (c Config) GetHotSync() hotsync.Config {
 	return c.NodeSync.HotSync
+}
+
+func (c Config) GetYamux() yamux.Config {
+	return c.Yamux
 }

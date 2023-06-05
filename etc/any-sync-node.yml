@@ -10,12 +10,18 @@ account:
     peerKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
     signingKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
 apiServer:
-    server:
-        listenAddrs:
-            - 127.0.0.1:8080
-    stream:
-        timeoutMilliseconds: 1000
-        maxMsgSizeMb: 256
+  server:
+    listenAddrs:
+      - 127.0.0.1:8080
+  stream:
+    timeoutMilliseconds: 1000
+    maxMsgSizeMb: 256
+yamux:
+    listenAddrs:
+      - 127.0.0.1:4430
+    writeTimeoutSec: 1
+    dialTimeoutSec: 1
+    maxStreams: 1000
 network:
   id: 64384a038e697b7fce2f447e
   networkId: N4N1wDHFpFpovXBqdbq2TDXE9tXdXbtV1eTJFpKJW4YeaJqR
