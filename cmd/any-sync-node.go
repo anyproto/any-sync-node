@@ -9,6 +9,8 @@ import (
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
 	"github.com/anyproto/any-sync/net/peerservice"
@@ -107,6 +109,8 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
+		Register(syncstatus.NewNoOpSyncStatus()).
+		Register(credentialprovider.NewNoOp()).
 		Register(coordinatorclient.New()).
 		Register(nodeconfstore.New()).
 		Register(nodeconfsource.New()).
@@ -124,8 +128,8 @@ func Bootstrap(a *app.App) {
 		Register(coldsync.New()).
 		Register(nodesync.New()).
 		Register(secureservice.New()).
-		Register(nodespace.New()).
 		Register(commonspace.New()).
+		Register(nodespace.New()).
 		Register(peermanager.New()).
 		Register(nodedebugrpc.New())
 }
