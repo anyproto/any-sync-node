@@ -94,7 +94,7 @@ func (n *nodeHead) loadHeadFromStore(spaceId string) (err error) {
 		return
 	}
 	defer func() {
-		_ = ss.Close()
+		_ = ss.Close(context.Background())
 	}()
 	hash, err := ss.ReadSpaceHash()
 	if err != nil {

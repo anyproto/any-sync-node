@@ -23,7 +23,6 @@ type provider struct {
 	nodeconf   nodeconf.Service
 	pool       pool.Pool
 	streamPool streampool.StreamPool
-	commonPool pool.Pool
 }
 
 func (p *provider) Init(a *app.App) (err error) {

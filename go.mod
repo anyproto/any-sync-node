@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anyproto/any-sync v0.1.2
+	github.com/anyproto/any-sync v0.1.6-0.20230607110637-4ef617b1f218
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
@@ -36,6 +36,7 @@ require (
 	github.com/goccy/go-graphviz v0.1.1 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/huandu/skiplist v1.2.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
@@ -52,7 +53,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.9.0 // indirect
 	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-multicodec v0.9.0 // indirect
-	github.com/multiformats/go-multihash v0.2.1 // indirect
+	github.com/multiformats/go-multihash v0.2.2 // indirect
 	github.com/multiformats/go-multistream v0.4.1 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

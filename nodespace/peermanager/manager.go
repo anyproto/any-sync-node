@@ -9,10 +9,8 @@ import (
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
-	"github.com/anyproto/any-sync/net/streampool"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
-	"storj.io/drpc"
 	"time"
 )
 
@@ -46,14 +44,8 @@ func (n *nodePeerManager) init() {
 
 func (n *nodePeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
-	var drpcMsg drpc.Message
-	drpcMsg = msg
-	if msg.ReplyId != "" || msg.RequestId != "" {
-		// prioritize messages with the request or reply by sending it to a separate queue
-		drpcMsg = streampool.WithQueueId(msg, "replyQueue")
-	}
 	if n.isResponsible(peerId) {
-		return n.p.streamPool.Send(ctx, drpcMsg, func(ctx context.Context) ([]peer.Peer, error) {
+		return n.p.streamPool.Send(ctx, msg, func(ctx context.Context) ([]peer.Peer, error) {
 			log.InfoCtx(ctx, "sendPeer send", zap.String("peerId", peerId))
 			p, e := n.p.pool.Get(ctx, peerId)
 			if e != nil {
@@ -63,7 +55,7 @@ func (n *nodePeerManager) SendPeer(ctx context.Context, peerId string, msg *spac
 		})
 	}
 	log.InfoCtx(ctx, "sendPeer sendById", zap.String("peerId", peerId))
-	return n.p.streamPool.SendById(ctx, drpcMsg, peerId)
+	return n.p.streamPool.SendById(ctx, msg, peerId)
 }
 
 func (n *nodePeerManager) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -83,7 +75,7 @@ func (n *nodePeerManager) Broadcast(ctx context.Context, msg *spacesyncproto.Obj
 }
 
 func (n *nodePeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
-	return n.getResponsiblePeers(ctx, n.p.commonPool)
+	return n.getResponsiblePeers(ctx, n.p.pool)
 }
 
 func (n *nodePeerManager) getResponsiblePeers(ctx context.Context, netPool pool.Pool) (peers []peer.Peer, err error) {

@@ -31,6 +31,10 @@ type spaceStorage struct {
 	service         *storageService
 }
 
+func (s *spaceStorage) Run(ctx context.Context) (err error) {
+	return nil
+}
+
 func (s *spaceStorage) Init(a *app.App) (err error) {
 	return nil
 }
@@ -269,7 +273,7 @@ func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
 	return string(v), nil
 }
 
-func (s *spaceStorage) Close() (err error) {
+func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	defer s.service.unlockSpaceStorage(s.spaceId)
 	return s.objDb.Close()
 }
