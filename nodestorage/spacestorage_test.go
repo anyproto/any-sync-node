@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+var ctx = context.Background()
+
 func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 	header := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: []byte("header"),
@@ -72,7 +74,7 @@ func TestSpaceStorage_Create(t *testing.T) {
 	require.NoError(t, err)
 
 	testSpace(t, store, payload)
-	require.NoError(t, store.Close())
+	require.NoError(t, store.Close(ctx))
 
 	t.Run("create same storage returns error", func(t *testing.T) {
 		_, err := createSpaceStorage(newTestService(dir), payload)
@@ -88,12 +90,12 @@ func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
 	payload := spaceTestPayload()
 	store, err := createSpaceStorage(newTestService(dir), payload)
 	require.NoError(t, err)
-	require.NoError(t, store.Close())
+	require.NoError(t, store.Close(ctx))
 
 	store, err = newSpaceStorage(&storageService{rootPath: dir}, payload.SpaceHeaderWithId.Id)
 	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, store.Close())
+		require.NoError(t, store.Close(ctx))
 	}()
 	testSpace(t, store, payload)
 
@@ -126,7 +128,7 @@ func TestSpaceStorage_StoredIds(t *testing.T) {
 	store, err := createSpaceStorage(newTestService(dir), payload)
 	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, store.Close())
+		require.NoError(t, store.Close(ctx))
 	}()
 
 	n := 5
@@ -156,7 +158,7 @@ func TestSpaceStorage_WriteSpaceHash(t *testing.T) {
 	store, err := createSpaceStorage(newTestService(dir), payload)
 	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, store.Close())
+		require.NoError(t, store.Close(ctx))
 	}()
 
 	hash := "123"
@@ -179,11 +181,11 @@ func TestLock(t *testing.T) {
 	_, err = ss.SpaceStorage(payload.SpaceHeaderWithId.Id)
 	require.Equal(t, ErrLocked, err)
 
-	require.NoError(t, store.Close())
+	require.NoError(t, store.Close(ctx))
 
 	store, err = ss.SpaceStorage(payload.SpaceHeaderWithId.Id)
 	require.NoError(t, err)
-	require.NoError(t, store.Close())
+	require.NoError(t, store.Close(ctx))
 }
 
 func TestWaitStore(t *testing.T) {
@@ -210,12 +212,12 @@ func TestWaitStore(t *testing.T) {
 		assert.True(t, false, "should be locked")
 	}
 
-	require.NoError(t, store.Close())
+	require.NoError(t, store.Close(ctx))
 
 	select {
 	case <-time.After(time.Second / 10):
 		assert.True(t, false, "timeout")
 	case store = <-storeCh:
 	}
-	require.NoError(t, store.Close())
+	require.NoError(t, store.Close(ctx))
 }

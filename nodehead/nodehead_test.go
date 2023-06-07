@@ -34,7 +34,7 @@ func TestNodeHead_Run(t *testing.T) {
 	ss, err := store.CreateSpaceStorage(spaceTestPayload())
 	require.NoError(t, err)
 	require.NoError(t, ss.WriteSpaceHash("123"))
-	require.NoError(t, ss.Close())
+	require.NoError(t, ss.Close(ctx))
 	fx.Finish(t)
 
 	fx = newFixture(t, tmpDir)
