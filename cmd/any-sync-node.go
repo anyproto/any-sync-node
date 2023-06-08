@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
 	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/debugserver"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/transport/yamux"
@@ -131,5 +132,6 @@ func Bootstrap(a *app.App) {
 		Register(commonspace.New()).
 		Register(nodespace.New()).
 		Register(peermanager.New()).
+		Register(debugserver.New()).
 		Register(nodedebugrpc.New())
 }

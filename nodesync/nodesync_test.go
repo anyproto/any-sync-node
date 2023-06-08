@@ -13,8 +13,8 @@ import (
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
-	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -207,9 +207,9 @@ func (c config) GetNodeSync() Config {
 	}
 }
 
-func (c config) GetNet() net.Config {
-	return net.Config{
-		Stream: net.StreamConfig{MaxMsgSizeMb: 10},
+func (c config) GetDrpc() rpc.Config {
+	return rpc.Config{
+		Stream: rpc.StreamConfig{MaxMsgSizeMb: 10},
 	}
 }
 

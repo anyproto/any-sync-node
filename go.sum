@@ -8,6 +8,12 @@ github.com/akrylysov/pogreb v0.10.1 h1:FqlR8VR7uCbJdfUob916tPM+idpKgeESDXOA1K0DK
 github.com/akrylysov/pogreb v0.10.1/go.mod h1:pNs6QmpQ1UlTJKDezuRWmaqkgUE2TuU0YTWyqJZ7+lI=
 github.com/anyproto/any-sync v0.1.6-0.20230607185209-5a6661eab180 h1:OfPk2YmNf3mWTE/E3bJs/XDHDgm6zM5+ZKGs8hmru54=
 github.com/anyproto/any-sync v0.1.6-0.20230607185209-5a6661eab180/go.mod h1:9mBFhqgDbUcxU9gxiyniNUQMfsUcD0eCjLIc6rgh2uk=
+github.com/anyproto/any-sync v0.1.6-0.20230608111030-33cbdd06a664 h1:18HIqz3bnTXYvk5DwlinmGtoxoE7yqbe7+e/1g7ez0s=
+github.com/anyproto/any-sync v0.1.6-0.20230608111030-33cbdd06a664/go.mod h1:9mBFhqgDbUcxU9gxiyniNUQMfsUcD0eCjLIc6rgh2uk=
+github.com/anyproto/any-sync v0.1.6-0.20230608112701-f9cb0c2dbb6c h1:YjpHIk4A7lA2RAlYHh5f6NqzFbGUKK2gt7WlvkZZ7yM=
+github.com/anyproto/any-sync v0.1.6-0.20230608112701-f9cb0c2dbb6c/go.mod h1:9mBFhqgDbUcxU9gxiyniNUQMfsUcD0eCjLIc6rgh2uk=
+github.com/anyproto/any-sync v0.1.6-0.20230608113800-85cf6b8332d7 h1:c3hBGrvVg4yu2D43xq0apAUlgzI86tzdYZeMMa5TQVA=
+github.com/anyproto/any-sync v0.1.6-0.20230608113800-85cf6b8332d7/go.mod h1:9mBFhqgDbUcxU9gxiyniNUQMfsUcD0eCjLIc6rgh2uk=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=

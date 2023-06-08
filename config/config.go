@@ -9,7 +9,8 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/rpc/debugserver"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"gopkg.in/yaml.v3"
@@ -31,9 +32,9 @@ func NewFromFile(path string) (c *Config, err error) {
 }
 
 type Config struct {
-	GrpcServer               net.Config             `yaml:"grpcServer"`
+	Drpc                     rpc.Config             `yaml:"drpc"`
 	Account                  commonaccount.Config   `yaml:"account"`
-	APIServer                net.Config             `yaml:"apiServer"`
+	APIServer                debugserver.Config     `yaml:"apiServer"`
 	Network                  nodeconf.Configuration `yaml:"network"`
 	NetworkStorePath         string                 `yaml:"networkStorePath"`
 	NetworkUpdateIntervalSec int                    `yaml:"networkUpdateIntervalSec"`
@@ -53,11 +54,11 @@ func (c Config) Name() (name string) {
 	return CName
 }
 
-func (c Config) GetNet() net.Config {
-	return c.GrpcServer
+func (c Config) GetDrpc() rpc.Config {
+	return c.Drpc
 }
 
-func (c Config) GetDebugNet() net.Config {
+func (c Config) GetDebugServer() debugserver.Config {
 	return c.APIServer
 }
 
