@@ -13,7 +13,10 @@ import (
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/testnodeconf"
@@ -46,7 +49,13 @@ func TestNodeSync_Sync(t *testing.T) {
 		acc2 := nodeServ.GetAccountService(1)
 		fx2 := newFixtureWithNodeConf(t, acc2, nodeServ)
 		defer fx2.Finish(t)
-		fx1.tp = fx1.tp.WithServer(fx2.ts)
+
+		mcS, mcC := rpctest.MultiConnPair(acc2.Account().PeerId, acc1.Account().PeerId)
+		pS, err := peer.NewPeer(mcS, fx1.ts)
+		require.NoError(t, err)
+		_, err = peer.NewPeer(mcC, fx2.ts)
+		require.NoError(t, err)
+		fx1.tp.AddPeer(ctx, pS)
 		emptyLdiff := ldiff.New(8, 8)
 
 		ld1 := ldiff.New(8, 8)
@@ -152,8 +161,9 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 	fx.nodeConf.EXPECT().CHash().AnyTimes().Return(ch)
 
 	fx.tp = rpctest.NewTestPool()
-	fx.ts = rpctest.NewTestServer()
+	fx.ts = server.New()
 	fx.a.Register(fx.nodeConf).
+		Register(fx.ts).
 		Register(accServ).
 		Register(&config{Config: confServ}).
 		Register(fx.NodeSync).
@@ -161,8 +171,7 @@ func newFixtureWithNodeConf(t *testing.T, accServ accountservice.Service, confSe
 		Register(fx.nodeSpace).
 		Register(fx.coldSync).
 		Register(fx.hotSync).
-		Register(fx.tp).
-		Register(fx.ts)
+		Register(fx.tp)
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
 }
@@ -181,7 +190,7 @@ type fixture struct {
 	hotSync   *mock_hotsync.MockHotSync
 	nodeConf  *mock_nodeconf.MockService
 	tp        *rpctest.TestPool
-	ts        *rpctest.TesServer
+	ts        server.DRPCServer
 }
 
 func (fx *fixture) Finish(t *testing.T) {
@@ -195,6 +204,12 @@ type config struct {
 func (c config) GetNodeSync() Config {
 	return Config{
 		SyncOnStart: false,
+	}
+}
+
+func (c config) GetDrpc() rpc.Config {
+	return rpc.Config{
+		Stream: rpc.StreamConfig{MaxMsgSizeMb: 10},
 	}
 }
 

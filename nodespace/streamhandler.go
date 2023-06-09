@@ -2,7 +2,7 @@ package nodespace
 
 import (
 	"errors"
-	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"go.uber.org/zap"
@@ -25,7 +25,11 @@ type streamHandler struct {
 func (s *streamHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
 	log.DebugCtx(ctx, "open outgoing stream", zap.String("peerId", p.Id()))
 	ctx = peer.CtxWithPeerId(ctx, p.Id())
-	if stream, err = spacesyncproto.NewDRPCSpaceSyncClient(p).ObjectSyncStream(ctx); err != nil {
+	conn, err := p.AcquireDrpcConn(ctx)
+	if err != nil {
+		return
+	}
+	if stream, err = spacesyncproto.NewDRPCSpaceSyncClient(conn).ObjectSyncStream(ctx); err != nil {
 		log.WarnCtx(ctx, "open outgoing stream error", zap.String("peerId", p.Id()), zap.Error(err))
 		return
 	}
@@ -56,7 +60,7 @@ func (s *streamHandler) HandleMessage(ctx context.Context, peerId string, msg dr
 	if err != nil {
 		return
 	}
-	err = space.HandleMessage(ctx, commonspace.HandleMessage{
+	err = space.HandleMessage(ctx, objectsync.HandleMessage{
 		Id:       lastMsgId.Add(1),
 		Deadline: time.Now().Add(time.Minute),
 		SenderId: peerId,

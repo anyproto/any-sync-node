@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -40,7 +41,7 @@ type Service interface {
 }
 
 type service struct {
-	conf                 commonspace.Config
+	conf                 config.Config
 	spaceCache           ocache.OCache
 	commonSpace          commonspace.SpaceService
 	confService          nodeconf.Service
@@ -51,7 +52,7 @@ type service struct {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.conf = a.MustComponent("config").(commonspace.ConfigGetter).GetSpace()
+	s.conf = a.MustComponent("config").(config.ConfigGetter).GetSpace()
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.SpaceService)
 	s.confService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)

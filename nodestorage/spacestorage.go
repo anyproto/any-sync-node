@@ -3,6 +3,7 @@ package nodestorage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -28,6 +29,18 @@ type spaceStorage struct {
 	aclStorage      liststorage.ListStorage
 	header          *spacesyncproto.RawSpaceHeaderWithId
 	service         *storageService
+}
+
+func (s *spaceStorage) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (s *spaceStorage) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (s *spaceStorage) Name() (name string) {
+	return spacestorage.CName
 }
 
 func newSpaceStorage(s *storageService, spaceId string) (store spacestorage.SpaceStorage, err error) {
@@ -260,7 +273,7 @@ func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
 	return string(v), nil
 }
 
-func (s *spaceStorage) Close() (err error) {
+func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	defer s.service.unlockSpaceStorage(s.spaceId)
 	return s.objDb.Close()
 }

@@ -1,21 +1,18 @@
-grpcServer:
-    server:
-        listenAddrs:
-            - 127.0.0.1:4430
-    stream:
-        timeoutMilliseconds: 1000
-        maxMsgSizeMb: 256
 account:
-    peerId: 12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu
-    peerKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
-    signingKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
+  peerId: 12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu
+  peerKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
+  signingKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
 apiServer:
-    server:
-        listenAddrs:
-            - 127.0.0.1:8080
-    stream:
-        timeoutMilliseconds: 1000
-        maxMsgSizeMb: 256
+  listenAddr: 127.0.0.1:8080
+drpc:
+  stream:
+    timeoutMilliseconds: 1000
+    maxMsgSizeMb: 256
+yamux:
+  listenAddrs:
+    - 127.0.0.1:4430
+  writeTimeoutSec: 10
+  dialTimeoutSec: 10
 network:
   id: 64384a038e697b7fce2f447e
   networkId: N4N1wDHFpFpovXBqdbq2TDXE9tXdXbtV1eTJFpKJW4YeaJqR
@@ -49,18 +46,18 @@ network:
 networkStorePath: .
 networkUpdateIntervalSec: 600
 space:
-    gcTTL: 60
-    syncPeriod: 240
+  gcTTL: 60
+  syncPeriod: 240
 storage:
-    path: db
+  path: db
 metric:
-    addr: ":7001"
+  addr: ":7001"
 nodeSync:
   hotSync:
     simultaneousRequests: 400
   syncOnStart: true
   periodicSyncHours: 2
 log:
-    production: false
-    defaultLevel: ""
-    namedLevels: {}
+  production: false
+  defaultLevel: ""
+  namedLevels: { }

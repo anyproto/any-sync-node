@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"os"
+	"storj.io/drpc"
 )
 
 const CName = "node.nodesync.coldsync"
@@ -41,7 +42,7 @@ type coldSync struct {
 }
 
 func (c *coldSync) Init(a *app.App) (err error) {
-	c.pool = a.MustComponent(pool.CName).(pool.Service).NewPool("coldsync")
+	c.pool = a.MustComponent(pool.CName).(pool.Pool)
 	c.storage = a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
 	c.nodespace = a.MustComponent(nodespace.CName).(nodespace.Service)
 	return
@@ -61,32 +62,31 @@ func (c *coldSync) Sync(ctx context.Context, spaceId, peerId string) (err error)
 }
 
 func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err error) {
-	p, err := c.pool.Dial(ctx, peerId)
+	p, err := c.pool.GetOneOf(ctx, []string{peerId})
 	if err != nil {
 		return
 	}
-	defer func() {
-		_ = p.Close()
-	}()
-	stream, err := nodesyncproto.NewDRPCNodeSyncClient(p).ColdSync(ctx, &nodesyncproto.ColdSyncRequest{
-		SpaceId: spaceId,
-	})
-	if err != nil {
-		return
-	}
-	rd := &streamReader{
-		dir:    c.storage.StoreDir("." + spaceId),
-		stream: stream,
-	}
-	if err = rd.Read(ctx); err != nil {
-		_ = os.RemoveAll(rd.dir)
-		if err == io.EOF {
-			return ErrRemoteSpaceLocked
-		} else {
+	return p.DoDrpc(ctx, func(conn drpc.Conn) error {
+		stream, err := nodesyncproto.NewDRPCNodeSyncClient(conn).ColdSync(ctx, &nodesyncproto.ColdSyncRequest{
+			SpaceId: spaceId,
+		})
+		if err != nil {
 			return err
 		}
-	}
-	return os.Rename(rd.dir, c.storage.StoreDir(spaceId))
+		rd := &streamReader{
+			dir:    c.storage.StoreDir("." + spaceId),
+			stream: stream,
+		}
+		if err = rd.Read(ctx); err != nil {
+			_ = os.RemoveAll(rd.dir)
+			if err == io.EOF {
+				return ErrRemoteSpaceLocked
+			} else {
+				return err
+			}
+		}
+		return os.Rename(rd.dir, c.storage.StoreDir(spaceId))
+	})
 }
 
 func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {

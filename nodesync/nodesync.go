@@ -17,6 +17,7 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/go-chash"
 	"go.uber.org/zap"
+	"storj.io/drpc"
 	"sync"
 	"time"
 )
@@ -57,7 +58,7 @@ func (n *nodeSync) Init(a *app.App) (err error) {
 	n.coldsync = a.MustComponent(coldsync.CName).(coldsync.ColdSync)
 	n.hotsync = a.MustComponent(hotsync.CName).(hotsync.HotSync)
 	n.peerId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
-	n.pool = a.MustComponent(pool.CName).(pool.Service).NewPool("nodesync")
+	n.pool = a.MustComponent(pool.CName).(pool.Pool)
 	n.conf = a.MustComponent("config").(configGetter).GetNodeSync()
 	n.syncStat = new(SyncStat)
 	n.hotsync.SetMetric(&n.syncStat.HotSyncHandled, &n.syncStat.HotSyncErrors)
@@ -174,26 +175,28 @@ func (n *nodeSync) syncPeer(ctx context.Context, peerId string, partId int) (err
 	if err != nil {
 		return
 	}
-	ld := n.nodehead.LDiff(partId)
-	newIds, changedIds, _, err := ld.Diff(ctx, nodeRemoteDiff{
-		partId: partId,
-		cl:     nodesyncproto.NewDRPCNodeSyncClient(p),
-	})
-	if err != nil {
-		return
-	}
-	log.Debug("syncing with peer", zap.String("peerId", peerId), zap.Int("changed", len(changedIds)), zap.Int("new", len(newIds)))
-	for _, newId := range newIds {
-		if e := n.coldSync(ctx, newId, peerId); e != nil {
-			log.Warn("can't coldSync space with peer", zap.String("spaceId", newId), zap.String("peerId", peerId), zap.Error(e))
-			n.syncStat.ColdSyncErrors.Add(1)
+	return p.DoDrpc(ctx, func(conn drpc.Conn) error {
+		ld := n.nodehead.LDiff(partId)
+		newIds, changedIds, _, err := ld.Diff(ctx, nodeRemoteDiff{
+			partId: partId,
+			cl:     nodesyncproto.NewDRPCNodeSyncClient(conn),
+		})
+		if err != nil {
+			return err
 		}
-		n.syncStat.ColdSyncHandled.Add(1)
-	}
-	if len(changedIds) > 0 {
-		n.hotsync.UpdateQueue(changedIds)
-	}
-	return
+		log.Debug("syncing with peer", zap.String("peerId", peerId), zap.Int("changed", len(changedIds)), zap.Int("new", len(newIds)))
+		for _, newId := range newIds {
+			if e := n.coldSync(ctx, newId, peerId); e != nil {
+				log.Warn("can't coldSync space with peer", zap.String("spaceId", newId), zap.String("peerId", peerId), zap.Error(e))
+				n.syncStat.ColdSyncErrors.Add(1)
+			}
+			n.syncStat.ColdSyncHandled.Add(1)
+		}
+		if len(changedIds) > 0 {
+			n.hotsync.UpdateQueue(changedIds)
+		}
+		return nil
+	})
 }
 
 func (n *nodeSync) coldSync(ctx context.Context, spaceId, peerId string) (err error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync-node/nodestorage/mock_nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -29,9 +30,12 @@ func TestColdSync_Sync(t *testing.T) {
 		fxC = newFixture(t)
 		fxS = newFixture(t)
 		peerId = "peer"
-		p, err := fxS.tp.Get(ctx, "peer")
+		mcS, mcC := rpctest.MultiConnPair(peerId, peerId+"client")
+		pS, err := peer.NewPeer(mcS, fxC.ts)
 		require.NoError(t, err)
-		fxC.tp.AddPeer(p)
+		fxC.tp.AddPeer(ctx, pS)
+		_, err = peer.NewPeer(mcC, fxS.ts)
+		require.NoError(t, err)
 		return
 	}
 
@@ -123,7 +127,8 @@ func newFixture(t *testing.T) (fx *fixture) {
 		ColdSync: New(),
 		ctrl:     gomock.NewController(t),
 		a:        new(app.App),
-		tp:       rpctest.NewTestPool().WithServer(ts),
+		ts:       ts,
+		tp:       rpctest.NewTestPool(),
 		tmpDir:   tmpDir,
 	}
 	fx.store = mock_nodestorage.NewMockNodeStorage(fx.ctrl)
@@ -139,7 +144,7 @@ func newFixture(t *testing.T) (fx *fixture) {
 	fx.space.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.space.EXPECT().Close(gomock.Any()).AnyTimes()
 
-	fx.a.Register(fx.ColdSync).Register(fx.tp).Register(fx.store).Register(fx.space)
+	fx.a.Register(fx.ColdSync).Register(fx.tp).Register(fx.ts).Register(fx.store).Register(fx.space)
 	require.NoError(t, nodesyncproto.DRPCRegisterNodeSync(ts, &testServer{cs: fx.ColdSync}))
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
@@ -147,12 +152,13 @@ func newFixture(t *testing.T) (fx *fixture) {
 
 type fixture struct {
 	ColdSync
-	tp     *rpctest.TestPool
 	a      *app.App
 	store  *mock_nodestorage.MockNodeStorage
 	ctrl   *gomock.Controller
 	tmpDir string
 	space  *mock_nodespace.MockService
+	ts     *rpctest.TestServer
+	tp     *rpctest.TestPool
 }
 
 func (fx *fixture) Finish(t *testing.T) {
