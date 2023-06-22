@@ -2,8 +2,10 @@ package nodedebugrpc
 
 import (
 	"context"
-	"github.com/anyproto/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"time"
+
+	"github.com/anyproto/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 )
 
 type rpcHandler struct {
@@ -11,19 +13,16 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) DumpTree(ctx context.Context, request *nodedebugrpcproto.DumpTreeRequest) (resp *nodedebugrpcproto.DumpTreeResponse, err error) {
-	tree, err := r.s.treeCache.GetTree(context.Background(), request.SpaceId, request.DocumentId)
+	tree, err := r.s.treeCache.GetTree(ctx, request.SpaceId, request.DocumentId)
 	if err != nil {
 		return
 	}
-	// TODO: commented
-	_ = tree
-	/*
-		dump, err := tree.DebugDump(nil)
-		if err != nil {
-			return
-		}*/
+	info, err := tree.Debug(objecttree.NoOpDescriptionParser)
+	if err != nil {
+		return
+	}
 	resp = &nodedebugrpcproto.DumpTreeResponse{
-		//Dump: dump,
+		Dump: info.Graphviz,
 	}
 	return
 }
