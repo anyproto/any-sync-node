@@ -6,10 +6,10 @@ import (
 	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/testnodeconf"
@@ -176,7 +176,7 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 		RawHeader: []byte("header"),
 		Id:        "headerId",
 	}
-	aclRoot := &aclrecordproto.RawAclRecordWithId{
+	aclRoot := &consensusproto.RawRecordWithId{
 		Payload: []byte("aclRoot"),
 		Id:      "aclRootId",
 	}
