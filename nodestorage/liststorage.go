@@ -3,15 +3,15 @@ package nodestorage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
 type listStorage struct {
 	db   *pogreb.DB
 	keys aclKeys
 	id   string
-	root *aclrecordproto.RawAclRecordWithId
+	root *consensusproto.RawRecordWithId
 }
 
 func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
@@ -34,7 +34,7 @@ func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 		return
 	}
 
-	rootWithId := &aclrecordproto.RawAclRecordWithId{
+	rootWithId := &consensusproto.RawRecordWithId{
 		Payload: root,
 		Id:      string(rootId),
 	}
@@ -48,7 +48,7 @@ func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 	return
 }
 
-func createListStorage(db *pogreb.DB, root *aclrecordproto.RawAclRecordWithId) (ls liststorage.ListStorage, err error) {
+func createListStorage(db *pogreb.DB, root *consensusproto.RawRecordWithId) (ls liststorage.ListStorage, err error) {
 	keys := aclKeys{}
 	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
@@ -86,7 +86,7 @@ func (l *listStorage) Id() string {
 	return l.id
 }
 
-func (l *listStorage) Root() (*aclrecordproto.RawAclRecordWithId, error) {
+func (l *listStorage) Root() (*consensusproto.RawRecordWithId, error) {
 	return l.root, nil
 }
 
@@ -103,7 +103,7 @@ func (l *listStorage) Head() (head string, err error) {
 	return
 }
 
-func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclrecordproto.RawAclRecordWithId, err error) {
+func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *consensusproto.RawRecordWithId, err error) {
 	res, err := l.db.Get(l.keys.RawRecordKey(id))
 	if err != nil {
 		return
@@ -113,7 +113,7 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclreco
 		return
 	}
 
-	raw = &aclrecordproto.RawAclRecordWithId{
+	raw = &consensusproto.RawRecordWithId{
 		Payload: res,
 		Id:      id,
 	}
@@ -124,6 +124,6 @@ func (l *listStorage) SetHead(headId string) (err error) {
 	return l.db.Put(l.keys.HeadIdKey(), []byte(headId))
 }
 
-func (l *listStorage) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawAclRecordWithId) error {
+func (l *listStorage) AddRawRecord(ctx context.Context, rec *consensusproto.RawRecordWithId) error {
 	return l.db.Put(l.keys.RawRecordKey(rec.Id), rec.Payload)
 }
