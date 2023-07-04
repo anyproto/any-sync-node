@@ -9,10 +9,8 @@ github.com/akrylysov/pogreb v0.10.1 h1:FqlR8VR7uCbJdfUob916tPM+idpKgeESDXOA1K0DK
 github.com/akrylysov/pogreb v0.10.1/go.mod h1:pNs6QmpQ1UlTJKDezuRWmaqkgUE2TuU0YTWyqJZ7+lI=
 github.com/alecthomas/kingpin/v2 v2.3.2 h1:H0aULhgmSzN8xQ3nX1uxtdlTHYoPLu5AhHxWrKI6ocU=
 github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 h1:s6gZFSlWYmbqAuRjVTiNNhvNRfY2Wxp9nhfyel4rklc=
-github.com/anyproto/any-sync v0.2.8 h1:t2QYkB9PpvxHXRrDmKWFBD3Gv/1whXwmFi/QXnr1h30=
-github.com/anyproto/any-sync v0.2.8/go.mod h1:ivki7kbpmZ2s4faXlj3QFnC7EOEFBTmlcmKehGrdF1k=
-github.com/anyproto/any-sync v0.2.11 h1:ojaclmLRaTVe2g/D9E5myqIsEFkS4CZsYyMypy44TrI=
-github.com/anyproto/any-sync v0.2.11/go.mod h1:ZENGpUnGbJ8NUbMkoIYPXSTX4IlXaoSko+gqzk/6onc=
+github.com/anyproto/any-sync v0.2.12 h1:V3z4kw2mxGO2FrPS34EUlzCabiWGt4F4qzoX1tcjcE0=
+github.com/anyproto/any-sync v0.2.12/go.mod h1:ZENGpUnGbJ8NUbMkoIYPXSTX4IlXaoSko+gqzk/6onc=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=
@@ -141,8 +139,6 @@ github.com/libp2p/go-buffer-pool v0.1.0 h1:oK4mSFcQz7cTQIfqbe4MIj9gLW+mnanjyFtc6
 github.com/libp2p/go-buffer-pool v0.1.0/go.mod h1:N+vh8gMqimBzdKkSMVuydVDq+UV5QTWy5HSiZacSbPg=
 github.com/libp2p/go-cidranger v1.1.0 h1:ewPN8EZ0dd1LSnrtuwd4709PXVcITVeuwbag38yPW7c=
 github.com/libp2p/go-flow-metrics v0.1.0 h1:0iPhMI8PskQwzh57jB9WxIuIOQ0r+15PChFGkx3Q3WM=
-github.com/libp2p/go-libp2p v0.28.0 h1:zO8cY98nJiPzZpFv5w5gqqb8aVzt4ukQ0nVOSaaKhJ8=
-github.com/libp2p/go-libp2p v0.28.0/go.mod h1:s3Xabc9LSwOcnv9UD4nORnXKTsWkPMkIMB/JIGXVnzk=
 github.com/libp2p/go-libp2p v0.28.1 h1:YurK+ZAI6cKfASLJBVFkpVBdl3wGhFi6fusOt725ii8=
 github.com/libp2p/go-libp2p v0.28.1/go.mod h1:s3Xabc9LSwOcnv9UD4nORnXKTsWkPMkIMB/JIGXVnzk=
 github.com/libp2p/go-libp2p-asn-util v0.3.0 h1:gMDcMyYiZKkocGXDQ5nsUQyquC9+H+iLEQHwOCZ7s8s=
