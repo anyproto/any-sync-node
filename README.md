@@ -41,4 +41,4 @@ Follow us on [Github](https://github.com/anyproto) and join the [Contributors Co
 ---
 Made by Any — a Swiss association 🇨🇭
 
-Licensed under [MIT License](./LICENSE.md).
+Licensed under [MIT License](./LICENSE).
