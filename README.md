@@ -12,6 +12,7 @@ To build and run the Any-Sync Node on your own server, follow these technical st
 
 *To avoid any Go language version incompatibility issues, please use version `1.19` of Go.
 
+## Running
 When running the Any-Sync Node, you can use the following options:
 
  - `-c` Every node should be run with the configuration file option. By
