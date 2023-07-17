@@ -1,23 +1,30 @@
-﻿# Anytype node
-To build and run the Anytype Node on your own server, follow these technical steps:
+﻿# Any-Sync Node
+Implementation of node from [`any-sync`](https://github.com/anyproto/any-sync) protocol.
 
-1.  Clone the Anytype Node repository to your local machine.
-2.  Navigate to the root directory of the repository, where you will find a `Makefile`.
-3.  Run the command `make deps` to install the required dependencies for the Anytype Node.*
-4.  Run the command `make build` to build the Anytype Node.*
-5.  If there are no errors, the Anytype Node will be built and can be found in the `/bin` directory.
+## Building the source
+To ensure compatibility, please use Go version `1.19`.
 
-*To avoid any Go language version incompatibility issues, please use version `1.19` of Go.
+To build and run the Any-Sync Node on your own server, follow these steps:
 
-When running the Anytype Node, you can use the following options:
+1.  Clone `any-sync-node` repository.
+2.  Navigate to the root directory of the repository.
+3.  Run the following commands to install the required dependencies and build the Any-Sync Node.
+    ```
+    make deps
+    make build
+    ```
+4.  If there are no errors, the Any-Sync Node will be built and can be found in the `/bin` directory.
 
- - `-c` Every node should be run with the configuration file option. By
-   default, the option flag is set to `etc/any-sync-node.yml.` You can
-   always generate a new configuration using the appropriate command **???**
- -   `-v` This option shows the current version of the Anytype Node and then exits.
- -   `-h` This option shows the help message and then exits.
+## Running
+Any-Sync Node requires a configuration. You can generate configuration files for your nodes with [`any-sync-network`](https://github.com/anyproto/any-sync-tools) tool.
 
-## Graph example of using anytype nodes group
+The following options are available for running the Any-Sync Node:
+
+ - `-c` — path to config file (default `etc/any-sync-node.yml`). 
+ - `-v` — current version.
+ - `-h` — help message.
+
+## Graph example of using Any-Sync Nodes group
 
 ```mermaid
 graph LR
@@ -27,3 +34,15 @@ C -- Sync --> A
 U[Client] --> A
 
 ```
+
+## Contribution
+Thank you for your desire to develop Anytype together. 
+
+Currently, we're not ready to accept PRs, but we will in the nearest future.
+
+Follow us on [Github](https://github.com/anyproto) and join the [Contributors Community](https://github.com/orgs/anyproto/discussions).
+
+---
+Made by Any — a Swiss association 🇨🇭
+
+Licensed under [MIT License](./LICENSE).
