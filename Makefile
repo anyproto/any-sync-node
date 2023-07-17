@@ -21,6 +21,7 @@ test:
 
 proto:
 	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. nodesync/nodesyncproto/protos/*.proto
+	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. nodeclient/nodeclientproto/protos/*.proto
 	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. debug/nodedebugrpc/nodedebugrpcproto/protos/*.proto
 
 deps:

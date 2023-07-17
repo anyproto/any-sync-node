@@ -1,0 +1,25 @@
+syntax = "proto3";
+package anyNodeClient;
+
+option go_package = "nodeclient/nodeclientproto";
+
+service NodeClient {
+    // AclAdd adds new acl record to the list
+    rpc AclAdd(AclAddRequest) returns (AclAddResponse);
+}
+
+enum ErrCodes {
+    Unexpected = 0;
+    InvalidRecord = 1;
+    ErrorOffset = 1100;
+}
+
+message AclAddRequest {
+    bytes clientRecord = 1;
+    bytes spaceId = 2;
+}
+
+message AclAddResponse {
+    bytes addedRecord = 1;
+    bytes recordId = 2;
+}
