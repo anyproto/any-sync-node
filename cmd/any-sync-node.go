@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
 	"github.com/anyproto/any-sync/net/peerservice"
@@ -122,6 +123,7 @@ func Bootstrap(a *app.App) {
 		Register(yamux.New()).
 		Register(pool.New()).
 		Register(streampool.New()).
+		Register(consensusclient.New()).
 		Register(nodehead.New()).
 		Register(nodestorage.New()).
 		Register(nodecache.New(200)).

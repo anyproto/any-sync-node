@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/server"
@@ -45,6 +46,7 @@ type service struct {
 	spaceCache           ocache.OCache
 	commonSpace          commonspace.SpaceService
 	confService          nodeconf.Service
+	consClient           consensusclient.Service
 	spaceStorageProvider nodestorage.NodeStorage
 	streamPool           streampool.StreamPool
 	nodeHead             nodehead.NodeHead
@@ -62,6 +64,7 @@ func (s *service) Init(a *app.App) (err error) {
 		DialQueueWorkers: 4,
 		DialQueueSize:    1000,
 	})
+	s.consClient = a.MustComponent(consensusclient.CName).(consensusclient.Service)
 	s.spaceCache = ocache.New(
 		s.loadSpace,
 		ocache.WithLogger(log.Sugar()),
@@ -133,7 +136,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	if err != nil {
 		return
 	}
-	ns, err := newNodeSpace(cc)
+	ns, err := newNodeSpace(cc, s.consClient)
 	if err != nil {
 		return
 	}

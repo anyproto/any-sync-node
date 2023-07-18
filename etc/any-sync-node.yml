@@ -42,6 +42,11 @@ network:
         - 127.0.0.1:4730
       types:
         - file
+    - peerId: 12D3KooWQxiZ5a7vcy4DTJa8Gy1eVUmwb5ojN4SrJC9Rjxzigw6C
+      addresses:
+        - 127.0.0.1:4530
+      types:
+        - consensus
   creationTime: 2023-04-13T20:29:23.453806629+02:00
 networkStorePath: .
 networkUpdateIntervalSec: 600

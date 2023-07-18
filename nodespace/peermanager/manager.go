@@ -78,6 +78,10 @@ func (n *nodePeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer
 	return n.getResponsiblePeers(ctx, n.p.pool)
 }
 
+func (n *nodePeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	return n.GetResponsiblePeers(ctx)
+}
+
 func (n *nodePeerManager) getResponsiblePeers(ctx context.Context, netPool pool.Pool) (peers []peer.Peer, err error) {
 	for _, rp := range n.responsiblePeers {
 		if time.Since(rp.lastFail.Load()) > reconnectTimeout {
