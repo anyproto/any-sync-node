@@ -42,7 +42,7 @@ network:
         - 127.0.0.1:4730
       types:
         - file
-    - peerId: 12D3KooWQxiZ5a7vcy4DTJa8Gy1eVUmwb5ojN4SrJC9Rjxzigw6C
+    - peerId: 12D3KooWNT4hbNKXeFuDtdQ13ZbhQ1oJJ2AVWgAQVRrCj6Zb5wxk
       addresses:
         - 127.0.0.1:4530
       types:
