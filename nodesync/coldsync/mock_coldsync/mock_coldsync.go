@@ -10,7 +10,7 @@ import (
 
 	nodesyncproto "github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 	app "github.com/anyproto/any-sync/app"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockColdSync is a mock of ColdSync interface.
