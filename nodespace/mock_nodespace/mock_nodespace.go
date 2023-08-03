@@ -12,7 +12,7 @@ import (
 	ocache "github.com/anyproto/any-sync/app/ocache"
 	commonspace "github.com/anyproto/any-sync/commonspace"
 	streampool "github.com/anyproto/any-sync/net/streampool"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockService is a mock of Service interface.

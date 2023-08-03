@@ -10,7 +10,7 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockNodeStorage is a mock of NodeStorage interface.

@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"math"
@@ -16,6 +18,64 @@ import (
 
 type rpcHandler struct {
 	s *service
+}
+
+func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.AclAddRecordRequest) (resp *spacesyncproto.AclAddRecordResponse, err error) {
+	space, err := r.s.GetSpace(ctx, request.SpaceId)
+	if err != nil {
+		return
+	}
+	rec := &consensusproto.RawRecord{}
+	err = proto.Unmarshal(request.Payload, rec)
+	if err != nil {
+		return
+	}
+	acl := space.Acl()
+	acl.RLock()
+	err = acl.ValidateRawRecord(rec)
+	if err != nil {
+		acl.RUnlock()
+		return
+	}
+	acl.RUnlock()
+	rawRecordWithId, err := r.s.consClient.AddRecord(ctx, acl.Id(), rec)
+	if err != nil {
+		return
+	}
+	acl.Lock()
+	defer acl.Unlock()
+	err = acl.AddRawRecord(rawRecordWithId)
+	if err != nil {
+		return
+	}
+	resp = &spacesyncproto.AclAddRecordResponse{
+		RecordId: rawRecordWithId.Id,
+		Payload:  rawRecordWithId.Payload,
+	}
+	return
+}
+
+func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.AclGetRecordsRequest) (resp *spacesyncproto.AclGetRecordsResponse, err error) {
+	space, err := r.s.GetSpace(ctx, request.SpaceId)
+	if err != nil {
+		return
+	}
+	acl := space.Acl()
+	acl.RLock()
+	recordsBefore, err := acl.RecordsBefore(ctx, request.AclHead)
+	if err != nil {
+		acl.RUnlock()
+		return
+	}
+	acl.RUnlock()
+	for _, rec := range recordsBefore {
+		marshalled, err := proto.Marshal(rec)
+		if err != nil {
+			return nil, err
+		}
+		resp.Records = append(resp.Records, marshalled)
+	}
+	return
 }
 
 func (r *rpcHandler) ObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
@@ -148,6 +208,14 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 		SpaceSettingsId:      req.Payload.GetSpaceSettingsPayloadId(),
 	}
 	ctx = context.WithValue(ctx, commonspace.AddSpaceCtxKey, description)
+	// adding record on the consensus node
+	err = r.s.consClient.AddLog(ctx, &consensusproto.RawRecordWithId{
+		Payload: description.AclPayload,
+		Id:      description.AclId,
+	})
+	if err != nil {
+		return
+	}
 	// calling GetSpace to add space inside the cache, so we this action would be synchronised
 	_, err = r.s.GetSpace(ctx, description.SpaceHeader.GetId())
 	if err != nil {

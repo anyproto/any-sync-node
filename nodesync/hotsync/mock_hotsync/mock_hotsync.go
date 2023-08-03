@@ -10,7 +10,7 @@ import (
 	atomic "sync/atomic"
 
 	app "github.com/anyproto/any-sync/app"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockHotSync is a mock of HotSync interface.
