@@ -54,8 +54,8 @@ jobs:
         run: |
           cat <<EOF > Dockerfile
           # syntax=docker/dockerfile:1
-          LABEL org.opencontainers.image.description ${{ env.ARTIFACT_PREFIX }}
           FROM ubuntu:23.04
+          LABEL org.opencontainers.image.description ${{ env.ARTIFACT_PREFIX }}
           ARG TARGETARCH
           COPY ${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb .
           RUN apt-get install -y ./${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb
