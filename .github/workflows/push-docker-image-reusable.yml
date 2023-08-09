@@ -55,7 +55,9 @@ jobs:
           cat <<EOF > Dockerfile
           # syntax=docker/dockerfile:1
           FROM ubuntu:23.04
-          LABEL org.opencontainers.image.description ${{ env.ARTIFACT_PREFIX }}
+          LABEL org.opencontainers.image.source=${{ github.repositoryUrl }}
+          LABEL org.opencontainers.image.description=${{ env.ARTIFACT_PREFIX }}
+          LABEL org.opencontainers.image.licenses=MIT
           ARG TARGETARCH
           COPY ${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb .
           RUN apt-get install -y ./${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb
@@ -87,6 +89,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ inputs.release }}
+          outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=${{ env.ARTIFACT_PREFIX }}
       - name: Curl
         run: |
           curl --request POST \
