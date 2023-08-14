@@ -10,7 +10,7 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	ldiff "github.com/anyproto/any-sync/app/ldiff"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockNodeHead is a mock of NodeHead interface.
