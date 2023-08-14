@@ -75,6 +75,9 @@ func main() {
 	ctx := context.Background()
 	a := new(app.App)
 
+	// set the proto version
+	secureservice.ProtoVersion = 1
+
 	// open config file
 	conf, err := config.NewFromFile(*flagConfigFile)
 	if err != nil {
