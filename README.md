@@ -1,4 +1,5 @@
-﻿# Any-Sync Node
+﻿[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/anyproto/any-sync-node/badge)](https://securityscorecards.dev/viewer/?uri=github.com/any-sync-node)
+# Any-Sync Node
 Implementation of node from [`any-sync`](https://github.com/anyproto/any-sync) protocol.
 
 ## Building the source
