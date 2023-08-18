@@ -148,6 +148,9 @@ func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string)
 	return s.waitLock(ctx, spaceId, func() error {
 		dbPath := s.StoreDir(spaceId)
 		if _, err := os.Stat(dbPath); err != nil {
+			if os.IsNotExist(err) {
+				return spacestorage.ErrSpaceStorageMissing
+			}
 			return fmt.Errorf("can't delete datadir '%s': %w", dbPath, err)
 		}
 		return os.RemoveAll(dbPath)

@@ -44,7 +44,6 @@ func (s *spaceDeleter) Init(a *app.App) (err error) {
 	s.coordClient = a.MustComponent(coordinatorclient.CName).(coordinatorclient.CoordinatorClient)
 	s.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	s.storageProvider = a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
-	s.deletionStorage = s.storageProvider.DeletionStorage()
 	s.syncWaiter = a.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
 	return
 }
@@ -54,6 +53,7 @@ func (s *spaceDeleter) Name() (name string) {
 }
 
 func (s *spaceDeleter) Run(ctx context.Context) (err error) {
+	s.deletionStorage = s.storageProvider.DeletionStorage()
 	s.periodicCall.Run()
 	return
 }
