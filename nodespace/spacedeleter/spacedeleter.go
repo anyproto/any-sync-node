@@ -4,8 +4,10 @@ import (
 	"context"
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodestorage"
+	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
@@ -17,7 +19,7 @@ import (
 const CName = "node.nodespace.spacedeleter"
 
 const (
-	periodicDeleteSecs = 100
+	periodicDeleteSecs = 60
 	deleteTimeout      = 100 * time.Second
 	logLimit           = 1000
 )
@@ -34,6 +36,7 @@ type spaceDeleter struct {
 	deletionStorage nodestorage.DeletionStorage
 	spaceService    nodespace.Service
 	storageProvider nodestorage.NodeStorage
+	syncWaiter      <-chan struct{}
 }
 
 func (s *spaceDeleter) Init(a *app.App) (err error) {
@@ -42,6 +45,7 @@ func (s *spaceDeleter) Init(a *app.App) (err error) {
 	s.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	s.storageProvider = a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
 	s.deletionStorage = s.storageProvider.DeletionStorage()
+	s.syncWaiter = a.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
 	return
 }
 
@@ -60,6 +64,12 @@ func (s *spaceDeleter) Close(ctx context.Context) (err error) {
 }
 
 func (s *spaceDeleter) delete(ctx context.Context) error {
+	select {
+	// waiting for nodes to sync before we start deletion process
+	case <-s.syncWaiter:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	lastRecordId, err := s.deletionStorage.LastRecordId()
 	if err != nil && err != nodestorage.ErrNoLastRecordId {
 		return err
@@ -70,45 +80,54 @@ func (s *spaceDeleter) delete(ctx context.Context) error {
 		return err
 	}
 	for _, rec := range recs {
-		log := log.With(zap.String("spaceId", rec.SpaceId))
-		switch rec.Status {
-		case coordinatorproto.DeletionLogRecordStatus_Ok:
-			log.Debug("received deletion cancel record")
-			err := s.deletionStorage.SetSpaceStatus(rec.SpaceId, nodestorage.SpaceStatusOk)
-			if err != nil {
-				return err
-			}
-			space, err := s.spaceService.PickSpace(ctx, rec.SpaceId)
-			if err != nil {
-				continue
-			}
-			space.SetDeleted(false)
-		case coordinatorproto.DeletionLogRecordStatus_RemovePrepare:
-			log.Debug("received deletion prepare record")
-			err := s.deletionStorage.SetSpaceStatus(rec.SpaceId, nodestorage.SpaceStatusRemovePrepare)
-			if err != nil {
-				return err
-			}
-			space, err := s.spaceService.PickSpace(ctx, rec.SpaceId)
-			if err != nil {
-				continue
-			}
-			space.SetDeleted(true)
-		case coordinatorproto.DeletionLogRecordStatus_Remove:
-			log.Debug("received deletion record")
-			err := s.storageProvider.DeleteSpaceStorage(ctx, rec.SpaceId)
-			if err != nil && err != spacestorage.ErrSpaceStorageMissing {
-				return err
-			}
-			err = s.deletionStorage.SetSpaceStatus(rec.SpaceId, nodestorage.SpaceStatusRemove)
-			if err != nil {
-				return err
-			}
-		}
-		err = s.deletionStorage.SetLastRecordId(rec.Id)
+		err = s.processDeletionRecord(ctx, rec)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinatorproto.DeletionLogRecord) (err error) {
+	log := log.With(zap.String("spaceId", rec.SpaceId))
+	updateCachedSpace := func(status nodestorage.SpaceStatus, deleted bool) error {
+		err := s.deletionStorage.SetSpaceStatus(rec.SpaceId, status)
+		if err != nil {
+			return err
+		}
+		space, err := s.spaceService.PickSpace(ctx, rec.SpaceId)
+		if err != nil {
+			if err == ocache.ErrNotExists {
+				return nil
+			}
+			return err
+		}
+		space.SetDeleted(deleted)
+		return nil
+	}
+	switch rec.Status {
+	case coordinatorproto.DeletionLogRecordStatus_Ok:
+		log.Debug("received deletion cancel record")
+		err := updateCachedSpace(nodestorage.SpaceStatusOk, false)
+		if err != nil {
+			return err
+		}
+	case coordinatorproto.DeletionLogRecordStatus_RemovePrepare:
+		log.Debug("received deletion prepare record")
+		err := updateCachedSpace(nodestorage.SpaceStatusRemovePrepare, true)
+		if err != nil {
+			return err
+		}
+	case coordinatorproto.DeletionLogRecordStatus_Remove:
+		log.Debug("received deletion record")
+		err := s.storageProvider.DeleteSpaceStorage(ctx, rec.SpaceId)
+		if err != nil && err != spacestorage.ErrSpaceStorageMissing {
+			return err
+		}
+		err = s.deletionStorage.SetSpaceStatus(rec.SpaceId, nodestorage.SpaceStatusRemove)
+		if err != nil {
+			return err
+		}
+	}
+	return s.deletionStorage.SetLastRecordId(rec.Id)
 }
