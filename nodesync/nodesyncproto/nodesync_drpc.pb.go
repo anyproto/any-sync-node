@@ -42,7 +42,6 @@ type DRPCNodeSyncClient interface {
 
 	PartitionSync(ctx context.Context, in *PartitionSyncRequest) (*PartitionSyncResponse, error)
 	ColdSync(ctx context.Context, in *ColdSyncRequest) (DRPCNodeSync_ColdSyncClient, error)
-	SpaceDelete(ctx context.Context, in *SpaceDeleteRequest) (*SpaceDeleteResponse, error)
 }
 
 type drpcNodeSyncClient struct {
@@ -100,19 +99,9 @@ func (x *drpcNodeSync_ColdSyncClient) RecvMsg(m *ColdSyncResponse) error {
 	return x.MsgRecv(m, drpcEncoding_File_nodesync_nodesyncproto_protos_nodesync_proto{})
 }
 
-func (c *drpcNodeSyncClient) SpaceDelete(ctx context.Context, in *SpaceDeleteRequest) (*SpaceDeleteResponse, error) {
-	out := new(SpaceDeleteResponse)
-	err := c.cc.Invoke(ctx, "/anyNodeSync.NodeSync/SpaceDelete", drpcEncoding_File_nodesync_nodesyncproto_protos_nodesync_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 type DRPCNodeSyncServer interface {
 	PartitionSync(context.Context, *PartitionSyncRequest) (*PartitionSyncResponse, error)
 	ColdSync(*ColdSyncRequest, DRPCNodeSync_ColdSyncStream) error
-	SpaceDelete(context.Context, *SpaceDeleteRequest) (*SpaceDeleteResponse, error)
 }
 
 type DRPCNodeSyncUnimplementedServer struct{}
@@ -125,13 +114,9 @@ func (s *DRPCNodeSyncUnimplementedServer) ColdSync(*ColdSyncRequest, DRPCNodeSyn
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCNodeSyncUnimplementedServer) SpaceDelete(context.Context, *SpaceDeleteRequest) (*SpaceDeleteResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
 type DRPCNodeSyncDescription struct{}
 
-func (DRPCNodeSyncDescription) NumMethods() int { return 3 }
+func (DRPCNodeSyncDescription) NumMethods() int { return 2 }
 
 func (DRPCNodeSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -153,15 +138,6 @@ func (DRPCNodeSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Receiv
 						&drpcNodeSync_ColdSyncStream{in2.(drpc.Stream)},
 					)
 			}, DRPCNodeSyncServer.ColdSync, true
-	case 2:
-		return "/anyNodeSync.NodeSync/SpaceDelete", drpcEncoding_File_nodesync_nodesyncproto_protos_nodesync_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCNodeSyncServer).
-					SpaceDelete(
-						ctx,
-						in1.(*SpaceDeleteRequest),
-					)
-			}, DRPCNodeSyncServer.SpaceDelete, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -198,20 +174,4 @@ type drpcNodeSync_ColdSyncStream struct {
 
 func (x *drpcNodeSync_ColdSyncStream) Send(m *ColdSyncResponse) error {
 	return x.MsgSend(m, drpcEncoding_File_nodesync_nodesyncproto_protos_nodesync_proto{})
-}
-
-type DRPCNodeSync_SpaceDeleteStream interface {
-	drpc.Stream
-	SendAndClose(*SpaceDeleteResponse) error
-}
-
-type drpcNodeSync_SpaceDeleteStream struct {
-	drpc.Stream
-}
-
-func (x *drpcNodeSync_SpaceDeleteStream) SendAndClose(m *SpaceDeleteResponse) error {
-	if err := x.MsgSend(m, drpcEncoding_File_nodesync_nodesyncproto_protos_nodesync_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
 }

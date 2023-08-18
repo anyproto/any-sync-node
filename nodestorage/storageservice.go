@@ -24,11 +24,13 @@ func New() NodeStorage {
 
 type NodeStorage interface {
 	spacestorage.SpaceStorageProvider
+	DeletionStorage() DeletionStorage
 	SpaceStorage(spaceId string) (spacestorage.SpaceStorage, error)
 	TryLockAndDo(spaceId string, do func() error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
 	StoreDir(spaceId string) (path string)
+	DeleteSpaceStorage(ctx context.Context, spaceId string) error
 }
 
 type lockSpace struct {
@@ -38,9 +40,26 @@ type lockSpace struct {
 
 type storageService struct {
 	rootPath     string
+	delStorage   DeletionStorage
 	onWriteHash  func(ctx context.Context, spaceId, hash string)
 	lockedSpaces map[string]*lockSpace
 	mu           sync.Mutex
+}
+
+func (s *storageService) Run(ctx context.Context) (err error) {
+	s.delStorage, err = OpenDeletionStorage(s.rootPath)
+	return
+}
+
+func (s *storageService) Close(ctx context.Context) (err error) {
+	if s.delStorage != nil {
+		return s.delStorage.Close()
+	}
+	return
+}
+
+func (s *storageService) DeletionStorage() DeletionStorage {
+	return s.delStorage
 }
 
 func (s *storageService) Init(a *app.App) (err error) {
@@ -125,6 +144,33 @@ func (s *storageService) checkLock(id string, openFunc func() error) (ls *lockSp
 	return nil, nil
 }
 
+func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string) error {
+	return s.waitLock(ctx, spaceId, func() error {
+		dbPath := s.StoreDir(spaceId)
+		if _, err := os.Stat(dbPath); err != nil {
+			return fmt.Errorf("can't delete datadir '%s': %w", dbPath, err)
+		}
+		return os.RemoveAll(dbPath)
+	})
+}
+
+func (s *storageService) waitLock(ctx context.Context, id string, action func() error) (err error) {
+	var ls *lockSpace
+	ls, err = s.checkLock(id, action)
+	if err == ErrLocked {
+		select {
+		case <-ls.ch:
+			if ls.err != nil {
+				return err
+			}
+			return s.waitLock(ctx, id, action)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return
+}
+
 func (s *storageService) unlockSpaceStorage(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -140,7 +186,6 @@ func (s *storageService) AllSpaceIds() (ids []string, err error) {
 	if err != nil {
 		return files, fmt.Errorf("can't read datadir '%v': %v", s.rootPath, err)
 	}
-
 	for _, file := range fileInfo {
 		if !strings.HasPrefix(file.Name(), ".") {
 			files = append(files, file.Name())

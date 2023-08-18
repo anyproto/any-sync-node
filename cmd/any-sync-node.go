@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/peermanager"
+	"github.com/anyproto/any-sync-node/nodespace/spacedeleter"
 	"github.com/anyproto/any-sync-node/nodespace/statusprovider"
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
@@ -114,6 +115,7 @@ func Bootstrap(a *app.App) {
 		Register(statusprovider.New()).
 		Register(credentialprovider.NewNoOp()).
 		Register(coordinatorclient.New()).
+		Register(coordinatorclient.New()).
 		Register(nodeconfstore.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
@@ -133,6 +135,7 @@ func Bootstrap(a *app.App) {
 		Register(secureservice.New()).
 		Register(commonspace.New()).
 		Register(nodespace.New()).
+		Register(spacedeleter.New()).
 		Register(peermanager.New()).
 		Register(debugserver.New()).
 		Register(nodedebugrpc.New())
