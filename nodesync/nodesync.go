@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_nodesync/mock_nodesync.go github.com/anyproto/any-sync-node/nodesync NodeSync
 package nodesync
 
 import (
