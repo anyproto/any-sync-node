@@ -115,7 +115,6 @@ func Bootstrap(a *app.App) {
 		Register(statusprovider.New()).
 		Register(credentialprovider.NewNoOp()).
 		Register(coordinatorclient.New()).
-		Register(coordinatorclient.New()).
 		Register(nodeconfstore.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
