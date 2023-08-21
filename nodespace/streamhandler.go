@@ -58,6 +58,10 @@ func (s *streamHandler) HandleMessage(ctx context.Context, peerId string, msg dr
 
 	space, err := s.s.GetSpace(ctx, syncMsg.SpaceId)
 	if err != nil {
+		if err == spacesyncproto.ErrSpaceIsDeleted {
+			log.Debug("message sent to deleted space", zap.String("spaceId", syncMsg.SpaceId), zap.String("peerId", peerId))
+			return nil
+		}
 		return
 	}
 	err = space.HandleMessage(ctx, objectsync.HandleMessage{
