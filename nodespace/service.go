@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_nodespace/mock_nodespace.go github.com/anyproto/any-sync-node/nodespace Service
+//go:generate mockgen -destination mock_nodespace/mock_nodespace.go github.com/anyproto/any-sync-node/nodespace Service,NodeSpace
 package nodespace
 
 import (
@@ -30,8 +30,8 @@ func New() Service {
 }
 
 type Service interface {
-	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
-	PickSpace(ctx context.Context, id string) (commonspace.Space, error)
+	GetSpace(ctx context.Context, id string) (NodeSpace, error)
+	PickSpace(ctx context.Context, id string) (NodeSpace, error)
 	Cache() ocache.OCache
 	StreamPool() streampool.StreamPool
 	app.ComponentRunnable
@@ -84,20 +84,24 @@ func (s *service) StreamPool() streampool.StreamPool {
 	return s.streamPool
 }
 
-func (s *service) PickSpace(ctx context.Context, id string) (commonspace.Space, error) {
+func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 	v, err := s.spaceCache.Pick(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return v.(commonspace.Space), nil
+	return v.(NodeSpace), nil
 }
 
-func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, error) {
+func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
 	v, err := s.spaceCache.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return v.(commonspace.Space), nil
+	space := v.(NodeSpace)
+	if space.IsDeleted() {
+		return nil, spacesyncproto.ErrSpaceIsDeleted
+	}
+	return space, nil
 }
 
 func (s *service) HandleMessage(ctx context.Context, senderId string, req *spacesyncproto.ObjectSyncMessage) (err error) {

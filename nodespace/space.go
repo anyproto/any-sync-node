@@ -11,8 +11,15 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"go.uber.org/zap"
+	"sync/atomic"
 	"time"
 )
+
+type NodeSpace interface {
+	commonspace.Space
+	SetIsDeleted(isDeleted bool)
+	IsDeleted() bool
+}
 
 func newNodeSpace(cc commonspace.Space, consClient consensusclient.Service, nodeStorage nodestorage.NodeStorage) (*nodeSpace, error) {
 	return &nodeSpace{
@@ -28,6 +35,15 @@ type nodeSpace struct {
 	consClient  consensusclient.Service
 	nodeStorage nodestorage.NodeStorage
 	log         logger.CtxLogger
+	isDeleted   atomic.Bool
+}
+
+func (s *nodeSpace) IsDeleted() bool {
+	return s.isDeleted.Load()
+}
+
+func (s *nodeSpace) SetIsDeleted(isDeleted bool) {
+	s.isDeleted.Store(isDeleted)
 }
 
 func (s *nodeSpace) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) {
@@ -47,28 +63,41 @@ func (s *nodeSpace) AddConsensusError(err error) {
 	return
 }
 
+func (s *nodeSpace) checkDeletionStatus(ctx context.Context, status nodestorage.SpaceStatus) (err error) {
+	switch status {
+	case nodestorage.SpaceStatusRemovePrepare:
+		err = s.Space.Storage().Close(ctx)
+		if err != nil {
+			return err
+		}
+		return spacesyncproto.ErrSpaceIsDeleted
+	case nodestorage.SpaceStatusRemove:
+		err = s.Space.Storage().Close(ctx)
+		if err != nil {
+			return err
+		}
+		err = s.nodeStorage.DeleteSpaceStorage(ctx, s.Id())
+		if err != nil {
+			return err
+		}
+		return spacesyncproto.ErrSpaceIsDeleted
+	default:
+		return nil
+	}
+}
+
 func (s *nodeSpace) Init(ctx context.Context) (err error) {
 	delStorage := s.nodeStorage.DeletionStorage()
 	delStatus, err := delStorage.SpaceStatus(s.Id())
 	if err == nil {
-		if delStatus == nodestorage.SpaceStatusRemove {
-			err = s.Space.Storage().Close(ctx)
-			if err != nil {
-				return err
-			}
-			err = s.nodeStorage.DeleteSpaceStorage(ctx, s.Id())
-			if err != nil {
-				return err
-			}
-			return spacesyncproto.ErrSpaceIsDeleted
+		err = s.checkDeletionStatus(ctx, delStatus)
+		if err != nil {
+			return
 		}
 	}
 	err = s.Space.Init(ctx)
 	if err != nil {
 		return
-	}
-	if delStatus == nodestorage.SpaceStatusRemovePrepare {
-		s.Space.SetDeleted(true)
 	}
 	err = s.consClient.AddLog(ctx, &consensusproto.RawRecordWithId{
 		Payload: s.Acl().Root().Payload,

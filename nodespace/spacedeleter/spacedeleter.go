@@ -63,7 +63,14 @@ func (s *spaceDeleter) Close(ctx context.Context) (err error) {
 	return
 }
 
-func (s *spaceDeleter) delete(ctx context.Context) error {
+func (s *spaceDeleter) delete(ctx context.Context) (err error) {
+	defer func() {
+		if err != nil {
+			log.Error("deletion process failed", zap.Error(err))
+		} else {
+			log.Debug("deletion process finished")
+		}
+	}()
 	select {
 	// waiting for nodes to sync before we start deletion process
 	case <-s.syncWaiter:
@@ -79,6 +86,7 @@ func (s *spaceDeleter) delete(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	log.Debug("got deletion records", zap.String("lastRecordId", lastRecordId), zap.Int("len(records)", len(recs)))
 	for _, rec := range recs {
 		err = s.processDeletionRecord(ctx, rec)
 		if err != nil {
@@ -102,7 +110,7 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 			}
 			return err
 		}
-		space.SetDeleted(deleted)
+		space.SetIsDeleted(deleted)
 		return nil
 	}
 	switch rec.Status {

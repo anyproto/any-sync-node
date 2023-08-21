@@ -15,7 +15,6 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ocache"
-	"github.com/anyproto/any-sync/commonspace/mock_commonspace"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -129,9 +128,9 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
-	space1 := mock_commonspace.NewMockSpace(fx.ctrl)
+	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space1").Return(space1, nil).AnyTimes()
-	space1.EXPECT().SetDeleted(false)
+	space1.EXPECT().SetIsDeleted(false)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
 	store.Close(context.Background())
 
@@ -149,9 +148,9 @@ func TestSpaceDeleter_Run_OkNoStorage(t *testing.T) {
 	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
-	space1 := mock_commonspace.NewMockSpace(fx.ctrl)
+	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space1").Return(space1, nil).AnyTimes()
-	space1.EXPECT().SetDeleted(false)
+	space1.EXPECT().SetIsDeleted(false)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
 
 	time.Sleep(testSaveDelay)
@@ -168,9 +167,9 @@ func TestSpaceDeleter_Run_Failure(t *testing.T) {
 	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
-	space1 := mock_commonspace.NewMockSpace(fx.ctrl)
+	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space1").Return(space1, nil).AnyTimes()
-	space1.EXPECT().SetDeleted(false)
+	space1.EXPECT().SetIsDeleted(false)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, fmt.Errorf("some system error")).AnyTimes()
 
 	time.Sleep(testSaveDelay)
