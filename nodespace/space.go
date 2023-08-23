@@ -84,7 +84,7 @@ func (s *nodeSpace) checkDeletionStatus(ctx context.Context) (err error) {
 
 func (s *nodeSpace) Init(ctx context.Context) (err error) {
 	err = s.checkDeletionStatus(ctx)
-	if err == nil {
+	if err != nil {
 		return
 	}
 	err = s.Space.Init(ctx)
