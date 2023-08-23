@@ -14,8 +14,6 @@ service NodeSync {
     rpc PartitionSync(PartitionSyncRequest) returns (PartitionSyncResponse);
     // ColdSync requests cold sync stream for fast space download
     rpc ColdSync(ColdSyncRequest) returns (stream ColdSyncResponse);
-    // SpaceDelete sends a deletion change into space
-    rpc SpaceDelete(SpaceDeleteRequest) returns (SpaceDeleteResponse);
 }
 
 // PartitionSyncRange presenting a request for one range
@@ -57,15 +55,4 @@ message ColdSyncResponse {
     string filename = 2;
     bytes data = 3;
     uint32 crc32 = 4;
-}
-
-// SpaceDeleteRequest contains a change to be inserted in space settings object
-message SpaceDeleteRequest {
-    string spaceId = 1;
-    string changeId = 2;
-    bytes deleteChange = 3;
-}
-
-// SpaceDeleteResponse contains empty payload, we just need to check if there are no errors
-message SpaceDeleteResponse {
 }

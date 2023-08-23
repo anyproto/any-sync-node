@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	nodestorage "github.com/anyproto/any-sync-node/nodestorage"
 	app "github.com/anyproto/any-sync/app"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
 	gomock "go.uber.org/mock/gomock"
@@ -64,6 +65,34 @@ func (m *MockNodeStorage) CreateSpaceStorage(arg0 spacestorage.SpaceStorageCreat
 func (mr *MockNodeStorageMockRecorder) CreateSpaceStorage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).CreateSpaceStorage), arg0)
+}
+
+// DeleteSpaceStorage mocks base method.
+func (m *MockNodeStorage) DeleteSpaceStorage(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSpaceStorage", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSpaceStorage indicates an expected call of DeleteSpaceStorage.
+func (mr *MockNodeStorageMockRecorder) DeleteSpaceStorage(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).DeleteSpaceStorage), arg0, arg1)
+}
+
+// DeletionStorage mocks base method.
+func (m *MockNodeStorage) DeletionStorage() nodestorage.DeletionStorage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletionStorage")
+	ret0, _ := ret[0].(nodestorage.DeletionStorage)
+	return ret0
+}
+
+// DeletionStorage indicates an expected call of DeletionStorage.
+func (mr *MockNodeStorageMockRecorder) DeletionStorage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionStorage", reflect.TypeOf((*MockNodeStorage)(nil).DeletionStorage))
 }
 
 // Init mocks base method.

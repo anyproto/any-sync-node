@@ -1,27 +1,23 @@
-//go:generate mockgen -destination mock_nodespace/mock_nodespace.go github.com/anyproto/any-sync-node/nodespace Service
+//go:generate mockgen -destination mock_nodespace/mock_nodespace.go github.com/anyproto/any-sync-node/nodespace Service,NodeSpace
 package nodespace
 
 import (
 	"context"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodestorage"
-	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/config"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 	"time"
 )
 
@@ -34,8 +30,8 @@ func New() Service {
 }
 
 type Service interface {
-	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
-	DeleteSpace(ctx context.Context, spaceId, changeId string, changePayload []byte) (err error)
+	GetSpace(ctx context.Context, id string) (NodeSpace, error)
+	PickSpace(ctx context.Context, id string) (NodeSpace, error)
 	Cache() ocache.OCache
 	StreamPool() streampool.StreamPool
 	app.ComponentRunnable
@@ -88,12 +84,24 @@ func (s *service) StreamPool() streampool.StreamPool {
 	return s.streamPool
 }
 
-func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, error) {
+func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
+	v, err := s.spaceCache.Pick(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return v.(NodeSpace), nil
+}
+
+func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
 	v, err := s.spaceCache.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return v.(commonspace.Space), nil
+	space := v.(NodeSpace)
+	if space.IsDeleted() {
+		return nil, spacesyncproto.ErrSpaceIsDeleted
+	}
+	return space, nil
 }
 
 func (s *service) HandleMessage(ctx context.Context, senderId string, req *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -109,25 +117,6 @@ func (s *service) HandleMessage(ctx context.Context, senderId string, req *space
 	}
 }
 
-func (s *service) DeleteSpace(ctx context.Context, spaceId, changeId string, changePayload []byte) (err error) {
-	peerId, err := peer.CtxPeerId(ctx)
-	if err != nil {
-		return
-	}
-	if !slices.Contains(s.confService.CoordinatorPeers(), peerId) {
-		err = nodesyncproto.ErrExpectedCoordinator
-		return
-	}
-	space, err := s.spaceCache.Get(ctx, spaceId)
-	if err != nil {
-		return
-	}
-	return space.(commonspace.Space).DeleteSpace(ctx, &treechangeproto.RawTreeChangeWithId{
-		RawChange: changePayload,
-		Id:        changeId,
-	})
-}
-
 func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {
 	defer func() {
 		log.InfoCtx(ctx, "space loaded", zap.String("id", id), zap.Error(err))
@@ -136,7 +125,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	if err != nil {
 		return
 	}
-	ns, err := newNodeSpace(cc, s.consClient)
+	ns, err := newNodeSpace(cc, s.consClient, s.spaceStorageProvider)
 	if err != nil {
 		return
 	}

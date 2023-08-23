@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_nodesync/mock_nodesync.go github.com/anyproto/any-sync-node/nodesync NodeSync
 package nodesync
 
 import (
@@ -27,28 +28,30 @@ const CName = "node.nodesync"
 var log = logger.NewNamed(CName)
 
 func New() NodeSync {
-	return new(nodeSync)
+	return &nodeSync{startSyncWaiter: make(chan struct{})}
 }
 
 type NodeSync interface {
 	Sync() (err error)
+	WaitSyncOnStart() <-chan struct{}
 	app.ComponentRunnable
 }
 
 type nodeSync struct {
-	nodeconf       nodeconf.Service
-	nodehead       nodehead.NodeHead
-	nodespace      nodespace.Service
-	coldsync       coldsync.ColdSync
-	hotsync        hotsync.HotSync
-	pool           pool.Pool
-	conf           Config
-	peerId         string
-	syncMu         sync.Mutex
-	syncInProgress chan struct{}
-	syncCtx        context.Context
-	syncCtxCancel  context.CancelFunc
-	syncStat       *SyncStat
+	nodeconf        nodeconf.Service
+	nodehead        nodehead.NodeHead
+	nodespace       nodespace.Service
+	coldsync        coldsync.ColdSync
+	hotsync         hotsync.HotSync
+	pool            pool.Pool
+	conf            Config
+	peerId          string
+	syncMu          sync.Mutex
+	syncInProgress  chan struct{}
+	startSyncWaiter chan struct{}
+	syncCtx         context.Context
+	syncCtxCancel   context.CancelFunc
+	syncStat        *SyncStat
 }
 
 func (n *nodeSync) Init(a *app.App) (err error) {
@@ -78,13 +81,20 @@ func (n *nodeSync) Name() (name string) {
 	return CName
 }
 
+func (n *nodeSync) WaitSyncOnStart() <-chan struct{} {
+	return n.startSyncWaiter
+}
+
 func (n *nodeSync) Run(ctx context.Context) (err error) {
 	if n.conf.SyncOnStart {
 		go func() {
 			if e := n.Sync(); e != nil {
 				log.Warn("nodesync onStart failed", zap.Error(e))
 			}
+			close(n.startSyncWaiter)
 		}()
+	} else {
+		close(n.startSyncWaiter)
 	}
 	if n.conf.PeriodicSyncHours > 0 {
 		go func() {

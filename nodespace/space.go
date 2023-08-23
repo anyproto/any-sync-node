@@ -2,28 +2,48 @@ package nodespace
 
 import (
 	"context"
+	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"go.uber.org/zap"
+	"sync/atomic"
 	"time"
 )
 
-func newNodeSpace(cc commonspace.Space, consClient consensusclient.Service) (*nodeSpace, error) {
+type NodeSpace interface {
+	commonspace.Space
+	SetIsDeleted(isDeleted bool)
+	IsDeleted() bool
+}
+
+func newNodeSpace(cc commonspace.Space, consClient consensusclient.Service, nodeStorage nodestorage.NodeStorage) (*nodeSpace, error) {
 	return &nodeSpace{
-		Space:      cc,
-		consClient: consClient,
-		log:        log.With(zap.String("spaceId", cc.Id())),
+		Space:       cc,
+		consClient:  consClient,
+		nodeStorage: nodeStorage,
+		log:         log.With(zap.String("spaceId", cc.Id())),
 	}, nil
 }
 
 type nodeSpace struct {
 	commonspace.Space
-	consClient consensusclient.Service
-	log        logger.CtxLogger
+	consClient  consensusclient.Service
+	nodeStorage nodestorage.NodeStorage
+	log         logger.CtxLogger
+	isDeleted   atomic.Bool
+}
+
+func (s *nodeSpace) IsDeleted() bool {
+	return s.isDeleted.Load()
+}
+
+func (s *nodeSpace) SetIsDeleted(isDeleted bool) {
+	s.isDeleted.Store(isDeleted)
 }
 
 func (s *nodeSpace) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) {
@@ -43,7 +63,30 @@ func (s *nodeSpace) AddConsensusError(err error) {
 	return
 }
 
+func (s *nodeSpace) checkDeletionStatus(ctx context.Context) (err error) {
+	delStorage := s.nodeStorage.DeletionStorage()
+	status, err := delStorage.SpaceStatus(s.Id())
+	if err != nil {
+		if err == nodestorage.ErrUnknownSpaceId {
+			return nil
+		}
+		return err
+	}
+	if status == nodestorage.SpaceStatusRemovePrepare || status == nodestorage.SpaceStatusRemove {
+		err = s.Space.Storage().Close(ctx)
+		if err != nil {
+			return err
+		}
+		return spacesyncproto.ErrSpaceIsDeleted
+	}
+	return nil
+}
+
 func (s *nodeSpace) Init(ctx context.Context) (err error) {
+	err = s.checkDeletionStatus(ctx)
+	if err != nil {
+		return
+	}
 	err = s.Space.Init(ctx)
 	if err != nil {
 		return

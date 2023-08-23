@@ -89,6 +89,17 @@ func isTreeHeadsKey(key string) bool {
 	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "/heads")
 }
 
+type deletionKeys struct {
+}
+
+func (d deletionKeys) SpaceStatusKey(spaceId string) []byte {
+	return treestorage.JoinStringsToBytes("status", spaceId)
+}
+
+func (d deletionKeys) LastRecordIdKey() []byte {
+	return []byte("lastRecordId")
+}
+
 func getRootId(key string) string {
 	prefixLen := 2 // len("t/")
 	suffixLen := 6 // len("/heads")

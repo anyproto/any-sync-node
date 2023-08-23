@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/peermanager"
+	"github.com/anyproto/any-sync-node/nodespace/spacedeleter"
 	"github.com/anyproto/any-sync-node/nodespace/statusprovider"
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
@@ -121,8 +122,8 @@ func Bootstrap(a *app.App) {
 		Register(metric.New()).
 		Register(server.New()).
 		Register(peerservice.New()).
-		Register(yamux.New()).
 		Register(quic.New()).
+		Register(yamux.New()).
 		Register(pool.New()).
 		Register(streampool.New()).
 		Register(consensusclient.New()).
@@ -135,6 +136,7 @@ func Bootstrap(a *app.App) {
 		Register(secureservice.New()).
 		Register(commonspace.New()).
 		Register(nodespace.New()).
+		Register(spacedeleter.New()).
 		Register(peermanager.New()).
 		Register(debugserver.New()).
 		Register(nodedebugrpc.New())
