@@ -63,37 +63,29 @@ func (s *nodeSpace) AddConsensusError(err error) {
 	return
 }
 
-func (s *nodeSpace) checkDeletionStatus(ctx context.Context, status nodestorage.SpaceStatus) (err error) {
-	switch status {
-	case nodestorage.SpaceStatusRemovePrepare:
-		err = s.Space.Storage().Close(ctx)
-		if err != nil {
-			return err
+func (s *nodeSpace) checkDeletionStatus(ctx context.Context) (err error) {
+	delStorage := s.nodeStorage.DeletionStorage()
+	status, err := delStorage.SpaceStatus(s.Id())
+	if err != nil {
+		if err == nodestorage.ErrUnknownSpaceId {
+			return nil
 		}
-		return spacesyncproto.ErrSpaceIsDeleted
-	case nodestorage.SpaceStatusRemove:
-		err = s.Space.Storage().Close(ctx)
-		if err != nil {
-			return err
-		}
-		err = s.nodeStorage.DeleteSpaceStorage(ctx, s.Id())
-		if err != nil {
-			return err
-		}
-		return spacesyncproto.ErrSpaceIsDeleted
-	default:
-		return nil
+		return err
 	}
+	if status == nodestorage.SpaceStatusRemovePrepare || status == nodestorage.SpaceStatusRemove {
+		err = s.Space.Storage().Close(ctx)
+		if err != nil {
+			return err
+		}
+		return spacesyncproto.ErrSpaceIsDeleted
+	}
+	return nil
 }
 
 func (s *nodeSpace) Init(ctx context.Context) (err error) {
-	delStorage := s.nodeStorage.DeletionStorage()
-	delStatus, err := delStorage.SpaceStatus(s.Id())
+	err = s.checkDeletionStatus(ctx)
 	if err == nil {
-		err = s.checkDeletionStatus(ctx, delStatus)
-		if err != nil {
-			return
-		}
+		return
 	}
 	err = s.Space.Init(ctx)
 	if err != nil {
