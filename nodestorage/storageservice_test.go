@@ -29,6 +29,8 @@ func TestStorageService_DeleteSpaceStorage(t *testing.T) {
 		require.NoError(t, err)
 		_, err = os.Stat(storePath)
 		require.Error(t, os.ErrNotExist, err)
+		_, err = testServ.WaitSpaceStorage(ctx, payload.SpaceHeaderWithId.Id)
+		require.Error(t, err)
 		close(deleteWait)
 	}()
 	// waiting to be sure that goroutine has started

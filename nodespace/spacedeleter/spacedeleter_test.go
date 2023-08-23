@@ -2,7 +2,9 @@ package spacedeleter
 
 import (
 	"context"
-	"fmt"
+	"github.com/anyproto/any-sync/consensus/consensusclient"
+	"github.com/anyproto/any-sync/consensus/consensusclient/mock_consensusclient"
+	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"os"
 	"testing"
 	"time"
@@ -28,6 +30,7 @@ import (
 
 type spaceDeleterFixture struct {
 	coordClient  *mock_coordinatorclient.MockCoordinatorClient
+	consClient   *mock_consensusclient.MockService
 	spaceService *mock_nodespace.MockService
 	storage      nodestorage.NodeStorage
 	nodesync     *mock_nodesync.MockNodeSync
@@ -76,9 +79,13 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 	coordClient := mock_coordinatorclient.NewMockCoordinatorClient(ctrl)
 	spaceService := mock_nodespace.NewMockService(ctrl)
 	nodeSync := mock_nodesync.NewMockNodeSync(ctrl)
+	consClient := mock_consensusclient.NewMockService(ctrl)
 	storage := nodestorage.New()
 	coordClient.EXPECT().Name().Return(coordinatorclient.CName).AnyTimes()
 	coordClient.EXPECT().Init(a).Return(nil).AnyTimes()
+	consClient.EXPECT().Name().Return(consensusclient.CName).AnyTimes()
+	consClient.EXPECT().Init(a).Return(nil).AnyTimes()
+	consClient.EXPECT().Run(gomock.Any()).Return(nil).AnyTimes()
 	spaceService.EXPECT().Name().Return(nodespace.CName).AnyTimes()
 	spaceService.EXPECT().Init(a).Return(nil).AnyTimes()
 	spaceService.EXPECT().Run(gomock.Any()).Return(nil).AnyTimes()
@@ -90,6 +97,7 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 
 	a.Register(storeConfig(dir)).
 		Register(coordClient).
+		Register(consClient).
 		Register(storage).
 		Register(spaceService).
 		Register(nodeSync).
@@ -98,6 +106,7 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 	require.NoError(t, err)
 	return &spaceDeleterFixture{
 		coordClient:  coordClient,
+		consClient:   consClient,
 		spaceService: spaceService,
 		storage:      storage,
 		nodesync:     nodeSync,
@@ -113,6 +122,7 @@ const testSaveDelay = 500 * time.Millisecond
 func (fx *spaceDeleterFixture) stop(t *testing.T) {
 	fx.nodesync.EXPECT().Close(gomock.Any()).Return(nil).AnyTimes()
 	fx.spaceService.EXPECT().Close(gomock.Any()).Return(nil).AnyTimes()
+	fx.consClient.EXPECT().Close(gomock.Any()).Return(nil).AnyTimes()
 	err := fx.app.Close(context.Background())
 	require.NoError(t, err)
 	fx.ctrl.Finish()
@@ -122,7 +132,8 @@ func (fx *spaceDeleterFixture) stop(t *testing.T) {
 
 func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
-	store, err := fx.storage.CreateSpaceStorage(spaceTestPayload())
+	payload := spaceTestPayload()
+	store, err := fx.storage.CreateSpaceStorage(payload)
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
 	close(fx.waiterChan)
@@ -132,17 +143,44 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space1").Return(space1, nil).AnyTimes()
 	space1.EXPECT().SetIsDeleted(false)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
+	fx.consClient.EXPECT().DeleteLog(gomock.Any(), payload.AclWithId.Id).Return(nil)
 	store.Close(context.Background())
-
 	time.Sleep(testSaveDelay)
 
 	id, err := fx.storage.DeletionStorage().LastRecordId()
 	require.NoError(t, err)
 	require.Equal(t, lg[2].Id, id)
+	store, err = fx.storage.WaitSpaceStorage(context.Background(), payload.SpaceHeaderWithId.Id)
+	require.Error(t, err)
 	fx.stop(t)
 }
 
-func TestSpaceDeleter_Run_OkNoStorage(t *testing.T) {
+func TestSpaceDeleter_Run_Ok_LogNotFound(t *testing.T) {
+	fx := newSpaceDeleterFixture(t)
+	payload := spaceTestPayload()
+	store, err := fx.storage.CreateSpaceStorage(payload)
+	require.NoError(t, err)
+	lg := mockDeletionLog(store.Id())
+	close(fx.waiterChan)
+
+	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
+	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
+	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space1").Return(space1, nil).AnyTimes()
+	space1.EXPECT().SetIsDeleted(false)
+	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
+	fx.consClient.EXPECT().DeleteLog(gomock.Any(), payload.AclWithId.Id).Return(consensuserr.ErrLogNotFound)
+	store.Close(context.Background())
+	time.Sleep(testSaveDelay)
+
+	id, err := fx.storage.DeletionStorage().LastRecordId()
+	require.NoError(t, err)
+	require.Equal(t, lg[2].Id, id)
+	store, err = fx.storage.WaitSpaceStorage(context.Background(), payload.SpaceHeaderWithId.Id)
+	require.Error(t, err)
+	fx.stop(t)
+}
+
+func TestSpaceDeleter_Run_Ok_NoStorage(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	lg := mockDeletionLog("space3")
 	close(fx.waiterChan)
@@ -161,22 +199,30 @@ func TestSpaceDeleter_Run_OkNoStorage(t *testing.T) {
 	fx.stop(t)
 }
 
-func TestSpaceDeleter_Run_Failure(t *testing.T) {
+func TestSpaceDeleter_Run_Failure_LogError(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
-	lg := mockDeletionLog("space3")
+	payload := spaceTestPayload()
+	store, err := fx.storage.CreateSpaceStorage(payload)
+	require.NoError(t, err)
+	lg := mockDeletionLog(store.Id())
 	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
 	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space1").Return(space1, nil).AnyTimes()
 	space1.EXPECT().SetIsDeleted(false)
-	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, fmt.Errorf("some system error")).AnyTimes()
-
+	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
+	fx.consClient.EXPECT().DeleteLog(gomock.Any(), payload.AclWithId.Id).Return(consensuserr.ErrConflict)
+	store.Close(context.Background())
 	time.Sleep(testSaveDelay)
 
 	id, err := fx.storage.DeletionStorage().LastRecordId()
 	require.NoError(t, err)
-	require.Equal(t, lg[0].Id, id)
+	require.Equal(t, lg[1].Id, id)
+	// checking that storage is still there
+	store, err = fx.storage.WaitSpaceStorage(context.Background(), payload.SpaceHeaderWithId.Id)
+	require.NoError(t, err)
+	store.Close(context.Background())
 	fx.stop(t)
 }
 

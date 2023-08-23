@@ -145,7 +145,7 @@ func (s *storageService) checkLock(id string, openFunc func() error) (ls *lockSp
 }
 
 func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string) error {
-	return s.waitLock(ctx, spaceId, func() error {
+	err := s.waitLock(ctx, spaceId, func() error {
 		dbPath := s.StoreDir(spaceId)
 		if _, err := os.Stat(dbPath); err != nil {
 			if os.IsNotExist(err) {
@@ -155,6 +155,10 @@ func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string)
 		}
 		return os.RemoveAll(dbPath)
 	})
+	if err == nil {
+		s.unlockSpaceStorage(spaceId)
+	}
+	return err
 }
 
 func (s *storageService) waitLock(ctx context.Context, id string, action func() error) (err error) {
@@ -164,7 +168,7 @@ func (s *storageService) waitLock(ctx context.Context, id string, action func() 
 		select {
 		case <-ls.ch:
 			if ls.err != nil {
-				return err
+				return ls.err
 			}
 			return s.waitLock(ctx, id, action)
 		case <-ctx.Done():

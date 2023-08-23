@@ -9,6 +9,8 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/consensus/consensusclient"
+	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/util/periodicsync"
@@ -33,6 +35,7 @@ func New() app.Component {
 type spaceDeleter struct {
 	periodicCall    periodicsync.PeriodicSync
 	coordClient     coordinatorclient.CoordinatorClient
+	consClient      consensusclient.Service
 	deletionStorage nodestorage.DeletionStorage
 	spaceService    nodespace.Service
 	storageProvider nodestorage.NodeStorage
@@ -43,6 +46,7 @@ func (s *spaceDeleter) Init(a *app.App) (err error) {
 	s.periodicCall = periodicsync.NewPeriodicSync(periodicDeleteSecs, deleteTimeout, s.delete, log)
 	s.coordClient = a.MustComponent(coordinatorclient.CName).(coordinatorclient.CoordinatorClient)
 	s.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
+	s.consClient = a.MustComponent(consensusclient.CName).(consensusclient.Service)
 	s.storageProvider = a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
 	s.syncWaiter = a.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
 	return
@@ -113,6 +117,35 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 		space.SetIsDeleted(deleted)
 		return nil
 	}
+	deleteSpace := func() error {
+		// trying to get the storage
+		st, err := s.storageProvider.WaitSpaceStorage(ctx, rec.SpaceId)
+		if err != nil {
+			if err == spacestorage.ErrSpaceStorageMissing {
+				return s.deletionStorage.SetSpaceStatus(rec.SpaceId, nodestorage.SpaceStatusRemove)
+			}
+			return err
+		}
+		// getting the log Id
+		acl, err := st.AclStorage()
+		if err != nil {
+			st.Close(ctx)
+			return err
+		}
+		logId := acl.Id()
+		st.Close(ctx)
+		// deleting log from consensus
+		err = s.consClient.DeleteLog(ctx, logId)
+		if err != nil && err != consensuserr.ErrLogNotFound {
+			return err
+		}
+		// deleting space storage
+		err = s.storageProvider.DeleteSpaceStorage(ctx, rec.SpaceId)
+		if err != nil && err != spacestorage.ErrSpaceStorageMissing {
+			return err
+		}
+		return s.deletionStorage.SetSpaceStatus(rec.SpaceId, nodestorage.SpaceStatusRemove)
+	}
 	switch rec.Status {
 	case coordinatorproto.DeletionLogRecordStatus_Ok:
 		log.Debug("received deletion cancel record")
@@ -128,11 +161,7 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 		}
 	case coordinatorproto.DeletionLogRecordStatus_Remove:
 		log.Debug("received deletion record")
-		err := s.storageProvider.DeleteSpaceStorage(ctx, rec.SpaceId)
-		if err != nil && err != spacestorage.ErrSpaceStorageMissing {
-			return err
-		}
-		err = s.deletionStorage.SetSpaceStatus(rec.SpaceId, nodestorage.SpaceStatusRemove)
+		err := deleteSpace()
 		if err != nil {
 			return err
 		}

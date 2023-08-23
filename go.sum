@@ -12,6 +12,10 @@ github.com/anyproto/any-sync v0.2.22-0.20230818131632-1aecc3e75d84 h1:+eit6vuqzn
 github.com/anyproto/any-sync v0.2.22-0.20230818131632-1aecc3e75d84/go.mod h1:+6fDu6B90BWJfIaMs8tyfOQ6ZJPdEatImVHxYbH3B50=
 github.com/anyproto/any-sync v0.2.22-0.20230821170740-0799e7e638a6 h1:6ewvvc6y9G0jpbWeszqQwcs7CHcaPbiDhggpnKgR4ZI=
 github.com/anyproto/any-sync v0.2.22-0.20230821170740-0799e7e638a6/go.mod h1:+6fDu6B90BWJfIaMs8tyfOQ6ZJPdEatImVHxYbH3B50=
+github.com/anyproto/any-sync v0.2.22-0.20230822175230-eeea38bf2a5c h1:dorqTStGf6HKc5OWeAf9mIdRSqvWTVkc5YCFzKUCQ6k=
+github.com/anyproto/any-sync v0.2.22-0.20230822175230-eeea38bf2a5c/go.mod h1:+6fDu6B90BWJfIaMs8tyfOQ6ZJPdEatImVHxYbH3B50=
+github.com/anyproto/any-sync v0.2.22-0.20230823110303-c57246171eb9 h1:Tlr1o9L59FJHzNIuXVSKMKqDcWb3wMEzDvjPxC+CjMY=
+github.com/anyproto/any-sync v0.2.22-0.20230823110303-c57246171eb9/go.mod h1:+6fDu6B90BWJfIaMs8tyfOQ6ZJPdEatImVHxYbH3B50=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=
