@@ -136,7 +136,6 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	store, err := fx.storage.CreateSpaceStorage(payload)
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
-	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
 	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
@@ -145,7 +144,9 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
 	fx.consClient.EXPECT().DeleteLog(gomock.Any(), payload.AclWithId.Id).Return(nil)
 	store.Close(context.Background())
-	time.Sleep(testSaveDelay)
+
+	close(fx.waiterChan)
+	<-fx.deleter.testChan
 
 	id, err := fx.storage.DeletionStorage().LastRecordId()
 	require.NoError(t, err)
@@ -161,7 +162,6 @@ func TestSpaceDeleter_Run_Ok_LogNotFound(t *testing.T) {
 	store, err := fx.storage.CreateSpaceStorage(payload)
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
-	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
 	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
@@ -170,7 +170,9 @@ func TestSpaceDeleter_Run_Ok_LogNotFound(t *testing.T) {
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
 	fx.consClient.EXPECT().DeleteLog(gomock.Any(), payload.AclWithId.Id).Return(consensuserr.ErrLogNotFound)
 	store.Close(context.Background())
-	time.Sleep(testSaveDelay)
+
+	close(fx.waiterChan)
+	<-fx.deleter.testChan
 
 	id, err := fx.storage.DeletionStorage().LastRecordId()
 	require.NoError(t, err)
@@ -183,7 +185,6 @@ func TestSpaceDeleter_Run_Ok_LogNotFound(t *testing.T) {
 func TestSpaceDeleter_Run_Ok_NoStorage(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	lg := mockDeletionLog("space3")
-	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
 	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
@@ -191,7 +192,8 @@ func TestSpaceDeleter_Run_Ok_NoStorage(t *testing.T) {
 	space1.EXPECT().SetIsDeleted(false)
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
 
-	time.Sleep(testSaveDelay)
+	close(fx.waiterChan)
+	<-fx.deleter.testChan
 
 	id, err := fx.storage.DeletionStorage().LastRecordId()
 	require.NoError(t, err)
@@ -205,7 +207,6 @@ func TestSpaceDeleter_Run_Failure_LogError(t *testing.T) {
 	store, err := fx.storage.CreateSpaceStorage(payload)
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
-	close(fx.waiterChan)
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
 	space1 := mock_nodespace.NewMockNodeSpace(fx.ctrl)
@@ -214,7 +215,9 @@ func TestSpaceDeleter_Run_Failure_LogError(t *testing.T) {
 	fx.spaceService.EXPECT().PickSpace(gomock.Any(), "space2").Return(nil, ocache.ErrNotExists).AnyTimes()
 	fx.consClient.EXPECT().DeleteLog(gomock.Any(), payload.AclWithId.Id).Return(consensuserr.ErrConflict)
 	store.Close(context.Background())
-	time.Sleep(testSaveDelay)
+
+	close(fx.waiterChan)
+	<-fx.deleter.testChan
 
 	id, err := fx.storage.DeletionStorage().LastRecordId()
 	require.NoError(t, err)

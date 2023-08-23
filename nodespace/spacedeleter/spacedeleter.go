@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"go.uber.org/zap"
+	"sync"
 	"time"
 )
 
@@ -29,7 +30,7 @@ const (
 var log = logger.NewNamed(CName)
 
 func New() app.Component {
-	return &spaceDeleter{}
+	return &spaceDeleter{testChan: make(chan struct{})}
 }
 
 type spaceDeleter struct {
@@ -40,6 +41,9 @@ type spaceDeleter struct {
 	spaceService    nodespace.Service
 	storageProvider nodestorage.NodeStorage
 	syncWaiter      <-chan struct{}
+
+	testOnce sync.Once
+	testChan chan struct{}
 }
 
 func (s *spaceDeleter) Init(a *app.App) (err error) {
@@ -74,6 +78,10 @@ func (s *spaceDeleter) delete(ctx context.Context) (err error) {
 		} else {
 			log.Debug("deletion process finished")
 		}
+		// this is needed to reliably test the deletion process
+		s.testOnce.Do(func() {
+			close(s.testChan)
+		})
 	}()
 	select {
 	// waiting for nodes to sync before we start deletion process
