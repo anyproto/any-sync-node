@@ -2,7 +2,7 @@
 Implementation of node from [`any-sync`](https://github.com/anyproto/any-sync) protocol.
 
 ## Building the source
-To ensure compatibility, please use Go version `1.19`.
+To ensure compatibility, please use Go version `1.21`.
 
 To build and run the Any-Sync Node on your own server, follow these steps:
 
