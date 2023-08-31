@@ -10,7 +10,6 @@ type SpaceStatus int
 
 const (
 	SpaceStatusOk SpaceStatus = iota
-	SpaceStatusRemovePrepare
 	SpaceStatusRemove
 )
 

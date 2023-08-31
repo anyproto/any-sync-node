@@ -133,9 +133,6 @@ func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePul
 	}
 	sp, err := r.s.GetSpace(ctx, req.Id)
 	if err != nil {
-		if err != spacesyncproto.ErrSpaceMissing {
-			err = spacesyncproto.ErrUnexpected
-		}
 		return
 	}
 
@@ -170,12 +167,10 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 	if req.Payload != nil {
 		spaceId = req.Payload.GetSpaceHeader().GetId()
 	}
-
 	if spaceId == "" {
 		err = spacesyncproto.ErrUnexpected
 		return
 	}
-
 	accountIdentity, err := peer.CtxPubKey(ctx)
 	if err != nil {
 		return
@@ -208,14 +203,6 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 		SpaceSettingsId:      req.Payload.GetSpaceSettingsPayloadId(),
 	}
 	ctx = context.WithValue(ctx, commonspace.AddSpaceCtxKey, description)
-	// adding record on the consensus node
-	err = r.s.consClient.AddLog(ctx, &consensusproto.RawRecordWithId{
-		Payload: description.AclPayload,
-		Id:      description.AclId,
-	})
-	if err != nil {
-		return
-	}
 	// calling GetSpace to add space inside the cache, so we this action would be synchronised
 	_, err = r.s.GetSpace(ctx, description.SpaceHeader.GetId())
 	if err != nil {

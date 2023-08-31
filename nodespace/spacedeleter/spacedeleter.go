@@ -7,7 +7,6 @@ import (
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
@@ -111,19 +110,7 @@ func (s *spaceDeleter) delete(ctx context.Context) (err error) {
 func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinatorproto.DeletionLogRecord) (err error) {
 	log := log.With(zap.String("spaceId", rec.SpaceId))
 	updateCachedSpace := func(status nodestorage.SpaceStatus, deleted bool) error {
-		err := s.deletionStorage.SetSpaceStatus(rec.SpaceId, status)
-		if err != nil {
-			return err
-		}
-		space, err := s.spaceService.PickSpace(ctx, rec.SpaceId)
-		if err != nil {
-			if err == ocache.ErrNotExists {
-				return nil
-			}
-			return err
-		}
-		space.SetIsDeleted(deleted)
-		return nil
+		return s.deletionStorage.SetSpaceStatus(rec.SpaceId, status)
 	}
 	deleteSpace := func() error {
 		// trying to get the storage
@@ -163,10 +150,6 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 		}
 	case coordinatorproto.DeletionLogRecordStatus_RemovePrepare:
 		log.Debug("received deletion prepare record")
-		err := updateCachedSpace(nodestorage.SpaceStatusRemovePrepare, true)
-		if err != nil {
-			return err
-		}
 	case coordinatorproto.DeletionLogRecordStatus_Remove:
 		log.Debug("received deletion record")
 		err := deleteSpace()
