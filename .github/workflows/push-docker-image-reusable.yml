@@ -30,7 +30,7 @@ jobs:
       - name: release version only numbers
         id: release-version
         run: |
-          echo "${{ inputs.release }}" | sed 's|^[a-zA-Z]\+|RELEASE_VERSION=|' >> $GITHUB_OUTPUT
+          echo "${{ inputs.release }}" | sed 's|^[a-zA-Z]\+|RELEASE_VERSION=|; s|-|_|g' >> $GITHUB_OUTPUT
 
       - name: Set env ARTIFACT_PREFIX
         run: |
