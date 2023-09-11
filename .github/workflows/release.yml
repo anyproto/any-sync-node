@@ -38,7 +38,7 @@ jobs:
         os:
           - linux
         go-version:
-          - 1.21.0
+          - '1.21'
         include:
           - arch: amd64
             rpm_arch: x86_64
@@ -48,25 +48,12 @@ jobs:
       GOPRIVATE: github.com/anyproto
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: '${{ matrix.go-version }}'
+          check-latest: true
       - name: git config
         run: git config --global url.https://${{ secrets.ANYTYPE_PAT }}@github.com/.insteadOf https://github.com/
-      # cache {{
-      - id: go-cache-paths
-        run: |
-          echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-          echo "GOMODCACHE=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ${{ steps.go-cache-paths.outputs.GOCACHE }}
-            ${{ steps.go-cache-paths.outputs.GOMODCACHE }}
-          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ matrix.go-version }}-${{ matrix.os }}-${{ matrix.arch }}-
-      # }}
 
       # build {{
       - name: deps
