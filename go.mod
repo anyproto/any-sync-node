@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anyproto/any-sync v0.3.0-alpha
+	github.com/anyproto/any-sync v0.3.0
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.16.0
@@ -15,7 +15,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
-	golang.org/x/net v0.14.0
+	golang.org/x/net v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.33
 )
@@ -46,7 +46,7 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.30.0 // indirect
+	github.com/libp2p/go-libp2p v0.31.0 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
@@ -65,16 +65,16 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
-	github.com/quic-go/qtls-go1-20 v0.3.2 // indirect
-	github.com/quic-go/quic-go v0.38.0 // indirect
+	github.com/quic-go/qtls-go1-20 v0.3.3 // indirect
+	github.com/quic-go/quic-go v0.38.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	github.com/zeebo/errs v1.3.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/image v0.6.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/tools v0.12.1-0.20230815132531-74c255bcf846 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
