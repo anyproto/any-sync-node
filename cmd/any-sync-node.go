@@ -119,6 +119,7 @@ func Bootstrap(a *app.App) {
 		Register(nodeconfstore.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
+		Register(nodestorage.New()).
 		Register(metric.New()).
 		Register(server.New()).
 		Register(peerservice.New()).
@@ -128,7 +129,6 @@ func Bootstrap(a *app.App) {
 		Register(streampool.New()).
 		Register(consensusclient.New()).
 		Register(nodehead.New()).
-		Register(nodestorage.New()).
 		Register(nodecache.New(200)).
 		Register(hotsync.New()).
 		Register(coldsync.New()).
