@@ -1,26 +1,46 @@
-package nodecache
+package treesyncer
 
 import (
 	"context"
+
+	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
-	"go.uber.org/zap"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 )
+
+var log = logger.NewNamed(treesyncer.CName)
+
+func New() treesyncer.TreeSyncer {
+	return &treeSyncer{}
+}
 
 type treeSyncer struct {
 	spaceId     string
 	treeManager treemanager.TreeManager
 }
 
-func NewTreeSyncer(spaceId string, treeManager treemanager.TreeManager) treemanager.TreeSyncer {
-	return &treeSyncer{
-		spaceId:     spaceId,
-		treeManager: treeManager,
-	}
+func (t *treeSyncer) Init(a *app.App) (err error) {
+	t.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
+	return
 }
 
-func (t *treeSyncer) Init() {
-	return
+func (t *treeSyncer) Name() (name string) {
+	return treesyncer.CName
+}
+
+func (t *treeSyncer) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (t *treeSyncer) Close(ctx context.Context) (err error) {
+	return nil
+}
+
+func (t *treeSyncer) StartSync() {
 }
 
 func (t *treeSyncer) SyncAll(ctx context.Context, peerId string, existing, missing []string) (err error) {
@@ -48,8 +68,4 @@ func (t *treeSyncer) SyncAll(ctx context.Context, peerId string, existing, missi
 	syncTrees(missing)
 	syncTrees(existing)
 	return
-}
-
-func (t *treeSyncer) Close() error {
-	return nil
 }

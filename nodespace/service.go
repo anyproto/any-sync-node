@@ -4,6 +4,7 @@ package nodespace
 import (
 	"context"
 	"github.com/anyproto/any-sync-node/nodehead"
+	"github.com/anyproto/any-sync-node/nodespace/treesyncer"
 	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -121,7 +122,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	if err = s.checkDeletionStatus(id); err != nil {
 		return nil, err
 	}
-	cc, err := s.commonSpace.NewSpace(ctx, id)
+	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{TreeSyncer: treesyncer.New()})
 	if err != nil {
 		return
 	}
