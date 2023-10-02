@@ -3,9 +3,8 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anyproto/any-sync-node/nodehead"
-	"github.com/anyproto/any-sync-node/nodespace/treesyncer"
-	"github.com/anyproto/any-sync-node/nodestorage"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
@@ -19,7 +18,10 @@ import (
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
-	"time"
+
+	"github.com/anyproto/any-sync-node/nodehead"
+	"github.com/anyproto/any-sync-node/nodespace/treesyncer"
+	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
 const CName = "node.nodespace"
