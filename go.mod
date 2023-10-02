@@ -5,15 +5,15 @@ go 1.21
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.1
-	github.com/anyproto/any-sync v0.3.0
+	github.com/anyproto/any-sync v0.3.2
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/atomic v1.11.0
-	go.uber.org/mock v0.2.0
+	go.uber.org/mock v0.3.0
 	go.uber.org/multierr v1.11.0
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 	golang.org/x/net v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
