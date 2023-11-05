@@ -5,16 +5,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 )
 
-var ErrLocked = errors.New("space storage locked")
+var (
+	ErrLocked         = errors.New("space storage locked")
+	ErrSpaceIdIsEmpty = errors.New("space id is empty")
+)
 
 const CName = spacestorage.CName
 
@@ -102,6 +106,9 @@ func (s *storageService) WaitSpaceStorage(ctx context.Context, id string) (store
 }
 
 func (s *storageService) SpaceExists(id string) bool {
+	if id == "" {
+		return false
+	}
 	dbPath := path.Join(s.rootPath, id)
 	if _, err := os.Stat(dbPath); err != nil {
 		return false
@@ -125,6 +132,9 @@ func (s *storageService) TryLockAndDo(spaceId string, do func() error) (err erro
 }
 
 func (s *storageService) checkLock(id string, openFunc func() error) (ls *lockSpace, err error) {
+	if id == "" {
+		return nil, ErrSpaceIdIsEmpty
+	}
 	s.mu.Lock()
 	var ok bool
 	if ls, ok = s.lockedSpaces[id]; ok {
