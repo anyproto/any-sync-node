@@ -2,6 +2,10 @@ package nodestorage
 
 import (
 	"context"
+	"os"
+	"path"
+	"time"
+
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -11,9 +15,6 @@ import (
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"go.uber.org/zap"
-	"os"
-	"path"
-	"time"
 )
 
 var (
