@@ -4,13 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/anyproto/any-sync-node/nodehead"
-	"github.com/anyproto/any-sync-node/nodespace/peermanager"
-	"github.com/anyproto/any-sync-node/nodespace/spacedeleter"
-	"github.com/anyproto/any-sync-node/nodespace/statusprovider"
-	"github.com/anyproto/any-sync-node/nodesync"
-	"github.com/anyproto/any-sync-node/nodesync/coldsync"
-	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
@@ -24,26 +25,29 @@ import (
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/nodeconfstore"
+
+	"github.com/anyproto/any-sync-node/nodehead"
+	"github.com/anyproto/any-sync-node/nodespace/peermanager"
+	"github.com/anyproto/any-sync-node/nodespace/spacedeleter"
+	"github.com/anyproto/any-sync-node/nodespace/statusprovider"
+	"github.com/anyproto/any-sync-node/nodesync"
+	"github.com/anyproto/any-sync-node/nodesync/coldsync"
+	"github.com/anyproto/any-sync-node/nodesync/hotsync"
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
-	"github.com/anyproto/any-sync-node/account"
-	"github.com/anyproto/any-sync-node/config"
-	"github.com/anyproto/any-sync-node/debug/nodedebugrpc"
-	"github.com/anyproto/any-sync-node/nodespace"
-	"github.com/anyproto/any-sync-node/nodespace/nodecache"
-	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"go.uber.org/zap"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+
+	"github.com/anyproto/any-sync-node/account"
+	"github.com/anyproto/any-sync-node/config"
+	"github.com/anyproto/any-sync-node/debug/nodedebugrpc"
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync-node/nodespace/nodecache"
+	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
 var log = logger.NewNamed("main")
@@ -113,6 +117,7 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
+		Register(debugstat.New()).
 		Register(statusprovider.New()).
 		Register(credentialprovider.NewNoOp()).
 		Register(coordinatorclient.New()).
