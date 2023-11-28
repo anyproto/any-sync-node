@@ -3,15 +3,17 @@ package hotsync
 
 import (
 	"context"
-	"github.com/anyproto/any-sync-node/nodespace"
+	"sync"
+	"sync/atomic"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
-	"sync"
-	"sync/atomic"
+
+	"github.com/anyproto/any-sync-node/nodespace"
 )
 
 var log = logger.NewNamed(CName)
@@ -81,6 +83,7 @@ func (h *hotSync) UpdateQueue(changedIds []string) {
 	defer h.mx.Unlock()
 	added := slice.Difference(changedIds, h.spaceQueue)
 	h.spaceQueue = append(h.spaceQueue, added...)
+	log.Info("updated queue", zap.Int("added", len(added)), zap.Int("queue len", len(h.spaceQueue)))
 }
 
 func (h *hotSync) checkCache(ctx context.Context) (err error) {
@@ -98,6 +101,7 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	for _, id := range cp {
 		_, err = h.spaceService.GetSpace(ctx, id)
 		if err != nil {
+			log.Warn("can't get space", zap.String("spaceId", id), zap.Error(err))
 			h.miss.Add(1)
 			continue
 		}
