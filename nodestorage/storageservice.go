@@ -33,6 +33,7 @@ type NodeStorage interface {
 	TryLockAndDo(spaceId string, do func() error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
+	OnWriteOldHash(onWrite func(ctx context.Context, spaceId, hash string))
 	StoreDir(spaceId string) (path string)
 	DeleteSpaceStorage(ctx context.Context, spaceId string) error
 }
@@ -43,11 +44,12 @@ type lockSpace struct {
 }
 
 type storageService struct {
-	rootPath     string
-	delStorage   DeletionStorage
-	onWriteHash  func(ctx context.Context, spaceId, hash string)
-	lockedSpaces map[string]*lockSpace
-	mu           sync.Mutex
+	rootPath       string
+	delStorage     DeletionStorage
+	onWriteHash    func(ctx context.Context, spaceId, hash string)
+	onWriteOldHash func(ctx context.Context, spaceId, hash string)
+	lockedSpaces   map[string]*lockSpace
+	mu             sync.Mutex
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
@@ -217,4 +219,8 @@ func (s *storageService) StoreDir(spaceId string) (path string) {
 
 func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
 	s.onWriteHash = onWrite
+}
+
+func (s *storageService) OnWriteOldHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
+	s.onWriteOldHash = onWrite
 }
