@@ -54,6 +54,20 @@ func (mr *MockNodeHeadMockRecorder) Close(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockNodeHead)(nil).Close), arg0)
 }
 
+// DeleteHeads mocks base method.
+func (m *MockNodeHead) DeleteHeads(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteHeads", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteHeads indicates an expected call of DeleteHeads.
+func (mr *MockNodeHeadMockRecorder) DeleteHeads(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteHeads", reflect.TypeOf((*MockNodeHead)(nil).DeleteHeads), arg0)
+}
+
 // GetHead mocks base method.
 func (m *MockNodeHead) GetHead(arg0 string) (string, error) {
 	m.ctrl.T.Helper()

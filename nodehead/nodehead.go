@@ -39,6 +39,7 @@ type NodeHead interface {
 	GetHead(spaceId string) (head string, err error)
 	SetOldHead(spaceId, head string) (part int, err error)
 	GetOldHead(spaceId string) (head string, err error)
+	DeleteHeads(spaceId string) error
 	ReloadHeadFromStore(spaceId string) error
 	LDiff(partId int) ldiff.Diff
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
@@ -66,6 +67,11 @@ func (n *nodeHead) Init(a *app.App) (err error) {
 	n.spaceStore.OnWriteOldHash(func(_ context.Context, spaceId, hash string) {
 		if _, e := n.SetOldHead(spaceId, hash); e != nil {
 			log.Error("can't set old head", zap.Error(e))
+		}
+	})
+	n.spaceStore.OnDeleteStorage(func(_ context.Context, spaceId string) {
+		if e := n.DeleteHeads(spaceId); e != nil {
+			log.Error("can't delete space from nodehead", zap.Error(e))
 		}
 	})
 	if m := a.Component(metric.CName); m != nil {
@@ -128,6 +134,17 @@ func (n *nodeHead) loadHeadFromStore(spaceId string) (err error) {
 	return
 }
 
+func (n *nodeHead) DeleteHeads(spaceId string) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	delete(n.oldHashes, spaceId)
+	part := n.nodeconf.Partition(spaceId)
+	if ld, ok := n.partitions[part]; ok {
+		return ld.RemoveId(spaceId)
+	}
+	return nil
+}
+
 func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
 	part = n.nodeconf.Partition(spaceId)
 	n.mu.Lock()
@@ -174,6 +191,9 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 	n.mu.Unlock()
 	el, err := ld.Element(spaceId)
 	if err != nil {
+		if errors.Is(err, ldiff.ErrElementNotFound) {
+			return "", ErrSpaceNotFound
+		}
 		return
 	}
 	return el.Head, nil

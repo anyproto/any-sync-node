@@ -32,6 +32,7 @@ type NodeStorage interface {
 	SpaceStorage(spaceId string) (spacestorage.SpaceStorage, error)
 	TryLockAndDo(spaceId string, do func() error) (err error)
 	AllSpaceIds() (ids []string, err error)
+	OnDeleteStorage(onDelete func(ctx context.Context, spaceId string))
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
 	OnWriteOldHash(onWrite func(ctx context.Context, spaceId, hash string))
 	StoreDir(spaceId string) (path string)
@@ -44,12 +45,13 @@ type lockSpace struct {
 }
 
 type storageService struct {
-	rootPath       string
-	delStorage     DeletionStorage
-	onWriteHash    func(ctx context.Context, spaceId, hash string)
-	onWriteOldHash func(ctx context.Context, spaceId, hash string)
-	lockedSpaces   map[string]*lockSpace
-	mu             sync.Mutex
+	rootPath        string
+	delStorage      DeletionStorage
+	onWriteHash     func(ctx context.Context, spaceId, hash string)
+	onDeleteStorage func(ctx context.Context, spaceId string)
+	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
+	lockedSpaces    map[string]*lockSpace
+	mu              sync.Mutex
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
@@ -165,6 +167,7 @@ func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string)
 			}
 			return fmt.Errorf("can't delete datadir '%s': %w", dbPath, err)
 		}
+		s.onDeleteStorage(ctx, spaceId)
 		return os.RemoveAll(dbPath)
 	})
 	if err == nil {
@@ -223,4 +226,8 @@ func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId s
 
 func (s *storageService) OnWriteOldHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
 	s.onWriteOldHash = onWrite
+}
+
+func (s *storageService) OnDeleteStorage(onDelete func(ctx context.Context, spaceId string)) {
+	s.onDeleteStorage = onDelete
 }

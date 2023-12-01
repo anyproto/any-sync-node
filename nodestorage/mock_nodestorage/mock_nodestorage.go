@@ -127,6 +127,18 @@ func (mr *MockNodeStorageMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockNodeStorage)(nil).Name))
 }
 
+// OnDeleteStorage mocks base method.
+func (m *MockNodeStorage) OnDeleteStorage(arg0 func(context.Context, string)) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "OnDeleteStorage", arg0)
+}
+
+// OnDeleteStorage indicates an expected call of OnDeleteStorage.
+func (mr *MockNodeStorageMockRecorder) OnDeleteStorage(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnDeleteStorage", reflect.TypeOf((*MockNodeStorage)(nil).OnDeleteStorage), arg0)
+}
+
 // OnWriteHash mocks base method.
 func (m *MockNodeStorage) OnWriteHash(arg0 func(context.Context, string, string)) {
 	m.ctrl.T.Helper()
