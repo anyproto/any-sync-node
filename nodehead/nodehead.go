@@ -114,6 +114,17 @@ func (n *nodeHead) loadHeadFromStore(spaceId string) (err error) {
 	if _, err = n.SetHead(spaceId, hash); err != nil {
 		return
 	}
+	oldHash, err := ss.ReadOldSpaceHash()
+	if err != nil {
+		return
+	}
+	// that means that the hash was not set before
+	if oldHash == "" {
+		oldHash = hash
+	}
+	if _, err = n.SetOldHead(spaceId, oldHash); err != nil {
+		return
+	}
 	return
 }
 
