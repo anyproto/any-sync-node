@@ -167,7 +167,9 @@ func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string)
 			}
 			return fmt.Errorf("can't delete datadir '%s': %w", dbPath, err)
 		}
-		s.onDeleteStorage(ctx, spaceId)
+		if s.onDeleteStorage != nil {
+			s.onDeleteStorage(ctx, spaceId)
+		}
 		return os.RemoveAll(dbPath)
 	})
 	if err == nil {
