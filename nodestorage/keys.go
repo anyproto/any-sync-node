@@ -2,8 +2,9 @@ package nodestorage
 
 import (
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"strings"
+
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
 
 type aclKeys struct {
@@ -63,6 +64,7 @@ var (
 	spaceSettingsIdKey = []byte("spaceSettingsId")
 	deletedKey         = []byte("spaceDeleted")
 	spaceHashKey       = []byte("spaceHash")
+	oldSpaceHashKey    = []byte("oldSpaceHash")
 )
 
 func (s spaceKeys) SpaceIdKey() []byte {

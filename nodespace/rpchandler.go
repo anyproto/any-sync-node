@@ -3,6 +3,9 @@ package nodespace
 import (
 	"context"
 	"encoding/hex"
+	"math"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -12,8 +15,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-	"math"
-	"time"
 )
 
 type rpcHandler struct {
@@ -248,8 +249,9 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 }
 
 func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
-	if len(req.Ranges) == 1 {
-		if req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64 {
+	if len(req.Ranges) == 1 && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
+		switch req.DiffType {
+		case spacesyncproto.DiffType_Precalculated:
 			hash, err := r.s.nodeHead.GetHead(req.SpaceId)
 			if err != nil {
 				return
@@ -259,6 +261,26 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 				return
 			}
 			log.Debug("got head sync with nodehead", zap.String("spaceId", req.SpaceId))
+			return &spacesyncproto.HeadSyncResponse{
+				DiffType: spacesyncproto.DiffType_Precalculated,
+				Results: []*spacesyncproto.HeadSyncResult{
+					{
+						Hash: hashB,
+						// this makes diff not compareResults and create new batch directly (see (d *diff) Diff)
+						Count: 1,
+					},
+				},
+			}
+		case spacesyncproto.DiffType_Initial:
+			hash, err := r.s.nodeHead.GetOldHead(req.SpaceId)
+			if err != nil {
+				return
+			}
+			hashB, err := hex.DecodeString(hash)
+			if err != nil {
+				return
+			}
+			log.Debug("got head sync with old nodehead", zap.String("spaceId", req.SpaceId))
 			return &spacesyncproto.HeadSyncResponse{
 				Results: []*spacesyncproto.HeadSyncResult{
 					{

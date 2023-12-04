@@ -21,6 +21,7 @@ message PartitionSyncRange {
     uint64 from = 1;
     uint64 to = 2;
     uint32 limit = 3;
+    bool elements = 4;
 }
 
 // PartitionSyncResult presenting a response for one range

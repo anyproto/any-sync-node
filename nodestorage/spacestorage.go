@@ -266,8 +266,23 @@ func (s *spaceStorage) WriteSpaceHash(hash string) error {
 	return s.objDb.Put(spaceHashKey, []byte(hash))
 }
 
+func (s *spaceStorage) WriteOldSpaceHash(hash string) error {
+	if s.service.onWriteHash != nil {
+		defer s.service.onWriteOldHash(context.Background(), s.spaceId, hash)
+	}
+	return s.objDb.Put(oldSpaceHashKey, []byte(hash))
+}
+
 func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
 	v, err := s.objDb.Get(spaceHashKey)
+	if err != nil {
+		return "", err
+	}
+	return string(v), nil
+}
+
+func (s *spaceStorage) ReadOldSpaceHash() (hash string, err error) {
+	v, err := s.objDb.Get(oldSpaceHashKey)
 	if err != nil {
 		return "", err
 	}

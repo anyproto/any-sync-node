@@ -2,14 +2,9 @@ package nodesync
 
 import (
 	"context"
-	"github.com/anyproto/any-sync-node/nodehead"
-	"github.com/anyproto/any-sync-node/nodehead/mock_nodehead"
-	"github.com/anyproto/any-sync-node/nodespace"
-	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
-	"github.com/anyproto/any-sync-node/nodesync/coldsync"
-	"github.com/anyproto/any-sync-node/nodesync/coldsync/mock_coldsync"
-	"github.com/anyproto/any-sync-node/nodesync/hotsync"
-	"github.com/anyproto/any-sync-node/nodesync/hotsync/mock_hotsync"
+	"testing"
+	"time"
+
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
@@ -24,8 +19,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"testing"
-	"time"
+
+	"github.com/anyproto/any-sync-node/nodehead"
+	"github.com/anyproto/any-sync-node/nodehead/mock_nodehead"
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
+	"github.com/anyproto/any-sync-node/nodesync/coldsync"
+	"github.com/anyproto/any-sync-node/nodesync/coldsync/mock_coldsync"
+	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	"github.com/anyproto/any-sync-node/nodesync/hotsync/mock_hotsync"
 )
 
 var ctx = context.Background()
@@ -85,8 +87,10 @@ func TestNodeSync_Sync(t *testing.T) {
 
 		for i := 0; i < nodeconf.PartitionCount; i++ {
 			if i == 0 {
+				// calling twice because we now do a twostep diff
+				// the same as actually was done with real nodes before
 				fx1.nodeHead.EXPECT().LDiff(i).Return(ld1)
-				fx2.nodeHead.EXPECT().LDiff(i).Return(ld2)
+				fx2.nodeHead.EXPECT().LDiff(i).Times(2).Return(ld2)
 			} else {
 				fx1.nodeHead.EXPECT().LDiff(i).Return(emptyLdiff)
 				fx2.nodeHead.EXPECT().LDiff(i).Return(emptyLdiff)

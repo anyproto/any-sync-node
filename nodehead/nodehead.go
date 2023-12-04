@@ -4,7 +4,9 @@ package nodehead
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync-node/nodestorage"
+	"sync"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
@@ -13,8 +15,8 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
-	"sync"
-	"time"
+
+	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
 const CName = "node.nodespace.nodehead"
@@ -35,6 +37,9 @@ func New() NodeHead {
 type NodeHead interface {
 	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
+	SetOldHead(spaceId, head string) (part int, err error)
+	GetOldHead(spaceId string) (head string, err error)
+	DeleteHeads(spaceId string) error
 	ReloadHeadFromStore(spaceId string) error
 	LDiff(partId int) ldiff.Diff
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
@@ -44,17 +49,29 @@ type NodeHead interface {
 type nodeHead struct {
 	mu         sync.Mutex
 	partitions map[int]ldiff.Diff
+	oldHashes  map[string]string
 	nodeconf   nodeconf.NodeConf
 	spaceStore nodestorage.NodeStorage
 }
 
 func (n *nodeHead) Init(a *app.App) (err error) {
 	n.partitions = map[int]ldiff.Diff{}
+	n.oldHashes = map[string]string{}
 	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	n.spaceStore = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
 		if _, e := n.SetHead(spaceId, hash); e != nil {
 			log.Error("can't set head", zap.Error(e))
+		}
+	})
+	n.spaceStore.OnWriteOldHash(func(_ context.Context, spaceId, hash string) {
+		if _, e := n.SetOldHead(spaceId, hash); e != nil {
+			log.Error("can't set old head", zap.Error(e))
+		}
+	})
+	n.spaceStore.OnDeleteStorage(func(_ context.Context, spaceId string) {
+		if e := n.DeleteHeads(spaceId); e != nil {
+			log.Error("can't delete space from nodehead", zap.Error(e))
 		}
 	})
 	if m := a.Component(metric.CName); m != nil {
@@ -103,7 +120,29 @@ func (n *nodeHead) loadHeadFromStore(spaceId string) (err error) {
 	if _, err = n.SetHead(spaceId, hash); err != nil {
 		return
 	}
+	oldHash, err := ss.ReadOldSpaceHash()
+	if err != nil {
+		return
+	}
+	// that means that the hash was not set before
+	if oldHash == "" {
+		oldHash = hash
+	}
+	if _, err = n.SetOldHead(spaceId, oldHash); err != nil {
+		return
+	}
 	return
+}
+
+func (n *nodeHead) DeleteHeads(spaceId string) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	delete(n.oldHashes, spaceId)
+	part := n.nodeconf.Partition(spaceId)
+	if ld, ok := n.partitions[part]; ok {
+		return ld.RemoveId(spaceId)
+	}
+	return nil
 }
 
 func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
@@ -116,6 +155,13 @@ func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
 		n.partitions[part] = ld
 	}
 	ld.Set(ldiff.Element{Id: spaceId, Head: head})
+	return
+}
+
+func (n *nodeHead) SetOldHead(spaceId, head string) (part int, err error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.oldHashes[spaceId] = head
 	return
 }
 
@@ -145,9 +191,21 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 	n.mu.Unlock()
 	el, err := ld.Element(spaceId)
 	if err != nil {
+		if errors.Is(err, ldiff.ErrElementNotFound) {
+			return "", ErrSpaceNotFound
+		}
 		return
 	}
 	return el.Head, nil
+}
+
+func (n *nodeHead) GetOldHead(spaceId string) (hash string, err error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if hash, ok := n.oldHashes[spaceId]; ok {
+		return hash, nil
+	}
+	return "", ErrSpaceNotFound
 }
 
 func (n *nodeHead) ReloadHeadFromStore(spaceId string) error {

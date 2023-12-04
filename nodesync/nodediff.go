@@ -2,10 +2,12 @@ package nodesync
 
 import (
 	"context"
-	"github.com/anyproto/any-sync-node/nodehead"
-	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
+
 	"github.com/anyproto/any-sync/app/ldiff"
 	"golang.org/x/exp/slices"
+
+	"github.com/anyproto/any-sync-node/nodehead"
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
 
 type nodeRemoteDiff struct {
@@ -17,9 +19,9 @@ func (n nodeRemoteDiff) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf
 	protoRanges := make([]*nodesyncproto.PartitionSyncRange, len(ranges))
 	for i, r := range ranges {
 		protoRanges[i] = &nodesyncproto.PartitionSyncRange{
-			From:  r.From,
-			To:    r.To,
-			Limit: uint32(r.Limit),
+			From:     r.From,
+			To:       r.To,
+			Elements: r.Elements,
 		}
 	}
 	req := &nodesyncproto.PartitionSyncRequest{
@@ -61,9 +63,9 @@ func (n *nodeRemoteDiffHandler) PartitionSync(ctx context.Context, req *nodesync
 	var ranges = make([]ldiff.Range, len(req.Ranges))
 	for i, r := range req.Ranges {
 		ranges[i] = ldiff.Range{
-			From:  r.From,
-			To:    r.To,
-			Limit: int(r.Limit),
+			From:     r.From,
+			To:       r.To,
+			Elements: r.Elements,
 		}
 	}
 
