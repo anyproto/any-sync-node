@@ -105,6 +105,7 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 			h.miss.Add(1)
 			continue
 		}
+		log.Debug("got space", zap.String("spaceId", id), zap.Int("space queue len", len(h.spaceQueue)), zap.Int("sync queue len", len(h.syncQueue)))
 		h.hit.Add(1)
 		h.syncQueue[id] = struct{}{}
 	}

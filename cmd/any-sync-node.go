@@ -128,8 +128,6 @@ func Bootstrap(a *app.App) {
 		Register(metric.New()).
 		Register(server.New()).
 		Register(peerservice.New()).
-		Register(quic.New()).
-		Register(yamux.New()).
 		Register(pool.New()).
 		Register(streampool.New()).
 		Register(consensusclient.New()).
@@ -144,5 +142,7 @@ func Bootstrap(a *app.App) {
 		Register(spacedeleter.New()).
 		Register(peermanager.New()).
 		Register(debugserver.New()).
-		Register(nodedebugrpc.New())
+		Register(nodedebugrpc.New()).
+		Register(quic.New()).
+		Register(yamux.New())
 }
