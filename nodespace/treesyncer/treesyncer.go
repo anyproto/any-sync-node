@@ -14,8 +14,8 @@ import (
 
 var log = logger.NewNamed(treesyncer.CName)
 
-func New() treesyncer.TreeSyncer {
-	return &treeSyncer{}
+func New(spaceId string) treesyncer.TreeSyncer {
+	return &treeSyncer{spaceId: spaceId}
 }
 
 type treeSyncer struct {
