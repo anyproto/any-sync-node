@@ -124,7 +124,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	if err = s.checkDeletionStatus(id); err != nil {
 		return nil, err
 	}
-	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{TreeSyncer: treesyncer.New()})
+	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{TreeSyncer: treesyncer.New(id)})
 	if err != nil {
 		return
 	}
