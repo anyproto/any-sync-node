@@ -240,6 +240,7 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 		return
 	}
 	deepHeadSync = true
+	log.DebugCtx(ctx, "deep head sync", zap.String("spaceId", req.SpaceId), zap.Int("type", int(req.DiffType)))
 	sp, err := r.s.GetSpace(ctx, req.SpaceId)
 	if err != nil {
 		return
