@@ -63,13 +63,14 @@ func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.
 	}
 	acl := space.Acl()
 	acl.RLock()
-	recordsBefore, err := acl.RecordsBefore(ctx, request.AclHead)
+	recordsAfter, err := acl.RecordsAfter(ctx, request.AclHead)
 	if err != nil {
 		acl.RUnlock()
 		return
 	}
 	acl.RUnlock()
-	for _, rec := range recordsBefore {
+	resp = &spacesyncproto.AclGetRecordsResponse{}
+	for _, rec := range recordsAfter {
 		marshalled, err := proto.Marshal(rec)
 		if err != nil {
 			return nil, err
