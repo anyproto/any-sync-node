@@ -3,10 +3,12 @@ package nodespace
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"math"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
@@ -46,14 +48,13 @@ func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.A
 	acl.Lock()
 	defer acl.Unlock()
 	err = acl.AddRawRecord(rawRecordWithId)
-	if err != nil {
+	if err != nil && !errors.Is(err, list.ErrRecordAlreadyExists) {
 		return
 	}
-	resp = &spacesyncproto.AclAddRecordResponse{
+	return &spacesyncproto.AclAddRecordResponse{
 		RecordId: rawRecordWithId.Id,
 		Payload:  rawRecordWithId.Payload,
-	}
-	return
+	}, nil
 }
 
 func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.AclGetRecordsRequest) (resp *spacesyncproto.AclGetRecordsResponse, err error) {
