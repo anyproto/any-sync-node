@@ -34,21 +34,25 @@ func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.A
 		return
 	}
 	acl := space.Acl()
+	log := log.With(zap.String("spaceId", request.SpaceId))
 	acl.RLock()
 	err = acl.ValidateRawRecord(rec)
 	if err != nil {
 		acl.RUnlock()
+		log.Error("failed to validate record", zap.Error(err))
 		return
 	}
 	acl.RUnlock()
 	rawRecordWithId, err := r.s.consClient.AddRecord(ctx, acl.Id(), rec)
 	if err != nil {
+		log.Error("failed to send record to consensus node", zap.Error(err))
 		return
 	}
 	acl.Lock()
 	defer acl.Unlock()
 	err = acl.AddRawRecord(rawRecordWithId)
 	if err != nil && !errors.Is(err, list.ErrRecordAlreadyExists) {
+		log.Error("failed to add record locally", zap.Error(err))
 		return
 	}
 	return &spacesyncproto.AclAddRecordResponse{
