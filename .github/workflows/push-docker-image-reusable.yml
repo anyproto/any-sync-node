@@ -60,10 +60,9 @@ jobs:
           LABEL org.opencontainers.image.licenses=MIT
           ARG TARGETARCH
           COPY ${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb .
-          RUN apt-get install -y ./${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb
-          EXPOSE 443
-          EXPOSE 8000
-          EXPOSE 8080
+          RUN apt-get install -y ./${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb \
+              && rm -f ${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb
+          EXPOSE 443 8000 8080
           EOF
 
       - name: Debug
