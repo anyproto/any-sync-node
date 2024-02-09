@@ -6,6 +6,16 @@ on:
         type: string
         required: true
         default: v0.0.1
+      dockerfile-image:
+        description: image for Generate Dockerfile
+        type: string
+        required: false
+        default: ubuntu:23.04
+      dockerfile-run:
+        description: addication cmd for Generate Dockerfile
+        type: string
+        required: false
+        default: "echo run"
 name: push-docker-image
 permissions: write-all
 jobs:
@@ -54,13 +64,14 @@ jobs:
         run: |
           cat <<EOF > Dockerfile
           # syntax=docker/dockerfile:1
-          FROM ubuntu:23.04
+          FROM ${{ inputs.dockerfile-image }}
           LABEL org.opencontainers.image.source=${{ github.repositoryUrl }}
           LABEL org.opencontainers.image.description=https://tech.anytype.io
           LABEL org.opencontainers.image.licenses=MIT
           ARG TARGETARCH
           COPY ${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb .
           RUN apt-get install -y ./${{ env.ARTIFACT_PREFIX }}_\${TARGETARCH}.deb
+          RUN ${{ inputs.dockerfile-run }}
           EXPOSE 443
           EXPOSE 8000
           EXPOSE 8080
