@@ -12,10 +12,15 @@ on:
         required: false
         default: ubuntu:23.04
       dockerfile-run:
-        description: addication cmd for Generate Dockerfile
+        description: addication "run" for Generate Dockerfile
         type: string
         required: false
         default: "echo run"
+      dockerfile-cmd:
+        description: addication "cmd" for Generate Dockerfile
+        type: string
+        required: false
+        default: "echo cmd"
 name: push-docker-image
 permissions: write-all
 jobs:
@@ -75,6 +80,7 @@ jobs:
           EXPOSE 443
           EXPOSE 8000
           EXPOSE 8080
+          CMD ${{ inputs.dockerfile-cmd }}
           EOF
 
       - name: Debug
