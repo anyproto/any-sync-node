@@ -89,7 +89,7 @@ jobs:
             .
       - name: create package deb
         if: matrix.os == 'linux'
-        uses: bpicode/github-action-fpm@master
+        uses: fb929/github-action-fpm@master
         with:
           fpm_opts:
             --name ${{ github.event.repository.name }}
@@ -102,7 +102,7 @@ jobs:
           fpm_args: ./bin
       - name: create package rpm
         if: matrix.os == 'linux'
-        uses: bpicode/github-action-fpm@master
+        uses: fb929/github-action-fpm@master
         with:
           fpm_opts:
             --name ${{ github.event.repository.name }}

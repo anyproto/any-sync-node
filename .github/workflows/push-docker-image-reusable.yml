@@ -10,7 +10,7 @@ on:
         description: image for Generate Dockerfile
         type: string
         required: false
-        default: ubuntu:23.04
+        default: ubuntu:22.04
       dockerfile-run:
         description: addication "run" for Generate Dockerfile
         type: string
