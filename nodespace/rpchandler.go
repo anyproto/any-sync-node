@@ -3,10 +3,12 @@ package nodespace
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"math"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
@@ -32,28 +34,31 @@ func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.A
 		return
 	}
 	acl := space.Acl()
+	log := log.With(zap.String("spaceId", request.SpaceId))
 	acl.RLock()
 	err = acl.ValidateRawRecord(rec)
 	if err != nil {
 		acl.RUnlock()
+		log.Error("failed to validate record", zap.Error(err))
 		return
 	}
 	acl.RUnlock()
 	rawRecordWithId, err := r.s.consClient.AddRecord(ctx, acl.Id(), rec)
 	if err != nil {
+		log.Error("failed to send record to consensus node", zap.Error(err))
 		return
 	}
 	acl.Lock()
 	defer acl.Unlock()
 	err = acl.AddRawRecord(rawRecordWithId)
-	if err != nil {
+	if err != nil && !errors.Is(err, list.ErrRecordAlreadyExists) {
+		log.Error("failed to add record locally", zap.Error(err))
 		return
 	}
-	resp = &spacesyncproto.AclAddRecordResponse{
+	return &spacesyncproto.AclAddRecordResponse{
 		RecordId: rawRecordWithId.Id,
 		Payload:  rawRecordWithId.Payload,
-	}
-	return
+	}, nil
 }
 
 func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.AclGetRecordsRequest) (resp *spacesyncproto.AclGetRecordsResponse, err error) {
