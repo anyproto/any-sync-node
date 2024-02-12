@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.2-0.20231113223812-90db0cc40ff5
-	github.com/anyproto/any-sync v0.3.19-0.20240125134459-30920610e6c2
+	github.com/anyproto/any-sync v0.3.20
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.17.0
