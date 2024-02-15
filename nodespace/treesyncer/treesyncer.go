@@ -43,6 +43,13 @@ func (t *treeSyncer) Close(ctx context.Context) (err error) {
 func (t *treeSyncer) StartSync() {
 }
 
+func (t *treeSyncer) StopSync() {
+}
+
+func (t *treeSyncer) ShouldSync(peerId string) bool {
+	return true
+}
+
 func (t *treeSyncer) SyncAll(ctx context.Context, peerId string, existing, missing []string) (err error) {
 	// TODO: copied from any-sync's previous version, should change later if needed to use queues
 	//  problem here is that all sync process is basically synchronous and has same timeout
