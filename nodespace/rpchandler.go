@@ -8,7 +8,6 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -22,37 +21,7 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.AclAddRecordRequest) (resp *spacesyncproto.AclAddRecordResponse, err error) {
-	space, err := r.s.GetSpace(ctx, request.SpaceId)
-	if err != nil {
-		return
-	}
-	rec := &consensusproto.RawRecord{}
-	err = proto.Unmarshal(request.Payload, rec)
-	if err != nil {
-		return
-	}
-	acl := space.Acl()
-	acl.RLock()
-	err = acl.ValidateRawRecord(rec)
-	if err != nil {
-		acl.RUnlock()
-		return
-	}
-	acl.RUnlock()
-	rawRecordWithId, err := r.s.consClient.AddRecord(ctx, acl.Id(), rec)
-	if err != nil {
-		return
-	}
-	acl.Lock()
-	defer acl.Unlock()
-	err = acl.AddRawRecord(rawRecordWithId)
-	if err != nil {
-		return
-	}
-	resp = &spacesyncproto.AclAddRecordResponse{
-		RecordId: rawRecordWithId.Id,
-		Payload:  rawRecordWithId.Payload,
-	}
+	r.s.coordClient.Name()
 	return
 }
 

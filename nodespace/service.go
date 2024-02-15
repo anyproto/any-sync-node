@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
+	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/streampool"
@@ -50,6 +51,7 @@ type service struct {
 	streamPool           streampool.StreamPool
 	nodeHead             nodehead.NodeHead
 	metric               metric.Metric
+	coordClient          coordinatorclient.CoordinatorClient
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -72,6 +74,7 @@ func (s *service) Init(a *app.App) (err error) {
 		ocache.WithPrometheus(a.MustComponent(metric.CName).(metric.Metric).Registry(), "space", "cache"),
 	)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
+	s.coordClient = app.MustComponent[coordinatorclient.CoordinatorClient](a)
 	return spacesyncproto.DRPCRegisterSpaceSync(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s})
 }
 

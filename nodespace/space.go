@@ -2,7 +2,8 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anyproto/any-sync-node/nodestorage"
+	"time"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
@@ -10,7 +11,8 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"go.uber.org/zap"
-	"time"
+
+	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
 type NodeSpace interface {
@@ -55,7 +57,8 @@ func (s *nodeSpace) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	err = s.consClient.AddLog(ctx, &consensusproto.RawRecordWithId{
+	// TODO: call a coordinator?
+	err = s.consClient.AddLog(ctx, s.Id(), &consensusproto.RawRecordWithId{
 		Payload: s.Acl().Root().Payload,
 		Id:      s.Acl().Id(),
 	})
