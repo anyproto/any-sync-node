@@ -8,10 +8,10 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
@@ -21,30 +21,34 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.AclAddRecordRequest) (resp *spacesyncproto.AclAddRecordResponse, err error) {
-	r.s.coordClient.Name()
-	return
+	// deprecated - just proxy this call to the coordinator
+	var record = &consensusproto.RawRecord{}
+	if err = record.Unmarshal(request.Payload); err != nil {
+		return
+	}
+	res, err := r.s.coordClient.AclAddRecord(ctx, request.SpaceId, record)
+	if err != nil {
+		return nil, err
+	}
+	return &spacesyncproto.AclAddRecordResponse{
+		RecordId: res.Id,
+		Payload:  res.Payload,
+	}, nil
 }
 
 func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.AclGetRecordsRequest) (resp *spacesyncproto.AclGetRecordsResponse, err error) {
-	space, err := r.s.GetSpace(ctx, request.SpaceId)
+	// deprecated - just proxy this call to the coordinator
+	res, err := r.s.coordClient.AclGetRecords(ctx, request.SpaceId, request.AclHead)
 	if err != nil {
-		return
+		return nil, err
 	}
-	acl := space.Acl()
-	acl.RLock()
-	recordsAfter, err := acl.RecordsAfter(ctx, request.AclHead)
-	if err != nil {
-		acl.RUnlock()
-		return
+	resp = &spacesyncproto.AclGetRecordsResponse{
+		Records: make([][]byte, len(res)),
 	}
-	acl.RUnlock()
-	resp = &spacesyncproto.AclGetRecordsResponse{}
-	for _, rec := range recordsAfter {
-		marshalled, err := proto.Marshal(rec)
-		if err != nil {
-			return nil, err
+	for i, rec := range res {
+		if resp.Records[i], err = rec.Marshal(); err != nil {
+			return
 		}
-		resp.Records = append(resp.Records, marshalled)
 	}
 	return
 }

@@ -39,6 +39,9 @@ func (s *nodeSpace) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) 
 	log := s.log.With(zap.Int("len(records)", len(recs)), zap.String("firstId", recs[0].Id))
 	s.Acl().Lock()
 	defer s.Acl().Unlock()
+	for i := 0; i < len(recs)/2; i++ {
+		recs[i], recs[len(recs)-i-1] = recs[len(recs)-i-1], recs[i]
+	}
 	err := s.Acl().AddRawRecords(recs)
 	if err != nil {
 		log.Warn("failed to add consensus records", zap.Error(err))
