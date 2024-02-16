@@ -3,18 +3,15 @@ package nodespace
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"math"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace"
-	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
@@ -24,63 +21,50 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.AclAddRecordRequest) (resp *spacesyncproto.AclAddRecordResponse, err error) {
-	space, err := r.s.GetSpace(ctx, request.SpaceId)
-	if err != nil {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.aclAddRecord",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(request.SpaceId),
+			zap.Error(err),
+		)
+	}()
+	// deprecated - just proxy this call to the coordinator
+	var record = &consensusproto.RawRecord{}
+	if err = record.Unmarshal(request.Payload); err != nil {
 		return
 	}
-	rec := &consensusproto.RawRecord{}
-	err = proto.Unmarshal(request.Payload, rec)
+	res, err := r.s.coordClient.AclAddRecord(ctx, request.SpaceId, record)
 	if err != nil {
-		return
-	}
-	acl := space.Acl()
-	log := log.With(zap.String("spaceId", request.SpaceId))
-	acl.RLock()
-	err = acl.ValidateRawRecord(rec)
-	if err != nil {
-		acl.RUnlock()
-		log.Error("failed to validate record", zap.Error(err))
-		return
-	}
-	acl.RUnlock()
-	rawRecordWithId, err := r.s.consClient.AddRecord(ctx, acl.Id(), rec)
-	if err != nil {
-		log.Error("failed to send record to consensus node", zap.Error(err))
-		return
-	}
-	acl.Lock()
-	defer acl.Unlock()
-	err = acl.AddRawRecord(rawRecordWithId)
-	if err != nil && !errors.Is(err, list.ErrRecordAlreadyExists) {
-		log.Error("failed to add record locally", zap.Error(err))
-		return
+		return nil, err
 	}
 	return &spacesyncproto.AclAddRecordResponse{
-		RecordId: rawRecordWithId.Id,
-		Payload:  rawRecordWithId.Payload,
+		RecordId: res.Id,
+		Payload:  res.Payload,
 	}, nil
 }
 
 func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.AclGetRecordsRequest) (resp *spacesyncproto.AclGetRecordsResponse, err error) {
-	space, err := r.s.GetSpace(ctx, request.SpaceId)
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.aclGetRecords",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(request.SpaceId),
+			zap.Error(err),
+		)
+	}()
+	// deprecated - just proxy this call to the coordinator
+	res, err := r.s.coordClient.AclGetRecords(ctx, request.SpaceId, request.AclHead)
 	if err != nil {
-		return
+		return nil, err
 	}
-	acl := space.Acl()
-	acl.RLock()
-	recordsAfter, err := acl.RecordsAfter(ctx, request.AclHead)
-	if err != nil {
-		acl.RUnlock()
-		return
+	resp = &spacesyncproto.AclGetRecordsResponse{
+		Records: make([][]byte, len(res)),
 	}
-	acl.RUnlock()
-	resp = &spacesyncproto.AclGetRecordsResponse{}
-	for _, rec := range recordsAfter {
-		marshalled, err := proto.Marshal(rec)
-		if err != nil {
-			return nil, err
+	for i, rec := range res {
+		if resp.Records[i], err = rec.Marshal(); err != nil {
+			return
 		}
-		resp.Records = append(resp.Records, marshalled)
 	}
 	return
 }

@@ -60,14 +60,15 @@ func (s *nodeSpace) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	err = s.consClient.AddLog(ctx, &consensusproto.RawRecordWithId{
+	// TODO: call a coordinator?
+	err = s.consClient.AddLog(ctx, s.Id(), &consensusproto.RawRecordWithId{
 		Payload: s.Acl().Root().Payload,
 		Id:      s.Acl().Id(),
 	})
 	if err != nil && rpcerr.Unwrap(err) != consensuserr.ErrLogExists {
 		log.Warn("failed to add consensus record", zap.Error(err))
 	}
-	return s.consClient.Watch(s.Acl().Id(), s)
+	return s.consClient.Watch(s.Id(), s)
 }
 
 func (s *nodeSpace) TryClose(objectTTL time.Duration) (close bool, err error) {
@@ -81,7 +82,7 @@ func (s *nodeSpace) TryClose(objectTTL time.Duration) (close bool, err error) {
 }
 
 func (s *nodeSpace) Close() (err error) {
-	err = s.consClient.UnWatch(s.Acl().Id())
+	err = s.consClient.UnWatch(s.Id())
 	if err != nil {
 		s.log.Warn("failed to unwatch space", zap.Error(err))
 	}
