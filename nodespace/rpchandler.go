@@ -21,6 +21,14 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.AclAddRecordRequest) (resp *spacesyncproto.AclAddRecordResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.aclAddRecord",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(request.SpaceId),
+			zap.Error(err),
+		)
+	}()
 	// deprecated - just proxy this call to the coordinator
 	var record = &consensusproto.RawRecord{}
 	if err = record.Unmarshal(request.Payload); err != nil {
@@ -37,6 +45,14 @@ func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.A
 }
 
 func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.AclGetRecordsRequest) (resp *spacesyncproto.AclGetRecordsResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.aclGetRecords",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(request.SpaceId),
+			zap.Error(err),
+		)
+	}()
 	// deprecated - just proxy this call to the coordinator
 	res, err := r.s.coordClient.AclGetRecords(ctx, request.SpaceId, request.AclHead)
 	if err != nil {
