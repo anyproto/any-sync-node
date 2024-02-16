@@ -10,3 +10,4 @@ jobs:
     secrets: inherit
     with:
       release: ${{ github.event.release.tag_name }}
+      dockerfile-cmd: /bin/any-sync-node -c /etc/any-sync-node/config.yml
