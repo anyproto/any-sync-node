@@ -53,10 +53,8 @@ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRF
 github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156/go.mod h1:Cb/ax3seSYIx7SuZdm2G2xzfwmv3TPSk2ucNfQESPXM=
 github.com/allegro/bigcache v1.2.1/go.mod h1:Cb/ax3seSYIx7SuZdm2G2xzfwmv3TPSk2ucNfQESPXM=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
-github.com/anyproto/any-sync v0.3.22-0.20240215181228-e86ba80a672b h1:vxNLQTxICQ2CdB/WIgsrE8v3a9zpyY2a4HvyvdZmB98=
-github.com/anyproto/any-sync v0.3.22-0.20240215181228-e86ba80a672b/go.mod h1:mu5OIaJLvo3IMAFFDHR8EcDPXfdROYbSmmNoLzSF5h0=
-github.com/anyproto/any-sync v0.3.22-0.20240215183845-846f44a34a6b h1:Ee3+NwPQUL54gOqvfgeBC+uJRVrJztaSVVLuFw1vkiA=
-github.com/anyproto/any-sync v0.3.22-0.20240215183845-846f44a34a6b/go.mod h1:mu5OIaJLvo3IMAFFDHR8EcDPXfdROYbSmmNoLzSF5h0=
+github.com/anyproto/any-sync v0.3.22 h1:n18YcWwOqYuImS6BY7rqPwmLe1x4OGXkHcg3HS8sVg4=
+github.com/anyproto/any-sync v0.3.22/go.mod h1:mu5OIaJLvo3IMAFFDHR8EcDPXfdROYbSmmNoLzSF5h0=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=
