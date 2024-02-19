@@ -68,12 +68,16 @@ func (s *nodeSpace) Init(ctx context.Context) (err error) {
 	if err != nil && rpcerr.Unwrap(err) != consensuserr.ErrLogExists {
 		log.Warn("failed to add consensus record", zap.Error(err))
 	}
-	return s.consClient.Watch(s.Id(), s)
+	if err = s.consClient.Watch(s.Id(), s); err != nil {
+		_ = s.Space.Close()
+		return
+	}
+	return
 }
 
 func (s *nodeSpace) TryClose(objectTTL time.Duration) (close bool, err error) {
 	if close, err = s.Space.TryClose(objectTTL); close {
-		unwatchErr := s.consClient.UnWatch(s.Acl().Id())
+		unwatchErr := s.consClient.UnWatch(s.Id())
 		if unwatchErr != nil {
 			s.log.Warn("failed to unwatch space", zap.Error(unwatchErr))
 		}
