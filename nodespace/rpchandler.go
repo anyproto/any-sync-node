@@ -29,7 +29,6 @@ func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.A
 			zap.Error(err),
 		)
 	}()
-	// deprecated - just proxy this call to the coordinator
 	var record = &consensusproto.RawRecord{}
 	if err = record.Unmarshal(request.Payload); err != nil {
 		return
@@ -38,6 +37,10 @@ func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.A
 	if err != nil {
 		return nil, err
 	}
+
+	// wakeup the space to propagate acl sync
+	_, _ = r.s.spaceCache.Get(ctx, request.SpaceId)
+
 	return &spacesyncproto.AclAddRecordResponse{
 		RecordId: res.Id,
 		Payload:  res.Payload,
