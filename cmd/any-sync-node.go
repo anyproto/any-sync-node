@@ -23,6 +23,7 @@ import (
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
+	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/nodeconfstore"
 
@@ -130,6 +131,7 @@ func Bootstrap(a *app.App) {
 		Register(peerservice.New()).
 		Register(pool.New()).
 		Register(streampool.New()).
+		Register(nodeclient.New()).
 		Register(consensusclient.New()).
 		Register(nodehead.New()).
 		Register(nodecache.New(200)).
