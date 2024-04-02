@@ -96,6 +96,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create latest tag for docker image
+        run: |
+          if [[ ${{ github.event.release.prerelease }} == 'false' ]]; then
+            echo "TAG_LATEST=ghcr.io/${{ github.repository }}:latest" >> $GITHUB_ENV
+          else
+            echo "TAG_LATEST=" >> $GITHUB_ENV
+          fi
       - name: Push to registry
         uses: docker/build-push-action@v4
         with:
@@ -104,8 +111,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ inputs.release }}
+            $TAG_LATEST
           outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=https://tech.anytype.io
       - name: Integration testing
         run: |
