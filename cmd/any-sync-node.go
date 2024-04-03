@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/debugserver"
@@ -39,7 +40,6 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace"
-	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"go.uber.org/zap"
 
@@ -118,6 +118,7 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
+		Register(metric.New()).
 		Register(debugstat.New()).
 		Register(statusprovider.New()).
 		Register(credentialprovider.NewNoOp()).
@@ -126,7 +127,6 @@ func Bootstrap(a *app.App) {
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
 		Register(nodestorage.New()).
-		Register(metric.New()).
 		Register(server.New()).
 		Register(peerservice.New()).
 		Register(pool.New()).
