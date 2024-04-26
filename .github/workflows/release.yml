@@ -9,27 +9,9 @@ name: release
 permissions: write-all
 
 jobs:
-  create_release:
-    name: create release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          # for triggering workflow "push-docker-image-release" - https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
-          GITHUB_TOKEN: ${{ secrets.ANYTYPE_PAT }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: true
   build:
     name: build release
     runs-on: ubuntu-22.04
-    needs: create_release
     strategy:
       matrix:
         arch:
@@ -120,47 +102,43 @@ jobs:
           ls -al ./
 
       # upload-release-asset {{
-      - name: upload-release-asset zip
+      - name: Create release and upload asset zip
+        uses: softprops/action-gh-release@v2.0.4
         if: matrix.os == 'windows'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.zip
-          asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.zip
-          asset_content_type: application/zip
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+          # for triggering workflow "push-docker-image-release" - https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.ANYTYPE_PAT }}
+          files: |
+            ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.zip
 
-      - name: upload-release-asset tgz
+      - name: Create release and upload asset tgz
+        uses: softprops/action-gh-release@v2.0.4
         if: matrix.os != 'windows'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.tgz
-          asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.tgz
-          asset_content_type: application/gzip
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+          # for triggering workflow "push-docker-image-release" - https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.ANYTYPE_PAT }}
+          files: |
+            ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.tgz
 
-      - name: upload-release-asset deb
+      - name: Create release and upload assets deb and rpm
+        uses: softprops/action-gh-release@v2.0.4
         if: matrix.os == 'linux'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_${{ matrix.arch }}.deb
-          asset_name: ${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_${{ matrix.arch }}.deb
-          asset_content_type: application/octet-stream
-
-      - name: upload-release-asset rpm
-        if: matrix.os == 'linux'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.${{ matrix.rpm_arch }}.rpm
-          asset_name: ${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.${{ matrix.rpm_arch }}.rpm
-          asset_content_type: application/octet-stream
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+          # for triggering workflow "push-docker-image-release" - https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.ANYTYPE_PAT }}
+          files: |
+            ./${{ github.event.repository.name }}_${{ steps.release-version.outputs.RELEASE_VERSION }}_${{ matrix.arch }}.deb
+            ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}-1.${{ matrix.rpm_arch }}.rpm
       # }}
