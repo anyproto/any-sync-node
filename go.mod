@@ -7,17 +7,17 @@ toolchain go1.22.1
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.2
-	github.com/anyproto/any-sync v0.4.16
+	github.com/anyproto/any-sync v0.4.17
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/mock v0.4.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
-	golang.org/x/net v0.24.0
+	golang.org/x/net v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
 )
@@ -90,7 +90,7 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.19.0 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
