@@ -108,9 +108,9 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ inputs.release }}
           outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=https://tech.anytype.io
-      - name: Integration testing
-        run: |
-          curl --request POST \
-          --url 'https://api.github.com/repos/anyproto/go-anytype-infrastructure-experiments/dispatches' \
-          --header 'authorization: Bearer ${{ secrets.ANYTYPE_PAT }}' \
-          --data '{"event_type": "on-release"}'
+      #- name: Integration testing
+      #  run: |
+      #    curl --request POST \
+      #    --url 'https://api.github.com/repos/anyproto/go-anytype-infrastructure-experiments/dispatches' \
+      #    --header 'authorization: Bearer ${{ secrets.ANYTYPE_PAT }}' \
+      #    --data '{"event_type": "on-release"}'
