@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -73,36 +74,7 @@ func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.
 }
 
 func (r *rpcHandler) ObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	st := time.Now()
-	defer func() {
-		r.s.metric.RequestLog(ctx, "space.objectSync",
-			metric.TotalDur(time.Since(st)),
-			metric.SpaceId(req.SpaceId),
-			metric.ObjectId(req.ObjectId),
-			zap.Error(err),
-		)
-	}()
-	accountIdentity, err := peer.CtxPubKey(ctx)
-	if err != nil {
-		return
-	}
-	err = checkResponsible(ctx, r.s.confService, req.SpaceId)
-	if err != nil {
-		log.Debug("object sync sent to not responsible peer",
-			zap.Error(err),
-			zap.String("spaceId", req.SpaceId),
-			zap.String("accountId", accountIdentity.Account()))
-		return nil, spacesyncproto.ErrPeerIsNotResponsible
-	}
-	sp, err := r.s.GetSpace(ctx, req.SpaceId)
-	if err != nil {
-		if err != spacesyncproto.ErrSpaceMissing {
-			err = spacesyncproto.ErrUnexpected
-		}
-		return
-	}
-	resp, err = sp.HandleSyncRequest(ctx, req)
-	return
+	return nil, spacesyncproto.ErrUnexpected
 }
 
 func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
@@ -146,6 +118,36 @@ func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePul
 		},
 	}
 	return
+}
+
+func (r *rpcHandler) ObjectSyncRequestStream(req *spacesyncproto.ObjectSyncMessage, stream spacesyncproto.DRPCSpaceSync_ObjectSyncRequestStreamStream) (err error) {
+	st := time.Now()
+	ctx := stream.Context()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.objectSync",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(req.SpaceId),
+			metric.ObjectId(req.ObjectId),
+			zap.Error(err),
+		)
+	}()
+	accountIdentity, err := peer.CtxPubKey(ctx)
+	if err != nil {
+		return
+	}
+	err = checkResponsible(ctx, r.s.confService, req.SpaceId)
+	if err != nil {
+		log.Debug("object sync sent to not responsible peer",
+			zap.Error(err),
+			zap.String("spaceId", req.SpaceId),
+			zap.String("accountId", accountIdentity.Account()))
+		return spacesyncproto.ErrPeerIsNotResponsible
+	}
+	sp, err := r.s.GetSpace(stream.Context(), req.SpaceId)
+	if err != nil {
+		return err
+	}
+	return sp.HandleStreamSyncRequest(stream.Context(), req, stream)
 }
 
 func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePushRequest) (resp *spacesyncproto.SpacePushResponse, err error) {
@@ -293,8 +295,14 @@ func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_Object
 	defer func() {
 		log.DebugCtx(stream.Context(), "incoming stream error")
 	}()
-
 	log.DebugCtx(stream.Context(), "open incoming stream")
-	err = r.s.streamPool.ReadStream(stream)
-	return
+	msg := &spacesyncproto.ObjectSyncMessage{}
+	if err := stream.MsgRecv(msg, streampool.EncodingProto); err != nil {
+		return err
+	}
+	sp, err := r.s.GetSpace(stream.Context(), msg.SpaceId)
+	if err != nil {
+		return err
+	}
+	return sp.HandleStream(stream)
 }

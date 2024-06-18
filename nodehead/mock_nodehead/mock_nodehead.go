@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_nodehead/mock_nodehead.go github.com/anyproto/any-sync-node/nodehead NodeHead
 //
+
 // Package mock_nodehead is a generated GoMock package.
 package mock_nodehead
 

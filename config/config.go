@@ -1,9 +1,8 @@
 package config
 
 import (
-	"github.com/anyproto/any-sync-node/nodestorage"
-	"github.com/anyproto/any-sync-node/nodesync"
-	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	"os"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -11,11 +10,15 @@ import (
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/rpc/debugserver"
+	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"gopkg.in/yaml.v3"
-	"os"
+
+	"github.com/anyproto/any-sync-node/nodestorage"
+	"github.com/anyproto/any-sync-node/nodesync"
+	"github.com/anyproto/any-sync-node/nodesync/hotsync"
 )
 
 const CName = "config"
@@ -106,4 +109,12 @@ func (c Config) GetYamux() yamux.Config {
 
 func (c Config) GetQuic() quic.Config {
 	return c.Quic
+}
+
+func (c Config) GetStreamConfig() streampool.StreamConfig {
+	return streampool.StreamConfig{
+		SendQueueSize:    100,
+		DialQueueWorkers: 4,
+		DialQueueSize:    1000,
+	}
 }
