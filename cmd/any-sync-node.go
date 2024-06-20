@@ -30,7 +30,6 @@ import (
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/peermanager"
 	"github.com/anyproto/any-sync-node/nodespace/spacedeleter"
-	"github.com/anyproto/any-sync-node/nodespace/statusprovider"
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
@@ -119,7 +118,6 @@ func Bootstrap(a *app.App) {
 	a.Register(account.New()).
 		Register(metric.New()).
 		Register(debugstat.New()).
-		Register(statusprovider.New()).
 		Register(credentialprovider.NewNoOp()).
 		Register(coordinatorclient.New()).
 		Register(nodeconfstore.New()).

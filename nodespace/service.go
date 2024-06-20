@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/metric"
@@ -112,6 +113,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
 		TreeSyncer:   treesyncer.New(id),
 		StreamOpener: &streamOpener{spaceId: id},
+		SyncStatus:   syncstatus.NewNoOpSyncStatus(),
 	})
 	if err != nil {
 		return
