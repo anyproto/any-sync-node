@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/rpc/debugserver"
+	"github.com/anyproto/any-sync/net/rpc/limiter"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
@@ -48,6 +49,7 @@ type Config struct {
 	Log                      logger.Config          `yaml:"log"`
 	NodeSync                 nodesync.Config        `yaml:"nodeSync"`
 	Yamux                    yamux.Config           `yaml:"yamux"`
+	Limiter                  limiter.Config         `yaml:"limiter"`
 	Quic                     quic.Config            `yaml:"quic"`
 }
 
@@ -97,6 +99,10 @@ func (c Config) GetNodeConfUpdateInterval() int {
 
 func (c Config) GetNodeSync() nodesync.Config {
 	return c.NodeSync
+}
+
+func (c Config) GetLimiterConf() limiter.Config {
+	return c.Limiter
 }
 
 func (c Config) GetHotSync() hotsync.Config {

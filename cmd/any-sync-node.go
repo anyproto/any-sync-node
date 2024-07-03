@@ -20,6 +20,7 @@ import (
 	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/debugserver"
+	"github.com/anyproto/any-sync/net/rpc/limiter"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
@@ -127,6 +128,7 @@ func Bootstrap(a *app.App) {
 		Register(server.New()).
 		Register(peerservice.New()).
 		Register(pool.New()).
+		Register(limiter.New()).
 		Register(nodeclient.New()).
 		Register(consensusclient.New()).
 		Register(nodehead.New()).

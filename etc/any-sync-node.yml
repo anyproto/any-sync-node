@@ -71,3 +71,7 @@ log:
   production: false
   defaultLevel: ""
   namedLevels: { }
+limiter:
+  default:
+    rps: 10
+    burst: 400
