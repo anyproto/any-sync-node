@@ -2,6 +2,7 @@ package nodestorage
 
 import (
 	"context"
+
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -114,6 +115,22 @@ func (t *treeStorage) SetHeads(heads []string) (err error) {
 
 func (t *treeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) (err error) {
 	return t.db.Put(t.keys.RawChangeKey(change.Id), change.RawChange)
+}
+
+func (t *treeStorage) GetAppendRawChange(ctx context.Context, buf []byte, id string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	res, err := t.db.GetAppend(t.keys.RawChangeKey(id), buf)
+	if err != nil {
+		return
+	}
+	if res == nil {
+		err = treestorage.ErrUnknownChange
+	}
+
+	raw = &treechangeproto.RawTreeChangeWithId{
+		RawChange: res,
+		Id:        id,
+	}
+	return
 }
 
 func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treechangeproto.RawTreeChangeWithId, err error) {

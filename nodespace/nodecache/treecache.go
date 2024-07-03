@@ -3,16 +3,19 @@ package nodecache
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync-node/nodespace"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/metric"
 	"go.uber.org/zap"
-	"time"
+
+	"github.com/anyproto/any-sync-node/nodespace"
 )
 
 var log = logger.NewNamed("treecache")
@@ -26,6 +29,10 @@ type treeCache struct {
 	gcttl       int
 	cache       ocache.OCache
 	nodeService nodespace.Service
+}
+
+func (c *treeCache) ValidateAndPutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) error {
+	panic("implement me")
 }
 
 func New(ttl int) treemanager.TreeManager {
