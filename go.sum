@@ -11,6 +11,8 @@ github.com/anyproto/any-sync v0.4.22-0.20240703194738-e7598966cab3 h1:JuCqYu4wkR
 github.com/anyproto/any-sync v0.4.22-0.20240703194738-e7598966cab3/go.mod h1:sO/zUrmnCZKnH/3KaRH3JQSZMuINS3X7ZJa+d4YgfkA=
 github.com/anyproto/any-sync v0.4.22-0.20240703221100-ab8322da4740 h1:bGY8ahuRGVE2Hv5zGshvXxD7NildHGy9Co+mn5FA4pg=
 github.com/anyproto/any-sync v0.4.22-0.20240703221100-ab8322da4740/go.mod h1:sO/zUrmnCZKnH/3KaRH3JQSZMuINS3X7ZJa+d4YgfkA=
+github.com/anyproto/any-sync v0.4.22-0.20240704152308-fc292e4a127b h1:v4sCzn9dMGxIPYyKK5mOlYJjuXaPY3l4zNOgjybE8ig=
+github.com/anyproto/any-sync v0.4.22-0.20240704152308-fc292e4a127b/go.mod h1:sO/zUrmnCZKnH/3KaRH3JQSZMuINS3X7ZJa+d4YgfkA=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=
