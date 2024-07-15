@@ -7,7 +7,7 @@ toolchain go1.22.1
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.2
-	github.com/anyproto/any-sync v0.5.0-alpha.2.0.20240715200018-4c42f499d18c
+	github.com/anyproto/any-sync v0.5.0-alpha.2.0.20240715212925-a5d2bbe830c9
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.19.1
@@ -84,4 +84,4 @@ require (
 
 replace github.com/akrylysov/pogreb => github.com/anyproto/pogreb v0.0.0-20240703122929-76639f85e02d
 
-replace github.com/gogo/protobuf => github.com/anyproto/protobuf v1.3.3-0.20240715193215-a93dfa8960ec
+replace github.com/gogo/protobuf => github.com/anyproto/protobuf v1.3.3-0.20240715205950-2af411f17dfa
