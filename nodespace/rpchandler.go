@@ -74,7 +74,32 @@ func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.
 }
 
 func (r *rpcHandler) ObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	return nil, spacesyncproto.ErrUnexpected
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.objectSync",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(req.SpaceId),
+			metric.ObjectId(req.ObjectId),
+			zap.Error(err),
+		)
+	}()
+	accountIdentity, err := peer.CtxPubKey(ctx)
+	if err != nil {
+		return
+	}
+	err = checkResponsible(ctx, r.s.confService, req.SpaceId)
+	if err != nil {
+		log.Debug("object sync sent to not responsible peer",
+			zap.Error(err),
+			zap.String("spaceId", req.SpaceId),
+			zap.String("accountId", accountIdentity.Account()))
+		return nil, spacesyncproto.ErrPeerIsNotResponsible
+	}
+	sp, err := r.s.GetSpace(ctx, req.SpaceId)
+	if err != nil {
+		return nil, err
+	}
+	return sp.HandleDeprecatedObjectSyncRequest(ctx, req)
 }
 
 func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
@@ -124,7 +149,7 @@ func (r *rpcHandler) ObjectSyncRequestStream(req *spacesyncproto.ObjectSyncMessa
 	st := time.Now()
 	ctx := stream.Context()
 	defer func() {
-		r.s.metric.RequestLog(ctx, "space.objectSync",
+		r.s.metric.RequestLog(ctx, "space.objectSyncRequestStream",
 			metric.TotalDur(time.Since(st)),
 			metric.SpaceId(req.SpaceId),
 			metric.ObjectId(req.ObjectId),
