@@ -23,7 +23,10 @@ var ErrCacheObjectWithoutTree = errors.New("cache object contains no tree")
 
 type ctxKey int
 
-const spaceKey ctxKey = 0
+const (
+	spaceKey ctxKey = iota
+	payloadKey
+)
 
 type treeCache struct {
 	gcttl       int
@@ -32,7 +35,10 @@ type treeCache struct {
 }
 
 func (c *treeCache) ValidateAndPutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) error {
-	panic("implement me")
+	ctx = context.WithValue(ctx, spaceKey, spaceId)
+	ctx = context.WithValue(ctx, payloadKey, payload)
+	_, err := c.cache.Get(ctx, payload.RootRawChange.Id)
+	return err
 }
 
 func New(ttl int) treemanager.TreeManager {
@@ -57,6 +63,10 @@ func (c *treeCache) Init(a *app.App) (err error) {
 			space, err := c.nodeService.GetSpace(ctx, spaceId)
 			if err != nil {
 				return
+			}
+			payload, ok := ctx.Value(payloadKey).(treestorage.TreeStorageCreatePayload)
+			if ok {
+				return space.TreeBuilder().PutTree(ctx, payload, nil)
 			}
 			return space.TreeBuilder().BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{})
 		},
