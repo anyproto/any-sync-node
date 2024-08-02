@@ -7,7 +7,7 @@ toolchain go1.22.1
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.2
-	github.com/anyproto/any-sync v0.5.0-alpha.4.0.20240730212628-611390987c0b
+	github.com/anyproto/any-sync v0.5.0-alpha.7.0.20240802091412-012a7ee5f061
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.19.1
@@ -26,6 +26,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/anyproto/go-slip10 v1.0.0 // indirect
 	github.com/anyproto/go-slip21 v1.0.0 // indirect
+	github.com/anyproto/protobuf v1.3.3-0.20240801222536-5596d71a739e // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 // indirect
@@ -82,6 +83,4 @@ require (
 	lukechampine.com/blake3 v1.2.1 // indirect
 )
 
-replace github.com/akrylysov/pogreb => github.com/anyproto/pogreb v0.0.0-20240703122929-76639f85e02d
-
-replace github.com/gogo/protobuf => github.com/anyproto/protobuf v1.3.3-0.20240715205950-2af411f17dfa
+replace github.com/akrylysov/pogreb => github.com/anyproto/pogreb v0.0.0-20240802122737-7e447164a534
