@@ -61,6 +61,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.spaceStorageProvider = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
 	s.nodeHead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	s.consClient = a.MustComponent(consensusclient.CName).(consensusclient.Service)
+	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.spaceCache = ocache.New(
 		s.loadSpace,
 		ocache.WithLogger(log.Sugar()),
