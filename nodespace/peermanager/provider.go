@@ -35,6 +35,5 @@ func (p *provider) Name() (name string) {
 
 func (p *provider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
 	pm := &nodePeerManager{p: p, spaceId: spaceId}
-	pm.init()
 	return pm, nil
 }

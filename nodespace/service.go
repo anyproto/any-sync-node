@@ -38,7 +38,6 @@ type Service interface {
 	GetSpace(ctx context.Context, id string) (NodeSpace, error)
 	PickSpace(ctx context.Context, id string) (NodeSpace, error)
 	Cache() ocache.OCache
-	StreamPool() streampool.StreamPool
 	app.ComponentRunnable
 }
 
@@ -82,10 +81,6 @@ func (s *service) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (s *service) StreamPool() streampool.StreamPool {
-	return s.streamPool
-}
-
 func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 	v, err := s.spaceCache.Pick(ctx, id)
 	if err != nil {
@@ -111,9 +106,8 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 		return nil, err
 	}
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
-		TreeSyncer:   treesyncer.New(id),
-		StreamOpener: &streamOpener{spaceId: id},
-		SyncStatus:   syncstatus.NewNoOpSyncStatus(),
+		TreeSyncer: treesyncer.New(id),
+		SyncStatus: syncstatus.NewNoOpSyncStatus(),
 	})
 	if err != nil {
 		return

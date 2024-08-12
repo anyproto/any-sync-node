@@ -22,6 +22,7 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/debugserver"
 	"github.com/anyproto/any-sync/net/rpc/server"
+	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/node/nodeclient"
@@ -132,6 +133,8 @@ func Bootstrap(a *app.App) {
 		//Register(limiter.New()).
 		Register(nodeclient.New()).
 		Register(consensusclient.New()).
+		Register(nodespace.NewStreamOpener()).
+		Register(streampool.New()).
 		Register(nodehead.New()).
 		Register(nodecache.New(200)).
 		Register(hotsync.New()).

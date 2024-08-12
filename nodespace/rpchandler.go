@@ -11,7 +11,6 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -317,17 +316,5 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 }
 
 func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) (err error) {
-	defer func() {
-		log.DebugCtx(stream.Context(), "incoming stream error")
-	}()
-	log.DebugCtx(stream.Context(), "open incoming stream")
-	msg := &spacesyncproto.ObjectSyncMessage{}
-	if err := stream.MsgRecv(msg, streampool.EncodingProto); err != nil {
-		return err
-	}
-	sp, err := r.s.GetSpace(stream.Context(), msg.SpaceId)
-	if err != nil {
-		return err
-	}
-	return sp.HandleStream(stream)
+	return r.s.streamPool.ReadStream(stream)
 }
