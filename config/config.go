@@ -119,8 +119,8 @@ func (c Config) GetQuic() quic.Config {
 
 func (c Config) GetStreamConfig() streampool.StreamConfig {
 	return streampool.StreamConfig{
-		SendQueueSize:    100,
+		SendQueueSize:    300,
 		DialQueueWorkers: 4,
-		DialQueueSize:    1000,
+		DialQueueSize:    100,
 	}
 }
