@@ -54,6 +54,7 @@ func (t *treeSyncer) ShouldSync(peerId string) bool {
 func (t *treeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, missing []string) (err error) {
 	// TODO: copied from any-sync's previous version, should change later if needed to use queues
 	//  problem here is that all sync process is basically synchronous and has same timeout
+	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	syncTrees := func(ids []string) {
 		for _, id := range ids {
 			log := log.With(zap.String("treeId", id))
