@@ -13,7 +13,6 @@ import (
 
 	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
-	"github.com/anyproto/any-sync/commonspace/globalsync"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
@@ -28,6 +27,7 @@ import (
 	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/nodeconfstore"
+	"github.com/anyproto/any-sync/util/syncqueues"
 
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/peermanager"
@@ -126,7 +126,7 @@ func Bootstrap(a *app.App) {
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
 		Register(nodestorage.New()).
-		Register(globalsync.New()).
+		Register(syncqueues.New()).
 		Register(server.New()).
 		Register(peerservice.New()).
 		Register(pool.New()).

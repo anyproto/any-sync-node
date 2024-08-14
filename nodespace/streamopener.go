@@ -37,7 +37,7 @@ func (s *streamOpener) Name() (name string) {
 	return streamhandler.CName
 }
 
-func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
+func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, queueSize int, err error) {
 	log.DebugCtx(ctx, "open outgoing stream", zap.String("peerId", p.Id()))
 	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	conn, err := p.AcquireDrpcConn(ctx)
@@ -49,6 +49,7 @@ func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc
 		return
 	}
 	log.DebugCtx(ctx, "outgoing stream opened", zap.String("peerId", p.Id()))
+	queueSize = 500
 	return
 }
 

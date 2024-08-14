@@ -316,5 +316,5 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 }
 
 func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) (err error) {
-	return r.s.streamPool.ReadStream(stream)
+	return r.s.streamPool.ReadStream(stream, 100)
 }
