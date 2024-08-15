@@ -2,6 +2,7 @@ package nodestorage
 
 import (
 	"context"
+	"errors"
 
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -162,6 +163,10 @@ func (t *treeStorage) AddRawChangesSetHeads(changes []*treechangeproto.RawTreeCh
 	return t.SetHeads(heads)
 }
 
+func (t *treeStorage) GetAllChangeIds() (storedKeys []string, err error) {
+	return t.storedIds()
+}
+
 func (t *treeStorage) Delete() (err error) {
 	storedKeys, err := t.storedKeys()
 	if err != nil {
@@ -188,9 +193,40 @@ func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
 		key, _, err = index.Next()
 	}
 
-	if err != pogreb.ErrIterationDone {
+	if !errors.Is(err, pogreb.ErrIterationDone) {
 		return
 	}
 	err = nil
 	return
+}
+
+func (t *treeStorage) storedIds() (ids []string, err error) {
+	index := t.db.Items()
+
+	key, _, err := index.Next()
+	for err == nil {
+		strKey := string(key)
+		if t.keys.isTreeRelatedKey(strKey) {
+			id := getId(strKey)
+			if id != "heads" {
+				ids = append(ids, getId(strKey))
+			}
+		}
+		key, _, err = index.Next()
+	}
+
+	if !errors.Is(err, pogreb.ErrIterationDone) {
+		return
+	}
+	err = nil
+	return
+}
+
+func getId(key string) (id string) {
+	for i := len(key) - 1; i >= 0; i-- {
+		if key[i] == '/' {
+			return key[i+1:]
+		}
+	}
+	return key
 }
