@@ -74,4 +74,4 @@ log:
 limiter:
   default:
     rps: 10
-    burst: 400
+    burst: 20
