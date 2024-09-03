@@ -27,11 +27,11 @@ import (
 	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/nodeconfstore"
+	"github.com/anyproto/any-sync/util/syncqueues"
 
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/peermanager"
 	"github.com/anyproto/any-sync-node/nodespace/spacedeleter"
-	"github.com/anyproto/any-sync-node/nodespace/statusprovider"
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
@@ -120,19 +120,20 @@ func Bootstrap(a *app.App) {
 	a.Register(account.New()).
 		Register(metric.New()).
 		Register(debugstat.New()).
-		Register(statusprovider.New()).
 		Register(credentialprovider.NewNoOp()).
 		Register(coordinatorclient.New()).
 		Register(nodeconfstore.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
 		Register(nodestorage.New()).
+		Register(syncqueues.New()).
 		Register(server.New()).
 		Register(peerservice.New()).
 		Register(pool.New()).
-		Register(streampool.New()).
 		Register(nodeclient.New()).
 		Register(consensusclient.New()).
+		Register(nodespace.NewStreamOpener()).
+		Register(streampool.New()).
 		Register(nodehead.New()).
 		Register(nodecache.New(200)).
 		Register(hotsync.New()).

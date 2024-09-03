@@ -1,9 +1,8 @@
 package config
 
 import (
-	"github.com/anyproto/any-sync-node/nodestorage"
-	"github.com/anyproto/any-sync-node/nodesync"
-	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	"os"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -11,11 +10,16 @@ import (
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/rpc/debugserver"
+	"github.com/anyproto/any-sync/net/rpc/limiter"
+	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"gopkg.in/yaml.v3"
-	"os"
+
+	"github.com/anyproto/any-sync-node/nodestorage"
+	"github.com/anyproto/any-sync-node/nodesync"
+	"github.com/anyproto/any-sync-node/nodesync/hotsync"
 )
 
 const CName = "config"
@@ -45,6 +49,7 @@ type Config struct {
 	Log                      logger.Config          `yaml:"log"`
 	NodeSync                 nodesync.Config        `yaml:"nodeSync"`
 	Yamux                    yamux.Config           `yaml:"yamux"`
+	Limiter                  limiter.Config         `yaml:"limiter"`
 	Quic                     quic.Config            `yaml:"quic"`
 }
 
@@ -96,6 +101,10 @@ func (c Config) GetNodeSync() nodesync.Config {
 	return c.NodeSync
 }
 
+func (c Config) GetLimiterConf() limiter.Config {
+	return c.Limiter
+}
+
 func (c Config) GetHotSync() hotsync.Config {
 	return c.NodeSync.HotSync
 }
@@ -106,4 +115,12 @@ func (c Config) GetYamux() yamux.Config {
 
 func (c Config) GetQuic() quic.Config {
 	return c.Quic
+}
+
+func (c Config) GetStreamConfig() streampool.StreamConfig {
+	return streampool.StreamConfig{
+		SendQueueSize:    300,
+		DialQueueWorkers: 4,
+		DialQueueSize:    100,
+	}
 }

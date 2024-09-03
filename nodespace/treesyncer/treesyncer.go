@@ -3,6 +3,7 @@ package treesyncer
 import (
 	"context"
 
+	"github.com/anyproto/any-sync/net/peer"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
@@ -50,9 +51,10 @@ func (t *treeSyncer) ShouldSync(peerId string) bool {
 	return true
 }
 
-func (t *treeSyncer) SyncAll(ctx context.Context, peerId string, existing, missing []string) (err error) {
+func (t *treeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, missing []string) (err error) {
 	// TODO: copied from any-sync's previous version, should change later if needed to use queues
 	//  problem here is that all sync process is basically synchronous and has same timeout
+	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	syncTrees := func(ids []string) {
 		for _, id := range ids {
 			log := log.With(zap.String("treeId", id))
@@ -65,7 +67,7 @@ func (t *treeSyncer) SyncAll(ctx context.Context, peerId string, existing, missi
 			if !ok {
 				log.WarnCtx(ctx, "not a sync tree")
 			}
-			if err = syncTree.SyncWithPeer(ctx, peerId); err != nil {
+			if err = syncTree.SyncWithPeer(ctx, p); err != nil {
 				log.WarnCtx(ctx, "synctree.SyncWithPeer error", zap.Error(err))
 			} else {
 				log.DebugCtx(ctx, "success synctree.SyncWithPeer")

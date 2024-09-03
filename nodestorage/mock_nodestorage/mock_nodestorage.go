@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_nodestorage/mock_nodestorage.go github.com/anyproto/any-sync-node/nodestorage NodeStorage
 //
+
 // Package mock_nodestorage is a generated GoMock package.
 package mock_nodestorage
 

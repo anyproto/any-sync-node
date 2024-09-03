@@ -2,16 +2,18 @@ package peermanager
 
 import (
 	"context"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/streampool"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
-	"time"
+	"storj.io/drpc"
 )
 
 const reconnectTimeout = time.Minute
@@ -25,9 +27,15 @@ type nodePeerManager struct {
 	spaceId          string
 	responsiblePeers []responsiblePeer
 	p                *provider
+	streamPool       streampool.StreamPool
 }
 
 func (n *nodePeerManager) Init(a *app.App) (err error) {
+	nodeIds := n.p.nodeconf.NodeIds(n.spaceId)
+	for _, peerId := range nodeIds {
+		n.responsiblePeers = append(n.responsiblePeers, responsiblePeer{peerId: peerId})
+	}
+	n.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	return nil
 }
 
@@ -35,17 +43,17 @@ func (n *nodePeerManager) Name() (name string) {
 	return peermanager.CName
 }
 
-func (n *nodePeerManager) init() {
-	nodeIds := n.p.nodeconf.NodeIds(n.spaceId)
-	for _, peerId := range nodeIds {
-		n.responsiblePeers = append(n.responsiblePeers, responsiblePeer{peerId: peerId})
-	}
+func (n *nodePeerManager) SendResponsible(ctx context.Context, msg drpc.Message, streamPool streampool.StreamPool) (err error) {
+	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
+	return streamPool.Send(ctx, msg, func(ctx context.Context) (peers []peer.Peer, err error) {
+		return n.getResponsiblePeers(ctx, n.p.pool)
+	})
 }
 
-func (n *nodePeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (n *nodePeerManager) SendMessage(ctx context.Context, peerId string, msg drpc.Message) error {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
 	if n.isResponsible(peerId) {
-		return n.p.streamPool.Send(ctx, msg, func(ctx context.Context) ([]peer.Peer, error) {
+		return n.streamPool.Send(ctx, msg, func(ctx context.Context) ([]peer.Peer, error) {
 			log.InfoCtx(ctx, "sendPeer send", zap.String("peerId", peerId))
 			p, e := n.p.pool.Get(ctx, peerId)
 			if e != nil {
@@ -55,23 +63,16 @@ func (n *nodePeerManager) SendPeer(ctx context.Context, peerId string, msg *spac
 		})
 	}
 	log.InfoCtx(ctx, "sendPeer sendById", zap.String("peerId", peerId))
-	return n.p.streamPool.SendById(ctx, msg, peerId)
+	return n.streamPool.SendById(ctx, msg, peerId)
 }
 
-func (n *nodePeerManager) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (n *nodePeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) (err error) {
 	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
-	return n.p.streamPool.Send(ctx, msg, func(ctx context.Context) (peers []peer.Peer, err error) {
-		return n.getResponsiblePeers(ctx, n.p.pool)
-	})
-}
-
-func (n *nodePeerManager) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	ctx = logger.CtxWithFields(context.Background(), logger.CtxGetFields(ctx)...)
-	if e := n.SendResponsible(ctx, msg); e != nil {
+	if e := n.SendResponsible(ctx, msg, n.streamPool); e != nil {
 		log.InfoCtx(ctx, "broadcast sendResponsible error", zap.Error(e))
 	}
 	log.InfoCtx(ctx, "broadcast", zap.String("spaceId", n.spaceId))
-	return n.p.streamPool.Broadcast(ctx, msg, n.spaceId)
+	return n.streamPool.Broadcast(ctx, msg, n.spaceId)
 }
 
 func (n *nodePeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {

@@ -2,6 +2,8 @@ package nodestorage
 
 import (
 	"context"
+	"errors"
+
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -116,6 +118,22 @@ func (t *treeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) 
 	return t.db.Put(t.keys.RawChangeKey(change.Id), change.RawChange)
 }
 
+func (t *treeStorage) GetAppendRawChange(ctx context.Context, buf []byte, id string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	res, err := t.db.GetAppend(t.keys.RawChangeKey(id), buf)
+	if err != nil {
+		return
+	}
+	if res == nil {
+		err = treestorage.ErrUnknownChange
+	}
+
+	raw = &treechangeproto.RawTreeChangeWithId{
+		RawChange: res,
+		Id:        id,
+	}
+	return
+}
+
 func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
 	res, err := t.db.Get(t.keys.RawChangeKey(id))
 	if err != nil {
@@ -145,6 +163,10 @@ func (t *treeStorage) AddRawChangesSetHeads(changes []*treechangeproto.RawTreeCh
 	return t.SetHeads(heads)
 }
 
+func (t *treeStorage) GetAllChangeIds() (storedKeys []string, err error) {
+	return t.storedIds()
+}
+
 func (t *treeStorage) Delete() (err error) {
 	storedKeys, err := t.storedKeys()
 	if err != nil {
@@ -171,9 +193,40 @@ func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
 		key, _, err = index.Next()
 	}
 
-	if err != pogreb.ErrIterationDone {
+	if !errors.Is(err, pogreb.ErrIterationDone) {
 		return
 	}
 	err = nil
 	return
+}
+
+func (t *treeStorage) storedIds() (ids []string, err error) {
+	index := t.db.Items()
+
+	key, _, err := index.Next()
+	for err == nil {
+		strKey := string(key)
+		if t.keys.isTreeRelatedKey(strKey) {
+			id := getId(strKey)
+			if id != "heads" {
+				ids = append(ids, getId(strKey))
+			}
+		}
+		key, _, err = index.Next()
+	}
+
+	if !errors.Is(err, pogreb.ErrIterationDone) {
+		return
+	}
+	err = nil
+	return
+}
+
+func getId(key string) (id string) {
+	for i := len(key) - 1; i >= 0; i-- {
+		if key[i] == '/' {
+			return key[i+1:]
+		}
+	}
+	return key
 }

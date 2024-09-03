@@ -3,16 +3,19 @@ package nodecache
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync-node/nodespace"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/metric"
 	"go.uber.org/zap"
-	"time"
+
+	"github.com/anyproto/any-sync-node/nodespace"
 )
 
 var log = logger.NewNamed("treecache")
@@ -20,12 +23,22 @@ var ErrCacheObjectWithoutTree = errors.New("cache object contains no tree")
 
 type ctxKey int
 
-const spaceKey ctxKey = 0
+const (
+	spaceKey ctxKey = iota
+	payloadKey
+)
 
 type treeCache struct {
 	gcttl       int
 	cache       ocache.OCache
 	nodeService nodespace.Service
+}
+
+func (c *treeCache) ValidateAndPutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) error {
+	ctx = context.WithValue(ctx, spaceKey, spaceId)
+	ctx = context.WithValue(ctx, payloadKey, payload)
+	_, err := c.cache.Get(ctx, payload.RootRawChange.Id)
+	return err
 }
 
 func New(ttl int) treemanager.TreeManager {
@@ -50,6 +63,10 @@ func (c *treeCache) Init(a *app.App) (err error) {
 			space, err := c.nodeService.GetSpace(ctx, spaceId)
 			if err != nil {
 				return
+			}
+			payload, ok := ctx.Value(payloadKey).(treestorage.TreeStorageCreatePayload)
+			if ok {
+				return space.TreeBuilder().PutTree(ctx, payload, nil)
 			}
 			return space.TreeBuilder().BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{})
 		},

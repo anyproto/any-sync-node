@@ -2,12 +2,14 @@ package nodestorage
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"testing"
+
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
 )
 
 func treeTestPayload() treestorage.TreeStorageCreatePayload {
@@ -165,5 +167,30 @@ func TestTreeStorage_Delete(t *testing.T) {
 		require.Equal(t, err, treestorage.ErrUnknownTreeId)
 
 		fx.testNoKeysExist(t, payload.RootRawChange.Id)
+	})
+}
+
+func TestTreeStorage_ChangedIds(t *testing.T) {
+	fx := newFixture(t)
+	fx.open(t)
+	payload := treeTestPayload()
+	_, err := createTreeStorage(fx.db, payload)
+	require.NoError(t, err)
+	fx.stop(t)
+
+	fx.open(t)
+	defer fx.stop(t)
+	store, err := newTreeStorage(fx.db, payload.RootRawChange.Id)
+	require.NoError(t, err)
+	testTreePayload(t, store, payload)
+
+	t.Run("add raw change, get change and has change", func(t *testing.T) {
+		newChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("ab"), Id: "newId"}
+		require.NoError(t, store.AddRawChange(newChange))
+
+		ids, err := store.GetAllChangeIds()
+		require.NoError(t, err)
+		require.Equal(t, []string{"rootId", "otherId", "newId"}, ids)
+		fmt.Println(ids)
 	})
 }
