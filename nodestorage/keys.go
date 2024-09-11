@@ -64,7 +64,6 @@ var (
 	spaceSettingsIdKey = []byte("spaceSettingsId")
 	deletedKey         = []byte("spaceDeleted")
 	spaceHashKey       = []byte("spaceHash")
-	oldSpaceHashKey    = []byte("oldSpaceHash")
 )
 
 func (s spaceKeys) SpaceIdKey() []byte {

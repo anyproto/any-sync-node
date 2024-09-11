@@ -87,7 +87,7 @@ func TestNodeSync_Sync(t *testing.T) {
 
 		for i := 0; i < nodeconf.PartitionCount; i++ {
 			if i == 0 {
-				// calling twice because we now do a twostep diff
+				// callng twice because we now do a twostep diff
 				// the same as actually was done with real nodes before
 				fx1.nodeHead.EXPECT().LDiff(i).Return(ld1)
 				fx2.nodeHead.EXPECT().LDiff(i).Times(2).Return(ld2)

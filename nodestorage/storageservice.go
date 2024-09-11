@@ -34,7 +34,6 @@ type NodeStorage interface {
 	AllSpaceIds() (ids []string, err error)
 	OnDeleteStorage(onDelete func(ctx context.Context, spaceId string))
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
-	OnWriteOldHash(onWrite func(ctx context.Context, spaceId, hash string))
 	StoreDir(spaceId string) (path string)
 	DeleteSpaceStorage(ctx context.Context, spaceId string) error
 }

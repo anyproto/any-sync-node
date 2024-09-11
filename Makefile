@@ -1,5 +1,5 @@
 .PHONY: proto build test deps
-SHELL=/bin/bash
+SHELL=/usr/bin/env bash
 export GOPRIVATE=github.com/anyproto
 export PATH:=deps:$(PATH)
 export CGO_ENABLED:=1

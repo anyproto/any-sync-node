@@ -37,8 +37,6 @@ func New() NodeHead {
 type NodeHead interface {
 	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
-	SetOldHead(spaceId, head string) (part int, err error)
-	GetOldHead(spaceId string) (head string, err error)
 	DeleteHeads(spaceId string) error
 	ReloadHeadFromStore(spaceId string) error
 	LDiff(partId int) ldiff.Diff
@@ -62,11 +60,6 @@ func (n *nodeHead) Init(a *app.App) (err error) {
 	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
 		if _, e := n.SetHead(spaceId, hash); e != nil {
 			log.Error("can't set head", zap.Error(e))
-		}
-	})
-	n.spaceStore.OnWriteOldHash(func(_ context.Context, spaceId, hash string) {
-		if _, e := n.SetOldHead(spaceId, hash); e != nil {
-			log.Error("can't set old head", zap.Error(e))
 		}
 	})
 	n.spaceStore.OnDeleteStorage(func(_ context.Context, spaceId string) {
@@ -117,20 +110,7 @@ func (n *nodeHead) loadHeadFromStore(spaceId string) (err error) {
 	if err != nil {
 		return
 	}
-	if _, err = n.SetHead(spaceId, hash); err != nil {
-		return
-	}
-	oldHash, err := ss.ReadOldSpaceHash()
-	if err != nil {
-		return
-	}
-	// that means that the hash was not set before
-	if oldHash == "" {
-		oldHash = hash
-	}
-	if _, err = n.SetOldHead(spaceId, oldHash); err != nil {
-		return
-	}
+	_, err = n.SetHead(spaceId, hash)
 	return
 }
 
@@ -155,13 +135,6 @@ func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
 		n.partitions[part] = ld
 	}
 	ld.Set(ldiff.Element{Id: spaceId, Head: head})
-	return
-}
-
-func (n *nodeHead) SetOldHead(spaceId, head string) (part int, err error) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	n.oldHashes[spaceId] = head
 	return
 }
 
@@ -197,15 +170,6 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 		return
 	}
 	return el.Head, nil
-}
-
-func (n *nodeHead) GetOldHead(spaceId string) (hash string, err error) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	if hash, ok := n.oldHashes[spaceId]; ok {
-		return hash, nil
-	}
-	return "", ErrSpaceNotFound
 }
 
 func (n *nodeHead) ReloadHeadFromStore(spaceId string) error {
