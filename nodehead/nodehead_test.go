@@ -102,36 +102,17 @@ func TestNodeHead_GetSpaceHash(t *testing.T) {
 	assert.Equal(t, ErrSpaceNotFound, err)
 }
 
-func TestNodeHead_GetOldSpaceHash(t *testing.T) {
-	fx := newFixture(t, "")
-	defer fx.Finish(t)
-	hash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
-	_, err := fx.SetOldHead("space1", hash)
-	require.NoError(t, err)
-
-	head, err := fx.GetOldHead("space1")
-	require.NoError(t, err)
-	assert.Equal(t, hash, head)
-
-	_, err = fx.GetOldHead("not found")
-	assert.Equal(t, ErrSpaceNotFound, err)
-}
-
 func TestNodeHead_DeleteHeads(t *testing.T) {
 	fx := newFixture(t, "")
 	defer fx.Finish(t)
 	hash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
 	_, err := fx.SetHead("space1", hash)
 	require.NoError(t, err)
-	_, err = fx.SetOldHead("space1", hash)
-	require.NoError(t, err)
 
 	err = fx.NodeHead.(*nodeHead).DeleteHeads("space1")
 	require.NoError(t, err)
 
 	_, err = fx.GetHead("space1")
-	assert.Equal(t, ErrSpaceNotFound, err)
-	_, err = fx.GetOldHead("space1")
 	assert.Equal(t, ErrSpaceNotFound, err)
 }
 

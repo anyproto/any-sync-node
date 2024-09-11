@@ -280,7 +280,6 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 		}
 		log.Debug("got head sync with nodehead", zap.String("spaceId", req.SpaceId))
 		return &spacesyncproto.HeadSyncResponse{
-			DiffType: spacesyncproto.DiffType_Precalculated,
 			Results: []*spacesyncproto.HeadSyncResult{
 				{
 					Hash: hashB,
