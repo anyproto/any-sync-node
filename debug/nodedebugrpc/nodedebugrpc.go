@@ -3,6 +3,7 @@ package nodedebugrpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/anyproto/any-sync/app"
@@ -54,6 +55,7 @@ func (s *nodeDebugRpc) Init(a *app.App) (err error) {
 	s.server = a.MustComponent(debugserver.CName).(debugserver.DebugServer)
 	s.statService = a.MustComponent(debugstat.CName).(debugstat.StatService)
 	http.HandleFunc("/stats", s.handleStats)
+	http.HandleFunc("/spacestats/{spaceId}", s.handleSpaceStats)
 	return nil
 }
 
@@ -83,4 +85,13 @@ func (s *nodeDebugRpc) handleStats(rw http.ResponseWriter, req *http.Request) {
 	}
 	rw.WriteHeader(http.StatusOK)
 	_, _ = rw.Write(marshalled)
+}
+
+func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Request) {
+	spaceId := req.PathValue("spaceId")
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Write([]byte(fmt.Sprintf("{\"spaceId\": \"%s\"}", spaceId)))
+	rw.WriteHeader(http.StatusOK)
+
 }
