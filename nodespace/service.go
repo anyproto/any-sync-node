@@ -21,6 +21,7 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 
+	"errors"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/treesyncer"
 	"github.com/anyproto/any-sync-node/nodestorage"
@@ -38,6 +39,7 @@ type Service interface {
 	GetSpace(ctx context.Context, id string) (NodeSpace, error)
 	PickSpace(ctx context.Context, id string) (NodeSpace, error)
 	Cache() ocache.OCache
+	GetStats(ctx context.Context, id string) (SpaceStats, error)
 	app.ComponentRunnable
 }
 
@@ -88,6 +90,64 @@ func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 		return nil, err
 	}
 	return v.(NodeSpace), nil
+}
+
+type ChangeSizeStats struct {
+	MaxLen int
+	P95    int
+	Avg    float64
+	Median float64
+}
+
+type SpaceStats struct {
+	DocsCount  int
+	ChangeSize ChangeSizeStats
+}
+
+type spaceStorageStats interface {
+	GetMaxChangeLen() (int, error)
+}
+
+var (
+	ErrDoesntSupportStats   = errors.New("SpaceStorage doesn't support spaceStorageStats")
+	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
+)
+
+func (s *service) GetStats(ctx context.Context, id string) (spaceStats SpaceStats, err error) {
+	// TODO: this takes 30 seconds
+	space, err := s.GetSpace(ctx, id)
+	defer func() {
+		if closeErr := space.Close(); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
+	}()
+
+	if err != nil {
+		return
+	}
+
+	// TODO: cast doesn't work for some reason
+	storage, ok := space.Storage().(spaceStorageStats)
+	if ok {
+		var maxLen int
+		maxLen, err = storage.GetMaxChangeLen()
+		if err != nil {
+			return
+		}
+
+		changeSize := ChangeSizeStats{
+			MaxLen: maxLen,
+		}
+
+		spaceStats = SpaceStats{
+			ChangeSize: changeSize,
+		}
+
+		return
+	} else {
+		err = ErrDoesntSupportStats
+		return
+	}
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {

@@ -3,7 +3,6 @@ package nodedebugrpc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/anyproto/any-sync/app"
@@ -16,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 
+	"fmt"
 	"github.com/anyproto/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"github.com/anyproto/any-sync-node/nodespace"
 	nodestorage "github.com/anyproto/any-sync-node/nodestorage"
@@ -35,27 +35,29 @@ type NodeDebugRpc interface {
 }
 
 type nodeDebugRpc struct {
-	transport      secureservice.SecureService
-	treeCache      treemanager.TreeManager
-	spaceService   nodespace.Service
-	storageService nodestorage.NodeStorage
-	nodeSync       nodesync.NodeSync
-	nodeConf       nodeconf.Service
-	server         debugserver.DebugServer
-	statService    debugstat.StatService
+	transport        secureservice.SecureService
+	treeCache        treemanager.TreeManager
+	spaceService     nodespace.Service
+	storageService   nodestorage.NodeStorage
+	nodeSpaceService nodespace.Service
+	nodeSync         nodesync.NodeSync
+	nodeConf         nodeconf.Service
+	server           debugserver.DebugServer
+	statService      debugstat.StatService
 }
 
 func (s *nodeDebugRpc) Init(a *app.App) (err error) {
 	s.treeCache = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	s.storageService = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
+	s.nodeSpaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	s.nodeSync = a.MustComponent(nodesync.CName).(nodesync.NodeSync)
 	s.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.server = a.MustComponent(debugserver.CName).(debugserver.DebugServer)
 	s.statService = a.MustComponent(debugstat.CName).(debugstat.StatService)
+	http.HandleFunc("/stat/{spaceId}", s.handleSpaceStats)
 	http.HandleFunc("/stats", s.handleStats)
-	http.HandleFunc("/spacestats/{spaceId}", s.handleSpaceStats)
 	return nil
 }
 
@@ -87,11 +89,38 @@ func (s *nodeDebugRpc) handleStats(rw http.ResponseWriter, req *http.Request) {
 	_, _ = rw.Write(marshalled)
 }
 
+// TODO: move this method to nodespace.GetStat
+
 func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Request) {
 	spaceId := req.PathValue("spaceId")
+	reqCtx := req.Context()
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.Write([]byte(fmt.Sprintf("{\"spaceId\": \"%s\"}", spaceId)))
+	// TODO:
+	// when space is locked, we can't wait until its unlocked:
+	// so we return 503 (Service unuavailable) and caller will try to call it later
+	spaceStats, err := s.spaceService.GetStats(reqCtx, spaceId)
+
+	if err != nil {
+		switch err {
+		case nodespace.ErrDoesntSupportStats:
+			log.Error("failed to get stats", zap.Error(err))
+			rw.WriteHeader(http.StatusMethodNotAllowed)
+			rw.Write([]byte(fmt.Sprintf("{\"error\": \"failed to get storage stats: %s\"}", err)))
+		default:
+			log.Error("failed to get stats", zap.Error(err))
+			rw.WriteHeader(http.StatusServiceUnavailable)
+			rw.Write([]byte(fmt.Sprintf("{\"error\": \"failed to get storage stats: %s\"}", err)))
+		}
+		return
+	}
+
+	marshalled, err := json.MarshalIndent(spaceStats, "", "  ")
+	if err != nil {
+		log.Error("failed to marshal stat", zap.Error(err))
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("{\"error\": \"failed to marshal stat\"}"))
+		return
+	}
 	rw.WriteHeader(http.StatusOK)
-
+	_, _ = rw.Write(marshalled)
 }

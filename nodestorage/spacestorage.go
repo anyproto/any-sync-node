@@ -259,6 +259,26 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	return
 }
 
+func (s *spaceStorage) GetMaxChangeLen() (maxLen int, err error) {
+	index := s.objDb.Items()
+	maxLen = 0
+
+	_, val, err := index.Next()
+	for err == nil {
+		curLen := len(val)
+		if curLen > maxLen {
+			maxLen = curLen
+		}
+		_, val, err = index.Next()
+	}
+
+	if err != pogreb.ErrIterationDone {
+		return
+	}
+	err = nil
+	return
+}
+
 func (s *spaceStorage) WriteSpaceHash(hash string) error {
 	if s.service.onWriteHash != nil {
 		defer s.service.onWriteHash(context.Background(), s.spaceId, hash)
