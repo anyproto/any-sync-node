@@ -89,28 +89,25 @@ func (s *nodeDebugRpc) handleStats(rw http.ResponseWriter, req *http.Request) {
 	_, _ = rw.Write(marshalled)
 }
 
-// TODO: move this method to nodespace.GetStat
-
 func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Request) {
 	spaceId := req.PathValue("spaceId")
 	reqCtx := req.Context()
 
-	// TODO:
-	// when space is locked, we can't wait until its unlocked:
-	// so we return 503 (Service unuavailable) and caller will try to call it later
 	spaceStats, err := s.spaceService.GetStats(reqCtx, spaceId)
 
 	if err != nil {
+		errStatus := http.StatusInternalServerError
 		switch err {
 		case nodespace.ErrDoesntSupportStats:
-			log.Error("failed to get stats", zap.Error(err))
-			rw.WriteHeader(http.StatusMethodNotAllowed)
-			rw.Write([]byte(fmt.Sprintf("{\"error\": \"failed to get storage stats: %s\"}", err)))
-		default:
-			log.Error("failed to get stats", zap.Error(err))
-			rw.WriteHeader(http.StatusServiceUnavailable)
-			rw.Write([]byte(fmt.Sprintf("{\"error\": \"failed to get storage stats: %s\"}", err)))
+			errStatus = http.StatusNotImplemented
+		case nodespace.ErrSpaceStorageIsLocked:
+			errStatus = http.StatusServiceUnavailable
 		}
+
+		log.Error("failed to get stats", zap.Error(err))
+		rw.WriteHeader(errStatus)
+		rw.Write([]byte(fmt.Sprintf("{\"error\": \"failed to get storage stats: %s\"}", err)))
+
 		return
 	}
 
@@ -121,6 +118,7 @@ func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Reques
 		rw.Write([]byte("{\"error\": \"failed to marshal stat\"}"))
 		return
 	}
+
 	rw.WriteHeader(http.StatusOK)
 	_, _ = rw.Write(marshalled)
 }
