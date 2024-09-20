@@ -113,16 +113,21 @@ var (
 	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
 )
 
+// TODO: handle "space is missing" when space id is wrong
 func (s *service) GetStats(ctx context.Context, id string) (spaceStats SpaceStats, err error) {
 	// TODO: this takes 30 seconds
-	space, err := s.GetSpace(ctx, id)
+	// when coordinator is not connected, it waits.
+	space, getSpaceErr := s.GetSpace(ctx, id)
 	defer func() {
-		if closeErr := space.Close(); closeErr != nil {
-			err = errors.Join(err, closeErr)
+		if getSpaceErr == nil {
+			if closeErr := space.Close(); closeErr != nil {
+				err = errors.Join(err, closeErr)
+			}
 		}
 	}()
 
-	if err != nil {
+	if getSpaceErr != nil {
+		err = getSpaceErr
 		return
 	}
 
