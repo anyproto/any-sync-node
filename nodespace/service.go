@@ -38,6 +38,7 @@ func New() Service {
 type Service interface {
 	GetSpace(ctx context.Context, id string) (NodeSpace, error)
 	PickSpace(ctx context.Context, id string) (NodeSpace, error)
+	EvictSpace(ctx context.Context, id string) error
 	Cache() ocache.OCache
 	GetStats(ctx context.Context, id string) (SpaceStats, error)
 	app.ComponentRunnable
@@ -84,6 +85,11 @@ func (s *service) Run(ctx context.Context) (err error) {
 	return
 }
 
+func (s *service) EvictSpace(ctx context.Context, id string) (err error) {
+	_, err = s.spaceCache.Remove(ctx, id)
+	return
+}
+
 func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 	v, err := s.spaceCache.Pick(ctx, id)
 	if err != nil {
@@ -115,23 +121,17 @@ var (
 
 // TODO: handle "space is missing" when space id is wrong
 func (s *service) GetStats(ctx context.Context, id string) (spaceStats SpaceStats, err error) {
-	// TODO: this takes 30 seconds
-	// when coordinator is not connected, it waits.
-	space, getSpaceErr := s.GetSpace(ctx, id)
-	defer func() {
-		if getSpaceErr == nil {
-			if closeErr := space.Close(); closeErr != nil {
-				err = errors.Join(err, closeErr)
-			}
-		}
-	}()
-
-	if getSpaceErr != nil {
-		err = getSpaceErr
+	space, err := s.GetSpace(ctx, id)
+	if err != nil {
 		return
 	}
 
-	// TODO: cast doesn't work for some reason
+	defer func() {
+		if closeErr := s.EvictSpace(ctx, id); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
+	}()
+
 	storage, ok := space.Storage().(spaceStorageStats)
 	if ok {
 		var maxLen int
