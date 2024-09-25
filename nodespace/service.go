@@ -98,29 +98,13 @@ func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 	return v.(NodeSpace), nil
 }
 
-type ChangeSizeStats struct {
-	MaxLen int
-	P95    int
-	Avg    float64
-	Median float64
-}
-
-type SpaceStats struct {
-	DocsCount  int
-	ChangeSize ChangeSizeStats
-}
-
-type spaceStorageStats interface {
-	GetMaxChangeLen() (int, error)
-}
-
 var (
 	ErrDoesntSupportStats   = errors.New("SpaceStorage doesn't support spaceStorageStats")
 	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
 )
 
 // TODO: handle "space is missing" when space id is wrong
-func (s *service) GetStats(ctx context.Context, id string) (spaceStats SpaceStats, err error) {
+func (s *service) TryGetStats(ctx context.Context, id string) (spaceStats nodestorage.SpaceStats, err error) {
 	space, err := s.GetSpace(ctx, id)
 	if err != nil {
 		return
@@ -132,22 +116,12 @@ func (s *service) GetStats(ctx context.Context, id string) (spaceStats SpaceStat
 		}
 	}()
 
-	storage, ok := space.Storage().(spaceStorageStats)
+	storage, ok := space.Storage().(nodestorage.NodeStorageStats)
 	if ok {
-		var maxLen int
-		maxLen, err = storage.GetMaxChangeLen()
+		spaceStats, err = storage.GetSpaceStats()
 		if err != nil {
 			return
 		}
-
-		changeSize := ChangeSizeStats{
-			MaxLen: maxLen,
-		}
-
-		spaceStats = SpaceStats{
-			ChangeSize: changeSize,
-		}
-
 		return
 	} else {
 		err = ErrDoesntSupportStats

@@ -22,6 +22,22 @@ var (
 	log              = logger.NewNamed("storage.spacestorage")
 )
 
+type ChangeSizeStats struct {
+	MaxLen int
+	P95    int
+	Avg    float64
+	Median float64
+}
+
+type SpaceStats struct {
+	DocsCount  int
+	ChangeSize ChangeSizeStats
+}
+
+type NodeStorageStats interface {
+	GetSpaceStats() (SpaceStats, error)
+}
+
 type spaceStorage struct {
 	spaceId         string
 	spaceSettingsId string
@@ -259,26 +275,6 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	return
 }
 
-func (s *spaceStorage) GetMaxChangeLen() (maxLen int, err error) {
-	index := s.objDb.Items()
-	maxLen = 0
-
-	_, val, err := index.Next()
-	for err == nil {
-		curLen := len(val)
-		if curLen > maxLen {
-			maxLen = curLen
-		}
-		_, val, err = index.Next()
-	}
-
-	if err != pogreb.ErrIterationDone {
-		return
-	}
-	err = nil
-	return
-}
-
 func (s *spaceStorage) WriteSpaceHash(hash string) error {
 	if s.service.onWriteHash != nil {
 		defer s.service.onWriteHash(context.Background(), s.spaceId, hash)
@@ -297,4 +293,33 @@ func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
 func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	defer s.service.unlockSpaceStorage(s.spaceId)
 	return s.objDb.Close()
+}
+
+func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
+	index := s.objDb.Items()
+	maxLen := 0
+
+	_, val, err := index.Next()
+	for err == nil {
+		curLen := len(val)
+		if curLen > maxLen {
+			maxLen = curLen
+		}
+		_, val, err = index.Next()
+	}
+
+	if err != pogreb.ErrIterationDone {
+		return
+	}
+	err = nil
+
+	changeSize := ChangeSizeStats{
+		MaxLen: maxLen,
+	}
+
+	spaceStats = SpaceStats{
+		ChangeSize: changeSize,
+	}
+
+	return
 }
