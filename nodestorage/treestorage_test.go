@@ -9,6 +9,8 @@ import (
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/util/cidutil"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,6 +34,15 @@ func treeTestPayloadWithData(root, other []byte, rootId, otherId string) treesto
 		Changes:       changes,
 		Heads:         []string{rootRawChange.Id},
 	}
+}
+
+func dummyTreeTestPayload(len int) treestorage.TreeStorageCreatePayload {
+	buf := make([]byte, len)
+	root := buf
+	other := buf
+	rootId, _ := cidutil.NewCidFromBytes(root)
+	otherId, _ := cidutil.NewCidFromBytes(root)
+	return treeTestPayloadWithData(root, other, rootId, otherId)
 }
 
 type fixture struct {

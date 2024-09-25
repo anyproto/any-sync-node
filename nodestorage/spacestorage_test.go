@@ -13,10 +13,8 @@ import (
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/rand"
 )
 
 var ctx = context.Background()
@@ -83,38 +81,6 @@ func TestSpaceStorage_Create(t *testing.T) {
 		_, err := createSpaceStorage(newTestService(dir), payload)
 		require.Error(t, err)
 	})
-}
-
-func TestSpaceStorage_GetHashes(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	payload := spaceTestPayload()
-	store, err := createSpaceStorage(newTestService(dir), payload)
-	require.NoError(t, err)
-	rand.Seed(uint64(time.Now().Unix()))
-	var maxLen int
-	for i := 0; i < 1000; i++ {
-		n := rand.Intn(10000) + 10
-		if n > maxLen {
-			maxLen = n
-		}
-		buf := make([]byte, n)
-		_, _ = rand.Read(buf)
-		root := buf
-		rootId, _ := cidutil.NewCidFromBytes(root)
-		buf = make([]byte, n)
-		_, _ = rand.Read(buf)
-		other := buf
-		otherId, _ := cidutil.NewCidFromBytes(root)
-		payload := treeTestPayloadWithData(root, other, rootId, otherId)
-		_, err := store.CreateTreeStorage(payload)
-		require.NoError(t, err)
-	}
-	stats, err := store.(NodeStorageStats).GetSpaceStats()
-	require.NoError(t, err)
-	require.Equal(t, maxLen, stats.ChangeSize.MaxLen)
 }
 
 func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
@@ -255,4 +221,31 @@ func TestWaitStore(t *testing.T) {
 	case store = <-storeCh:
 	}
 	require.NoError(t, store.Close(ctx))
+}
+
+func TestSpaceStorage_GetSpaceStats(t *testing.T) {
+	dir, err := os.MkdirTemp("", "")
+	t.Log(dir)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	payload := spaceTestPayload()
+	store, _ := createSpaceStorage(newTestService(dir), payload)
+
+	for i := range 1000 {
+		n := i + 10
+		treePayload := dummyTreeTestPayload(n)
+		_, err = store.CreateTreeStorage(treePayload)
+		require.NoError(t, err)
+	}
+
+	treePayload := dummyTreeTestPayload(1984)
+	_, err = store.CreateTreeStorage(treePayload)
+	require.NoError(t, err)
+
+	storeStats, ok := store.(NodeStorageStats)
+	assert.True(t, ok, "should be casted to NodeStorageStats")
+
+	stats, err := storeStats.GetSpaceStats()
+	assert.Equal(t, 1984, stats.ChangeSize.MaxLen, "should have a correct MaxLen")
 }
