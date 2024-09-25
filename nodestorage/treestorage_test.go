@@ -23,6 +23,17 @@ func treeTestPayload() treestorage.TreeStorageCreatePayload {
 	}
 }
 
+func treeTestPayloadWithData(root, other []byte, rootId, otherId string) treestorage.TreeStorageCreatePayload {
+	rootRawChange := &treechangeproto.RawTreeChangeWithId{RawChange: root, Id: rootId}
+	otherChange := &treechangeproto.RawTreeChangeWithId{RawChange: other, Id: otherId}
+	changes := []*treechangeproto.RawTreeChangeWithId{rootRawChange, otherChange}
+	return treestorage.TreeStorageCreatePayload{
+		RootRawChange: rootRawChange,
+		Changes:       changes,
+		Heads:         []string{rootRawChange.Id},
+	}
+}
+
 type fixture struct {
 	dir string
 	db  *pogreb.DB
