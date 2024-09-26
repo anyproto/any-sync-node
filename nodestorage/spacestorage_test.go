@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -15,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"math"
 )
 
 var ctx = context.Background()
@@ -223,9 +225,15 @@ func TestWaitStore(t *testing.T) {
 	require.NoError(t, store.Close(ctx))
 }
 
+func assertFloat64(t *testing.T, a, b float64, msg string) {
+	tolerance := 10e-4
+	ok := math.Abs(a-b) <= tolerance
+	assert.True(t, ok, msg, fmt.Sprintf("(%.4f !~ %.4f)", a, b))
+}
+
 func TestSpaceStorage_GetSpaceStats(t *testing.T) {
 	dir, err := os.MkdirTemp("", "")
-	t.Log(dir)
+
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -247,9 +255,10 @@ func TestSpaceStorage_GetSpaceStats(t *testing.T) {
 	assert.True(t, ok, "should be casted to NodeStorageStats")
 
 	stats, err := storeStats.GetSpaceStats()
-	assert.Equal(t, 1984, stats.ChangeSize.MaxLen, "should have a correct MaxLen")
-	assert.Equal(t, 1999, stats.ChangeSize.Avg, "should have a correct Avg")
-	assert.Equal(t, 1999, stats.ChangeSize.Median, "should have a correct Median")
-	assert.Equal(t, 1999, stats.ChangeSize.P95, "should have a correct P95")
 	assert.Equal(t, 2010, stats.DocsCount, "should have a correct DocsCount")
+	assert.Equal(t, 1984, stats.ChangeSize.MaxLen, "should have a correct MaxLen")
+	assertFloat64(t, 0.9870, stats.ChangeSize.Avg, "should have a correct Avg")
+	assertFloat64(t, 0.98701563456, stats.ChangeSize.Median, "should have a correct Median")
+	assertFloat64(t, 0.9870, stats.ChangeSize.P95, "should have a correct P95")
+
 }

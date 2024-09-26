@@ -24,7 +24,7 @@ var (
 
 type ChangeSizeStats struct {
 	MaxLen int
-	P95    int
+	P95    float64
 	Avg    float64
 	Median float64
 }
@@ -317,6 +317,7 @@ func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 
 	changeSize := ChangeSizeStats{
 		MaxLen: maxLen,
+		Avg:    float64(maxLen) / float64(docsCount),
 	}
 
 	spaceStats = SpaceStats{
