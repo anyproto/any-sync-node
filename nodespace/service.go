@@ -40,7 +40,7 @@ type Service interface {
 	PickSpace(ctx context.Context, id string) (NodeSpace, error)
 	EvictSpace(ctx context.Context, id string) error
 	Cache() ocache.OCache
-	GetStats(ctx context.Context, id string) (SpaceStats, error)
+	GetStats(ctx context.Context, id string) (nodestorage.SpaceStats, error)
 	app.ComponentRunnable
 }
 
@@ -104,7 +104,7 @@ var (
 )
 
 // TODO: handle "space is missing" when space id is wrong
-func (s *service) TryGetStats(ctx context.Context, id string) (spaceStats nodestorage.SpaceStats, err error) {
+func (s *service) GetStats(ctx context.Context, id string) (spaceStats nodestorage.SpaceStats, err error) {
 	space, err := s.GetSpace(ctx, id)
 	if err != nil {
 		return
