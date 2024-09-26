@@ -298,9 +298,11 @@ func (s *spaceStorage) Close(ctx context.Context) (err error) {
 func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	index := s.objDb.Items()
 	maxLen := 0
+	docsCount := 0
 
 	_, val, err := index.Next()
 	for err == nil {
+		docsCount += 1
 		curLen := len(val)
 		if curLen > maxLen {
 			maxLen = curLen
@@ -318,6 +320,7 @@ func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	}
 
 	spaceStats = SpaceStats{
+		DocsCount:  docsCount,
 		ChangeSize: changeSize,
 	}
 

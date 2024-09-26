@@ -248,4 +248,8 @@ func TestSpaceStorage_GetSpaceStats(t *testing.T) {
 
 	stats, err := storeStats.GetSpaceStats()
 	assert.Equal(t, 1984, stats.ChangeSize.MaxLen, "should have a correct MaxLen")
+	assert.Equal(t, 1999, stats.ChangeSize.Avg, "should have a correct Avg")
+	assert.Equal(t, 1999, stats.ChangeSize.Median, "should have a correct Median")
+	assert.Equal(t, 1999, stats.ChangeSize.P95, "should have a correct P95")
+	assert.Equal(t, 2010, stats.DocsCount, "should have a correct DocsCount")
 }
