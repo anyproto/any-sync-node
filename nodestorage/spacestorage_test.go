@@ -251,6 +251,22 @@ func TestSpaceStorage_GetSpaceStats_CalcAvg(t *testing.T) {
 	assertFloat64(t, 2.0, calcAvg(l1), "should have a correct avg 1")
 	assertFloat64(t, 1.0, calcAvg(l2), "should have a correct avg 2")
 	assertFloat64(t, 10.0, calcAvg(l3), "should have a correct avg 3")
+
+}
+
+func TestSpaceStorage_GetSpaceStats_CalcP95(t *testing.T) {
+	l1 := []int{1, 3, 2, 4}
+	l2 := []int{1, 2}
+	l3 := []int{3, 3, 3, 3, 2, 22, 2, 2, 2, 2, 1, 1, 1, 1, 1, 111}
+	l4 := []int{1}
+	sort.Ints(l1)
+	sort.Ints(l2)
+	sort.Ints(l3)
+
+	assertFloat64(t, 3.85, calcP95(l1), "should have a correct p95 1")
+	assertFloat64(t, 1.95, calcP95(l2), "should have a correct p95 2")
+	assertFloat64(t, 44.25, calcP95(l3), "should have a correct p95 3")
+	assertFloat64(t, 1.0, calcP95(l4), "should have a correct p95 4")
 }
 
 func TestSpaceStorage_GetSpaceStats(t *testing.T) {
