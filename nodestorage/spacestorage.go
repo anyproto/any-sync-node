@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"sort"
 	"time"
 
 	"github.com/akrylysov/pogreb"
@@ -295,15 +296,27 @@ func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	return s.objDb.Close()
 }
 
+func calcMedian(lenghts []int) (median float64) {
+	sort.Ints(lenghts)
+	mid := len(lenghts) / 2
+	if len(lenghts)%2 == 1 {
+		median = float64(lenghts[mid])
+	} else {
+		median = float64(lenghts[mid-1]+lenghts[mid]) / 2.0
+	}
+	return
+}
+
 func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	index := s.objDb.Items()
 	maxLen := 0
 	docsCount := 0
-
+	lenghts := make([]int, 0, 100)
 	_, val, err := index.Next()
 	for err == nil {
 		docsCount += 1
 		curLen := len(val)
+		lenghts = append(lenghts, curLen)
 		if curLen > maxLen {
 			maxLen = curLen
 		}
@@ -315,14 +328,15 @@ func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	}
 	err = nil
 
-	changeSize := ChangeSizeStats{
-		MaxLen: maxLen,
-		Avg:    float64(maxLen) / float64(docsCount),
-	}
-
+	median := calcMedian(lenghts)
+	avg := float64(maxLen) / float64(docsCount)
 	spaceStats = SpaceStats{
-		DocsCount:  docsCount,
-		ChangeSize: changeSize,
+		DocsCount: docsCount,
+		ChangeSize: ChangeSizeStats{
+			MaxLen: maxLen,
+			Avg:    avg,
+			Median: median,
+		},
 	}
 
 	return

@@ -231,6 +231,12 @@ func assertFloat64(t *testing.T, a, b float64, msg string) {
 	assert.True(t, ok, msg, fmt.Sprintf("(%.4f !~ %.4f)", a, b))
 }
 
+func TestSpaceStorage_GetSpaceStats_CalcMedian(t *testing.T) {
+	assertFloat64(t, 2.0, calcMedian([]int{1, 3, 2}), "should have a correct median on odd-sized slice")
+	assertFloat64(t, 1.0, calcMedian([]int{1}), "should have a correct median on even-sized slice")
+	assertFloat64(t, 2.0, calcMedian([]int{3, 3, 3, 3, 2, 22, 2, 2, 2, 2, 1, 1, 1, 1, 1, 111}), "should have a correct median on mixed-value slice")
+}
+
 func TestSpaceStorage_GetSpaceStats(t *testing.T) {
 	dir, err := os.MkdirTemp("", "")
 
