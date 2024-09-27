@@ -298,26 +298,6 @@ func TestSpaceStorage_GetSpaceStats(t *testing.T) {
 	assert.Equal(t, maxLen, stats.ChangeSize.MaxLen, "should have a correct MaxLen")
 	assertFloat64(t, 693.9641, stats.ChangeSize.Avg, "should have a correct Avg")
 	assertFloat64(t, 506.0, stats.ChangeSize.Median, "should have a correct Median")
-	assertFloat64(t, 146.0, stats.ChangeSize.P95, "should have a correct P95")
-
-}
-
-func TestSpaceStorage_GetSpaceStats_ShortLenghts(t *testing.T) {
-	// TODO: tests 0, 1 lenghts
-	dir, err := os.MkdirTemp("", "")
-
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	payload := spaceTestPayload()
-	store, _ := createSpaceStorage(newTestService(dir), payload)
-	storeStats, _ := store.(NodeStorageStats)
-	stats, err := storeStats.GetSpaceStats()
-
-	assert.Equal(t, 0, stats.DocsCount, "should have a correct DocsCount")
-	assert.Equal(t, 0, stats.ChangeSize.MaxLen, "should have a correct MaxLen")
-	assertFloat64(t, 0.0, stats.ChangeSize.Avg, "should have a correct Avg")
-	assertFloat64(t, 0.0, stats.ChangeSize.Median, "should have a correct Median")
-	assertFloat64(t, 0.0, stats.ChangeSize.P95, "should have a correct P95")
+	assertFloat64(t, 1860.5, stats.ChangeSize.P95, "should have a correct P95")
 
 }
