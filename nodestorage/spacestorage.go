@@ -296,16 +296,47 @@ func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	return s.objDb.Close()
 }
 
-func calcMedian(lenghts []int) (median float64) {
-	sort.Ints(lenghts)
-	mid := len(lenghts) / 2
-	if len(lenghts)%2 == 1 {
-		median = float64(lenghts[mid])
+func calcMedian(sortedLenghts []int) (median float64) {
+	mid := len(sortedLenghts) / 2
+	if len(sortedLenghts)%2 == 0 {
+		median = float64(sortedLenghts[mid-1]+sortedLenghts[mid]) / 2.0
 	} else {
-		median = float64(lenghts[mid-1]+lenghts[mid]) / 2.0
+
+		median = float64(sortedLenghts[mid])
 	}
 	return
 }
+
+func calcAvg(lenghts []int) (avg float64) {
+	sum := 0
+	for _, n := range lenghts {
+		sum += n
+	}
+
+	avg = float64(sum) / float64(len(lenghts))
+	return
+}
+
+// func calcP95(sortedLenghts []float64) (percentile float64, err error) {
+// 	percent := 95.0
+// 	index := (percent / 100) * float64(len(sortedLenghts))
+// 	if index == float64(int64(index)) {
+// 		i := int(index)
+// 		percentile = sortedLenghts[i-1]
+// 	} else if index > 1 {
+
+// 		// Convert float to int via truncation
+// 		i := int(index)
+
+// 		// Find the average of the index and following values
+// 		percentile, _ = Mean(Float64Data{c[i-1], c[i]})
+
+// 	} else {
+// 		return math.NaN(), BoundsErr
+// 	}
+
+// 	return percentile, nil
+// }
 
 func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	index := s.objDb.Items()
@@ -328,8 +359,9 @@ func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	}
 	err = nil
 
+	sort.Ints(lenghts)
 	median := calcMedian(lenghts)
-	avg := float64(maxLen) / float64(docsCount)
+	avg := calcAvg(lenghts)
 	spaceStats = SpaceStats{
 		DocsCount: docsCount,
 		ChangeSize: ChangeSizeStats{

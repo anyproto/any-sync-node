@@ -36,12 +36,11 @@ func treeTestPayloadWithData(root, other []byte, rootId, otherId string) treesto
 	}
 }
 
-func dummyTreeTestPayload(len int) treestorage.TreeStorageCreatePayload {
-	buf := make([]byte, len)
-	root := buf
-	other := buf
+func dummyTreeTestPayload(len1, len2 int) treestorage.TreeStorageCreatePayload {
+	root := make([]byte, len1)
+	other := make([]byte, len2)
 	rootId, _ := cidutil.NewCidFromBytes(root)
-	otherId, _ := cidutil.NewCidFromBytes(root)
+	otherId, _ := cidutil.NewCidFromBytes(other)
 	return treeTestPayloadWithData(root, other, rootId, otherId)
 }
 
