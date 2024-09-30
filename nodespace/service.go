@@ -3,6 +3,7 @@ package nodespace
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -21,7 +22,6 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 
-	"errors"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/treesyncer"
 	"github.com/anyproto/any-sync-node/nodestorage"

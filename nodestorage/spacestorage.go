@@ -296,42 +296,40 @@ func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	return s.objDb.Close()
 }
 
-func calcMedian(sortedLenghts []int) (median float64) {
-	mid := len(sortedLenghts) / 2
-	if len(sortedLenghts)%2 == 0 {
-		median = float64(sortedLenghts[mid-1]+sortedLenghts[mid]) / 2.0
+func calcMedian(sortedLengths []int) (median float64) {
+	mid := len(sortedLengths) / 2
+	if len(sortedLengths)%2 == 0 {
+		median = float64(sortedLengths[mid-1]+sortedLengths[mid]) / 2.0
 	} else {
-
-		median = float64(sortedLenghts[mid])
+		median = float64(sortedLengths[mid])
 	}
 	return
 }
 
-func calcAvg(lenghts []int) (avg float64) {
+func calcAvg(lengths []int) (avg float64) {
 	sum := 0
-	for _, n := range lenghts {
+	for _, n := range lengths {
 		sum += n
 	}
 
-	avg = float64(sum) / float64(len(lenghts))
+	avg = float64(sum) / float64(len(lengths))
 	return
 }
 
-func calcP95(sortedLenghts []int) (percentile float64) {
-	if len(sortedLenghts) == 1 {
-		percentile = float64(sortedLenghts[0])
+func calcP95(sortedLengths []int) (percentile float64) {
+	if len(sortedLengths) == 1 {
+		percentile = float64(sortedLengths[0])
 		return
 	}
 
 	p := 95.0
-	r := (p/100)*(float64(len(sortedLenghts))-1.0) + 1
+	r := (p/100)*(float64(len(sortedLengths))-1.0) + 1
 	ri := int(r)
 	if r == float64(int64(r)) {
-		percentile = float64(sortedLenghts[ri-1])
+		percentile = float64(sortedLengths[ri-1])
 	} else if r > 1 {
 		rf := r - float64(ri)
-		percentile = float64(sortedLenghts[ri-1]) + rf*float64(sortedLenghts[ri]-sortedLenghts[ri-1])
-
+		percentile = float64(sortedLengths[ri-1]) + rf*float64(sortedLengths[ri]-sortedLengths[ri-1])
 	}
 
 	return
@@ -341,12 +339,12 @@ func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	index := s.objDb.Items()
 	maxLen := 0
 	docsCount := 0
-	lenghts := make([]int, 0, 100)
+	lengths := make([]int, 0, 100)
 	_, val, err := index.Next()
 	for err == nil {
 		docsCount += 1
 		curLen := len(val)
-		lenghts = append(lenghts, curLen)
+		lengths = append(lengths, curLen)
 		if curLen > maxLen {
 			maxLen = curLen
 		}
@@ -358,10 +356,10 @@ func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	}
 	err = nil
 
-	sort.Ints(lenghts)
-	median := calcMedian(lenghts)
-	avg := calcAvg(lenghts)
-	p95 := calcP95(lenghts)
+	sort.Ints(lengths)
+	median := calcMedian(lengths)
+	avg := calcAvg(lengths)
+	p95 := calcP95(lengths)
 	spaceStats = SpaceStats{
 		DocsCount: docsCount,
 		ChangeSize: ChangeSizeStats{
