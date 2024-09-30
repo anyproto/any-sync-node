@@ -152,18 +152,6 @@ func (mr *MockNodeStorageMockRecorder) OnWriteHash(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnWriteHash", reflect.TypeOf((*MockNodeStorage)(nil).OnWriteHash), arg0)
 }
 
-// OnWriteOldHash mocks base method.
-func (m *MockNodeStorage) OnWriteOldHash(arg0 func(context.Context, string, string)) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "OnWriteOldHash", arg0)
-}
-
-// OnWriteOldHash indicates an expected call of OnWriteOldHash.
-func (mr *MockNodeStorageMockRecorder) OnWriteOldHash(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnWriteOldHash", reflect.TypeOf((*MockNodeStorage)(nil).OnWriteOldHash), arg0)
-}
-
 // SpaceExists mocks base method.
 func (m *MockNodeStorage) SpaceExists(arg0 string) bool {
 	m.ctrl.T.Helper()

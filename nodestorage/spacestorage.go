@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"sort"
 	"time"
 
 	"github.com/akrylysov/pogreb"
@@ -21,6 +22,22 @@ var (
 	defPogrebOptions = &pogreb.Options{BackgroundCompactionInterval: time.Minute * 5}
 	log              = logger.NewNamed("storage.spacestorage")
 )
+
+type ChangeSizeStats struct {
+	MaxLen int
+	P95    float64
+	Avg    float64
+	Median float64
+}
+
+type SpaceStats struct {
+	DocsCount  int
+	ChangeSize ChangeSizeStats
+}
+
+type NodeStorageStats interface {
+	GetSpaceStats() (SpaceStats, error)
+}
 
 type spaceStorage struct {
 	spaceId         string
@@ -277,4 +294,81 @@ func (s *spaceStorage) ReadSpaceHash() (hash string, err error) {
 func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	defer s.service.unlockSpaceStorage(s.spaceId)
 	return s.objDb.Close()
+}
+
+func calcMedian(sortedLengths []int) (median float64) {
+	mid := len(sortedLengths) / 2
+	if len(sortedLengths)%2 == 0 {
+		median = float64(sortedLengths[mid-1]+sortedLengths[mid]) / 2.0
+	} else {
+		median = float64(sortedLengths[mid])
+	}
+	return
+}
+
+func calcAvg(lengths []int) (avg float64) {
+	sum := 0
+	for _, n := range lengths {
+		sum += n
+	}
+
+	avg = float64(sum) / float64(len(lengths))
+	return
+}
+
+func calcP95(sortedLengths []int) (percentile float64) {
+	if len(sortedLengths) == 1 {
+		percentile = float64(sortedLengths[0])
+		return
+	}
+
+	p := 95.0
+	r := (p/100)*(float64(len(sortedLengths))-1.0) + 1
+	ri := int(r)
+	if r == float64(int64(r)) {
+		percentile = float64(sortedLengths[ri-1])
+	} else if r > 1 {
+		rf := r - float64(ri)
+		percentile = float64(sortedLengths[ri-1]) + rf*float64(sortedLengths[ri]-sortedLengths[ri-1])
+	}
+
+	return
+}
+
+func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
+	index := s.objDb.Items()
+	maxLen := 0
+	docsCount := 0
+	lengths := make([]int, 0, 100)
+	_, val, err := index.Next()
+	for err == nil {
+		docsCount += 1
+		curLen := len(val)
+		lengths = append(lengths, curLen)
+		if curLen > maxLen {
+			maxLen = curLen
+		}
+		_, val, err = index.Next()
+	}
+
+	if err != pogreb.ErrIterationDone {
+		return
+	}
+	err = nil
+
+	sort.Ints(lengths)
+	median := calcMedian(lengths)
+	avg := calcAvg(lengths)
+	p95 := calcP95(lengths)
+	spaceStats = SpaceStats{
+		DocsCount: docsCount,
+		ChangeSize: ChangeSizeStats{
+			MaxLen: maxLen,
+			Avg:    avg,
+			Median: median,
+			P95:    p95,
+		},
+	}
+
+	return
 }

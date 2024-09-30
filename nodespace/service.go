@@ -3,6 +3,7 @@ package nodespace
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -37,7 +38,9 @@ func New() Service {
 type Service interface {
 	GetSpace(ctx context.Context, id string) (NodeSpace, error)
 	PickSpace(ctx context.Context, id string) (NodeSpace, error)
+	EvictSpace(ctx context.Context, id string) error
 	Cache() ocache.OCache
+	GetStats(ctx context.Context, id string) (nodestorage.SpaceStats, error)
 	app.ComponentRunnable
 }
 
@@ -82,12 +85,47 @@ func (s *service) Run(ctx context.Context) (err error) {
 	return
 }
 
+func (s *service) EvictSpace(ctx context.Context, id string) (err error) {
+	_, err = s.spaceCache.Remove(ctx, id)
+	return
+}
+
 func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 	v, err := s.spaceCache.Pick(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	return v.(NodeSpace), nil
+}
+
+var (
+	ErrDoesntSupportStats   = errors.New("SpaceStorage doesn't support spaceStorageStats")
+	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
+)
+
+func (s *service) GetStats(ctx context.Context, id string) (spaceStats nodestorage.SpaceStats, err error) {
+	space, err := s.GetSpace(ctx, id)
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if closeErr := s.EvictSpace(ctx, id); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
+	}()
+
+	storage, ok := space.Storage().(nodestorage.NodeStorageStats)
+	if ok {
+		spaceStats, err = storage.GetSpaceStats()
+		if err != nil {
+			return
+		}
+		return
+	} else {
+		err = ErrDoesntSupportStats
+		return
+	}
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
