@@ -103,7 +103,6 @@ var (
 	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
 )
 
-// TODO: handle "space is missing" when space id is wrong
 func (s *service) GetStats(ctx context.Context, id string) (spaceStats nodestorage.SpaceStats, err error) {
 	space, err := s.GetSpace(ctx, id)
 	if err != nil {
