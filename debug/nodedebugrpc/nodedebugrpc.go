@@ -84,9 +84,15 @@ func (s *nodeDebugRpc) handleStats(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	marshalled, err := json.MarshalIndent(stats, "", "  ")
 	if err != nil {
-		log.Error("failed to marshal stat", zap.Error(err))
+		errorStr := "failed to marshal stat"
+		errReply := statsError{
+			Error: errorStr,
+		}
+		marshalledErr, _ := json.MarshalIndent(errReply, "", "  ")
+
+		log.Error(errorStr, zap.Error(err))
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("{\"error\": \"failed to marshal stat\"}"))
+		rw.Write(marshalledErr)
 		return
 	}
 	rw.WriteHeader(http.StatusOK)
@@ -108,7 +114,7 @@ func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Reques
 			errStatus = http.StatusServiceUnavailable
 		}
 
-		errorStr := fmt.Sprintf("failed to get space stats:%s", err)
+		errorStr := fmt.Sprintf("failed to get space stats: %s", err)
 		errReply := statsError{
 			Error: errorStr,
 		}
