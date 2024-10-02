@@ -24,15 +24,15 @@ var (
 )
 
 type ChangeSizeStats struct {
-	MaxLen int     `json:"max_len,omitempty"`
+	MaxLen int     `json:"maxLen,omitempty"`
 	P95    float64 `json:"p95,omitempty"`
 	Avg    float64 `json:"avg,omitempty"`
 	Median float64 `json:"median,omitempty"`
 }
 
 type SpaceStats struct {
-	DocsCount  int             `json:"docs_count,omitempty"`
-	ChangeSize ChangeSizeStats `json:"change_size_stats,omitempty"`
+	DocsCount  int             `json:"docsCount,omitempty"`
+	ChangeSize ChangeSizeStats `json:"changeSizeStats,omitempty"`
 }
 
 type NodeStorageStats interface {
