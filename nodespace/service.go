@@ -99,7 +99,7 @@ func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 }
 
 var (
-	ErrDoesntSupportStats   = errors.New("SpaceStorage doesn't support spaceStorageStats")
+	ErrDoesntSupportStats   = errors.New("SpaceStorage doesn't support nodestorage.SpaceStats")
 	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
 )
 

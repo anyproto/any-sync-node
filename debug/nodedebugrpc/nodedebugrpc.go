@@ -3,6 +3,7 @@ package nodedebugrpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/anyproto/any-sync/app"
@@ -15,7 +16,6 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 
-	"fmt"
 	"github.com/anyproto/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
 	"github.com/anyproto/any-sync-node/nodespace"
 	nodestorage "github.com/anyproto/any-sync-node/nodestorage"
@@ -44,6 +44,10 @@ type nodeDebugRpc struct {
 	nodeConf         nodeconf.Service
 	server           debugserver.DebugServer
 	statService      debugstat.StatService
+}
+
+type statsError struct {
+	Error string `json:"error,omitempty"`
 }
 
 func (s *nodeDebugRpc) Init(a *app.App) (err error) {
@@ -80,9 +84,15 @@ func (s *nodeDebugRpc) handleStats(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	marshalled, err := json.MarshalIndent(stats, "", "  ")
 	if err != nil {
-		log.Error("failed to marshal stat", zap.Error(err))
+		errorStr := "failed to marshal stat"
+		errReply := statsError{
+			Error: errorStr,
+		}
+		marshalledErr, _ := json.MarshalIndent(errReply, "", "  ")
+
+		log.Error(errorStr, zap.Error(err))
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte("{\"error\": \"failed to marshal stat\"}"))
+		rw.Write(marshalledErr)
 		return
 	}
 	rw.WriteHeader(http.StatusOK)
@@ -104,9 +114,16 @@ func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Reques
 			errStatus = http.StatusServiceUnavailable
 		}
 
-		log.Error("failed to get stats", zap.Error(err))
+		errorStr := fmt.Sprintf("failed to get space stats: %s", err)
+		errReply := statsError{
+			Error: errorStr,
+		}
+
+		log.Error(errorStr, zap.Error(err))
 		rw.WriteHeader(errStatus)
-		rw.Write([]byte(fmt.Sprintf("{\"error\": \"failed to get storage stats: %s\"}", err)))
+
+		marshalledErr, _ := json.MarshalIndent(errReply, "", "  ")
+		rw.Write(marshalledErr)
 
 		return
 	}
