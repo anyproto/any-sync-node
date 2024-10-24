@@ -7,7 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
-	github.com/anyproto/any-sync v0.5.6
+	github.com/anyproto/any-sync v0.5.7
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.20.5
@@ -88,5 +88,3 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
-
-replace github.com/anyproto/any-sync => ../any-sync
