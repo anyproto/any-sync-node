@@ -287,6 +287,7 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 					Count: 1,
 				},
 			},
+			DiffType: spacesyncproto.DiffType_Precalculated,
 		}
 	}
 	return nil
