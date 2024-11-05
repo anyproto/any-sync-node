@@ -132,7 +132,8 @@ func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceSt
 		err = ErrDoesntSupportStats
 		return
 	}
-
+	space.Acl().Lock()
+	defer space.Acl().Unlock()
 	for _, acc := range space.Acl().AclState().CurrentAccounts() {
 		if !acc.Permissions.NoPermissions() {
 			if acc.Permissions.CanWrite() {
