@@ -106,6 +106,12 @@ func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Reques
 
 	var treeTop, _ = strconv.Atoi(req.URL.Query().Get("treeTop"))
 
+	if !s.nodeConf.IsResponsible(spaceId) {
+		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write([]byte("{\"error\": \"node is not responsible\"}"))
+		return
+	}
+
 	spaceStats, err := s.spaceService.GetStats(reqCtx, spaceId, treeTop)
 
 	if err != nil {
