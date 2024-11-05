@@ -2,13 +2,14 @@ package nodestorage
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"testing"
 	"time"
 
-	"fmt"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -16,7 +17,6 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"math"
 )
 
 var ctx = context.Background()
@@ -293,11 +293,11 @@ func TestSpaceStorage_GetSpaceStats(t *testing.T) {
 	storeStats, ok := store.(NodeStorageStats)
 	assert.True(t, ok, "should be casted to NodeStorageStats")
 
-	stats, err := storeStats.GetSpaceStats()
-	assert.Equal(t, (10 + 1000*3 + 1), stats.DocsCount, "should have a correct DocsCount")
+	stats, err := storeStats.GetSpaceStats(0)
+	assert.Equal(t, 1002, stats.ObjectsCount, "should have a correct ObjectsCount")
 	assert.Equal(t, maxLen, stats.ChangeSize.MaxLen, "should have a correct MaxLen")
-	assertFloat64(t, 693.9641, stats.ChangeSize.Avg, "should have a correct Avg")
-	assertFloat64(t, 506.0, stats.ChangeSize.Median, "should have a correct Median")
-	assertFloat64(t, 1860.5, stats.ChangeSize.P95, "should have a correct P95")
+	assertFloat64(t, 1013.6835, stats.ChangeSize.Avg, "should have a correct Avg")
+	assertFloat64(t, 1010, stats.ChangeSize.Median, "should have a correct Median")
+	assertFloat64(t, 1910.9, stats.ChangeSize.P95, "should have a correct P95")
 
 }

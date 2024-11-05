@@ -40,7 +40,7 @@ type Service interface {
 	PickSpace(ctx context.Context, id string) (NodeSpace, error)
 	EvictSpace(ctx context.Context, id string) error
 	Cache() ocache.OCache
-	GetStats(ctx context.Context, id string) (nodestorage.SpaceStats, error)
+	GetStats(ctx context.Context, id string, treeTop int) (nodestorage.SpaceStats, error)
 	app.ComponentRunnable
 }
 
@@ -103,7 +103,7 @@ var (
 	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
 )
 
-func (s *service) GetStats(ctx context.Context, id string) (spaceStats nodestorage.SpaceStats, err error) {
+func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceStats nodestorage.SpaceStats, err error) {
 	space, err := s.GetSpace(ctx, id)
 	if err != nil {
 		return
@@ -117,7 +117,7 @@ func (s *service) GetStats(ctx context.Context, id string) (spaceStats nodestora
 
 	storage, ok := space.Storage().(nodestorage.NodeStorageStats)
 	if ok {
-		spaceStats, err = storage.GetSpaceStats()
+		spaceStats, err = storage.GetSpaceStats(treeTop)
 		if err != nil {
 			return
 		}
