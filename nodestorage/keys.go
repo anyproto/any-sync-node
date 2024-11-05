@@ -112,3 +112,17 @@ func getRootId(key string) string {
 	}
 	return sBuf.String()
 }
+
+func getTreeId(key string) string {
+	prefixIdx := strings.IndexByte(key, '/')
+	if prefixIdx == -1 {
+		return ""
+	}
+	key = key[prefixIdx+1:]
+	nextSlash := strings.IndexByte(key, '/')
+	if nextSlash == -1 {
+		return key
+	} else {
+		return key[:nextSlash]
+	}
+}

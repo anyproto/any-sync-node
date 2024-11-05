@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
@@ -103,7 +104,15 @@ func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Reques
 	spaceId := req.PathValue("spaceId")
 	reqCtx := req.Context()
 
-	spaceStats, err := s.spaceService.GetStats(reqCtx, spaceId)
+	var treeTop, _ = strconv.Atoi(req.URL.Query().Get("treeTop"))
+
+	if !s.nodeConf.IsResponsible(spaceId) {
+		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write([]byte("{\"error\": \"node is not responsible\"}"))
+		return
+	}
+
+	spaceStats, err := s.spaceService.GetStats(reqCtx, spaceId, treeTop)
 
 	if err != nil {
 		errStatus := http.StatusInternalServerError

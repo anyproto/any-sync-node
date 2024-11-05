@@ -1,10 +1,13 @@
 package nodestorage
 
 import (
+	"cmp"
 	"context"
 	"os"
 	"path"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/akrylysov/pogreb"
@@ -13,7 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"go.uber.org/zap"
 )
@@ -24,19 +27,31 @@ var (
 )
 
 type ChangeSizeStats struct {
-	MaxLen int     `json:"maxLen,omitempty"`
-	P95    float64 `json:"p95,omitempty"`
-	Avg    float64 `json:"avg,omitempty"`
-	Median float64 `json:"median,omitempty"`
+	MaxLen int     `json:"maxLen"`
+	P95    float64 `json:"p95"`
+	Avg    float64 `json:"avg"`
+	Median float64 `json:"median"`
+	Total  int     `json:"total"`
 }
 
 type SpaceStats struct {
-	DocsCount  int             `json:"docsCount,omitempty"`
-	ChangeSize ChangeSizeStats `json:"changeSizeStats,omitempty"`
+	ObjectsCount        int             `json:"objectsCount,omitempty"`
+	DeletedObjectsCount int             `json:"deletedObjectsCount"`
+	ChangesCount        int             `json:"changesCount"`
+	ChangeSize          ChangeSizeStats `json:"changeSizeStats,omitempty"`
+	TreeStats           []TreeStat      `json:"treeStats,omitempty"`
+	treeMap             map[string]TreeStat
+}
+
+type TreeStat struct {
+	Id             string `json:"id"`
+	ChangesCount   int    `json:"changesCount"`
+	SnapshotsCount int    `json:"snapshotsCount"`
+	ChangesSumSize int    `json:"payloadSize"`
 }
 
 type NodeStorageStats interface {
-	GetSpaceStats() (SpaceStats, error)
+	GetSpaceStats(treeTop int) (SpaceStats, error)
 }
 
 type spaceStorage struct {
@@ -335,20 +350,48 @@ func calcP95(sortedLengths []int) (percentile float64) {
 	return
 }
 
-func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
+func (s *spaceStorage) GetSpaceStats(treeTop int) (spaceStats SpaceStats, err error) {
 	index := s.objDb.Items()
 	maxLen := 0
 	docsCount := 0
+	deletedObjectsCount := 0
+	changesCount := 0
+	changesSize := 0
 	lengths := make([]int, 0, 100)
-	_, val, err := index.Next()
+	if treeTop > 0 {
+		spaceStats.treeMap = map[string]TreeStat{}
+	}
+	key, val, err := index.Next()
 	for err == nil {
-		docsCount += 1
-		curLen := len(val)
-		lengths = append(lengths, curLen)
-		if curLen > maxLen {
-			maxLen = curLen
+		sKey := string(key)
+		if isTreeHeadsKey(sKey) {
+			docsCount += 1
+		} else {
+			if strings.HasPrefix(sKey, "t/") {
+				changesCount++
+				curLen := len(val)
+				lengths = append(lengths, curLen)
+				if curLen > maxLen {
+					maxLen = curLen
+				}
+				changesSize += curLen
+				if treeTop > 0 {
+					treeId := getTreeId(sKey)
+					treeStat := spaceStats.treeMap[treeId]
+					treeStat.Id = treeId
+					treeStat.ChangesSumSize += curLen
+					treeStat.ChangesCount++
+					if isSnapshot(val) {
+						treeStat.SnapshotsCount++
+					}
+					spaceStats.treeMap[treeId] = treeStat
+				}
+
+			} else if strings.HasPrefix(sKey, "del/") {
+				deletedObjectsCount++
+			}
 		}
-		_, val, err = index.Next()
+		key, val, err = index.Next()
 	}
 
 	if err != pogreb.ErrIterationDone {
@@ -357,18 +400,33 @@ func (s *spaceStorage) GetSpaceStats() (spaceStats SpaceStats, err error) {
 	err = nil
 
 	sort.Ints(lengths)
-	median := calcMedian(lengths)
-	avg := calcAvg(lengths)
-	p95 := calcP95(lengths)
-	spaceStats = SpaceStats{
-		DocsCount: docsCount,
-		ChangeSize: ChangeSizeStats{
-			MaxLen: maxLen,
-			Avg:    avg,
-			Median: median,
-			P95:    p95,
-		},
-	}
+	spaceStats.ObjectsCount = docsCount
+	spaceStats.DeletedObjectsCount = deletedObjectsCount
+	spaceStats.ChangesCount = changesCount
+	spaceStats.ChangeSize.Median = calcMedian(lengths)
+	spaceStats.ChangeSize.Avg = calcAvg(lengths)
+	spaceStats.ChangeSize.P95 = calcP95(lengths)
+	spaceStats.ChangeSize.MaxLen = maxLen
+	spaceStats.ChangeSize.Total = changesSize
 
+	if treeTop > 0 {
+		for _, treeStat := range spaceStats.treeMap {
+			spaceStats.TreeStats = append(spaceStats.TreeStats, treeStat)
+		}
+		slices.SortFunc(spaceStats.TreeStats, func(a, b TreeStat) int {
+			return cmp.Compare(b.ChangesCount, a.ChangesCount)
+		})
+		if len(spaceStats.TreeStats) > treeTop {
+			spaceStats.TreeStats = spaceStats.TreeStats[:treeTop]
+		}
+	}
 	return
+}
+
+func isSnapshot(payload []byte) bool {
+	change := &treechangeproto.RawTreeChange{}
+	_ = change.Unmarshal(payload)
+	treeChange := &treechangeproto.TreeChange{}
+	_ = treeChange.Unmarshal(change.Payload)
+	return treeChange.IsSnapshot
 }
