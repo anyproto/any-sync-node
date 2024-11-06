@@ -89,10 +89,6 @@ func main() {
 		log.Fatal("can't open config file", zap.Error(err))
 	}
 
-	// hotfix for a space app stopping
-	// TODO: make app.SetCloseTimeout() method
-	app.StopDeadline = time.Hour
-
 	// bootstrap components
 	a.Register(conf)
 	Bootstrap(a)
