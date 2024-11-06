@@ -117,11 +117,6 @@ func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceSt
 		return
 	}
 
-	defer func() {
-		if closeErr := s.EvictSpace(ctx, id); closeErr != nil {
-			err = errors.Join(err, closeErr)
-		}
-	}()
 	storage, ok := space.Storage().(nodestorage.NodeStorageStats)
 	if ok {
 		spaceStats.Storage, err = storage.GetSpaceStats(treeTop)
