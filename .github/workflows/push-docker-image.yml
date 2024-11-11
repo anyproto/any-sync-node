@@ -6,7 +6,7 @@ name: push-docker-image-release
 
 jobs:
   push-docker-image-release:
-    uses: anyproto/any-sync-node/.github/workflows/push-docker-image-reusable.yml@main
+    uses: anyproto/any-sync-node/.github/workflows/push-docker-image-reusable.yml@OPS-560
     secrets: inherit # pass all secrets
     with:
       release: ${{ github.event.release.tag_name }}
