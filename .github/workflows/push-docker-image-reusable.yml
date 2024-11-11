@@ -87,18 +87,28 @@ jobs:
       - name: Debug
         run: pwd; cat Dockerfile;  ls -R
 
+      # push to registry
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Push to registry
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
@@ -107,7 +117,10 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ inputs.release }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository }}:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository }}:${{ inputs.release }}
           outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=https://tech.anytype.io
+
       #- name: Integration testing
       #  run: |
       #    curl --request POST \
