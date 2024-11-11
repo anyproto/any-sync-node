@@ -117,8 +117,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ inputs.release }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository }}:latest
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository }}:${{ inputs.release }}
+            docker.io/${{ github.repository }}:latest
+            docker.io/${{ github.repository }}:${{ inputs.release }}
           outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=https://tech.anytype.io
 
       #- name: Integration testing
