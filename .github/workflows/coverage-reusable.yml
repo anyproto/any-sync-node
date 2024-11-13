@@ -62,6 +62,7 @@ jobs:
           cd ..
           sudo gem install license_finder
           license_finder inherited_decisions add open/decisions.yml
+          GO111MODULE=on go mod tidy
           license_finder --enabled-package-managers gomodules
       # }}
 
