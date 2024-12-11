@@ -38,7 +38,7 @@ type NodeHead interface {
 	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
 	DeleteHeads(spaceId string) error
-	ReloadHeadFromStore(spaceId string) error
+	ReloadHeadFromStore(ctx context.Context, spaceId string) error
 	LDiff(partId int) ldiff.Diff
 	Ranges(ctx context.Context, part int, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error)
 	app.ComponentRunnable
@@ -90,7 +90,7 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 			return ctx.Err()
 		default:
 		}
-		if e := n.loadHeadFromStore(spaceId); e != nil {
+		if e := n.loadHeadFromStore(ctx, spaceId); e != nil {
 			log.Warn("loadHeadFromStore error", zap.String("spaceId", spaceId), zap.Error(e))
 		}
 	}
@@ -98,19 +98,19 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (n *nodeHead) loadHeadFromStore(spaceId string) (err error) {
-	ss, err := n.spaceStore.SpaceStorage(spaceId)
+func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err error) {
+	ss, err := n.spaceStore.SpaceStorage(ctx, spaceId)
 	if err != nil {
 		return
 	}
 	defer func() {
 		_ = ss.Close(context.Background())
 	}()
-	hash, err := ss.ReadSpaceHash()
+	state, err := ss.StateStorage().GetState(ctx)
 	if err != nil {
 		return
 	}
-	_, err = n.SetHead(spaceId, hash)
+	_, err = n.SetHead(spaceId, state.Hash)
 	return
 }
 
@@ -172,8 +172,8 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 	return el.Head, nil
 }
 
-func (n *nodeHead) ReloadHeadFromStore(spaceId string) error {
-	return n.loadHeadFromStore(spaceId)
+func (n *nodeHead) ReloadHeadFromStore(ctx context.Context, spaceId string) error {
+	return n.loadHeadFromStore(ctx, spaceId)
 }
 
 func (n *nodeHead) registerMetrics(m metric.Metric) {

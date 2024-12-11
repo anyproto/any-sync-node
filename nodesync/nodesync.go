@@ -4,11 +4,9 @@ package nodesync
 import (
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync-node/nodehead"
-	"github.com/anyproto/any-sync-node/nodespace"
-	"github.com/anyproto/any-sync-node/nodesync/coldsync"
-	"github.com/anyproto/any-sync-node/nodesync/hotsync"
-	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
+	"sync"
+	"time"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -19,8 +17,12 @@ import (
 	"github.com/anyproto/go-chash"
 	"go.uber.org/zap"
 	"storj.io/drpc"
-	"sync"
-	"time"
+
+	"github.com/anyproto/any-sync-node/nodehead"
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync-node/nodesync/coldsync"
+	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
 
 const CName = "node.nodesync"
@@ -213,7 +215,7 @@ func (n *nodeSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 	if err = n.coldsync.Sync(ctx, spaceId, peerId); err != nil {
 		return
 	}
-	return n.nodehead.ReloadHeadFromStore(spaceId)
+	return n.nodehead.ReloadHeadFromStore(ctx, spaceId)
 }
 
 func (n *nodeSync) getRelatePartitions() (parts []part, err error) {

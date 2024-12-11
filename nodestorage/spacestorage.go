@@ -1,10 +1,12 @@
 package nodestorage
 
 import (
+	"context"
 	"time"
 
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 )
 
 var (
@@ -38,4 +40,30 @@ type TreeStat struct {
 
 type NodeStorageStats interface {
 	GetSpaceStats(treeTop int) (SpaceStats, error)
+}
+
+type nodeStorage struct {
+	spacestorage.SpaceStorage
+	cont     *storageContainer
+	observer hashObserver
+}
+
+func (r *nodeStorage) OnHashChange(hash string) {
+	r.observer(r.Id(), hash)
+}
+
+type hashObserver = func(spaceId, hash string)
+
+func newNodeStorage(spaceStorage spacestorage.SpaceStorage, cont *storageContainer, observer hashObserver) *nodeStorage {
+	st := &nodeStorage{
+		SpaceStorage: spaceStorage,
+		cont:         cont,
+	}
+	st.StateStorage().SetObserver(st)
+	return st
+}
+
+func (r *nodeStorage) Close(ctx context.Context) (err error) {
+	defer r.cont.Release()
+	return r.SpaceStorage.Close(ctx)
 }

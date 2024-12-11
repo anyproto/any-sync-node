@@ -4,16 +4,18 @@ package coldsync
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync-node/nodespace"
-	"github.com/anyproto/any-sync-node/nodestorage"
-	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
+	"io"
+	"os"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/pool"
 	"go.uber.org/zap"
-	"io"
-	"os"
 	"storj.io/drpc"
+
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync-node/nodestorage"
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
 
 const CName = "node.nodesync.coldsync"
@@ -53,7 +55,7 @@ func (c *coldSync) Name() (name string) {
 }
 
 func (c *coldSync) Sync(ctx context.Context, spaceId, peerId string) (err error) {
-	return c.storage.TryLockAndDo(spaceId, func() error {
+	return c.storage.TryLockAndDo(ctx, spaceId, func() error {
 		if c.storage.SpaceExists(spaceId) {
 			return ErrSpaceExistsLocally
 		}
@@ -90,13 +92,9 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 }
 
 func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
-	err := c.storage.TryLockAndDo(req.SpaceId, func() error {
-		return c.coldSyncHandle(req.SpaceId, stream)
+	err := c.storage.DumpStorage(context.Background(), req.SpaceId, func(path string) error {
+		return c.coldSyncHandle(req.SpaceId, path, stream)
 	})
-	if err == nodestorage.ErrLocked {
-		// TODO: we need to force headSync here
-		_, err = c.nodespace.GetSpace(stream.Context(), req.SpaceId)
-	}
 	if err != nil {
 		log.Info("handle error", zap.Error(err))
 		return err
@@ -104,9 +102,9 @@ func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nod
 	return nil
 }
 
-func (c *coldSync) coldSyncHandle(spaceId string, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
+func (c *coldSync) coldSyncHandle(spaceId, path string, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
 	sw := &streamWriter{
-		dir:    c.storage.StoreDir(spaceId),
+		dir:    path,
 		stream: stream,
 	}
 	return sw.Write()

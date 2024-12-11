@@ -3,6 +3,7 @@ package nodespace
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math"
 	"time"
 
@@ -73,32 +74,7 @@ func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.
 }
 
 func (r *rpcHandler) ObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	st := time.Now()
-	defer func() {
-		r.s.metric.RequestLog(ctx, "space.objectSync",
-			metric.TotalDur(time.Since(st)),
-			metric.SpaceId(req.SpaceId),
-			metric.ObjectId(req.ObjectId),
-			zap.Error(err),
-		)
-	}()
-	accountIdentity, err := peer.CtxPubKey(ctx)
-	if err != nil {
-		return
-	}
-	err = checkResponsible(ctx, r.s.confService, req.SpaceId)
-	if err != nil {
-		log.Debug("object sync sent to not responsible peer",
-			zap.Error(err),
-			zap.String("spaceId", req.SpaceId),
-			zap.String("accountId", accountIdentity.Account()))
-		return nil, spacesyncproto.ErrPeerIsNotResponsible
-	}
-	sp, err := r.s.GetSpace(ctx, req.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-	return sp.HandleDeprecatedObjectSyncRequest(ctx, req)
+	return nil, fmt.Errorf("deprecated")
 }
 
 func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
@@ -126,7 +102,7 @@ func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePul
 		return
 	}
 
-	spaceDesc, err := sp.Description()
+	spaceDesc, err := sp.Description(ctx)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
 		return

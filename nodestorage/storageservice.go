@@ -50,16 +50,6 @@ func newStorageContainer(db anystore.DB, path string) *storageContainer {
 	}
 }
 
-type releaseStorage struct {
-	spacestorage.SpaceStorage
-	cont *storageContainer
-}
-
-func (r *releaseStorage) Close(ctx context.Context) (err error) {
-	defer r.cont.Release()
-	return r.SpaceStorage.Close(ctx)
-}
-
 func (s *storageContainer) Close() (err error) {
 	return fmt.Errorf("should not be called directly")
 }
@@ -126,6 +116,7 @@ type NodeStorage interface {
 	DeletionStorage() DeletionStorage
 	SpaceStorage(ctx context.Context, spaceId string) (spacestorage.SpaceStorage, error)
 	TryLockAndDo(ctx context.Context, spaceId string, do func() error) (err error)
+	DumpStorage(ctx context.Context, id string, do func(path string) error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnDeleteStorage(onDelete func(ctx context.Context, spaceId string))
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
@@ -142,6 +133,12 @@ type storageService struct {
 	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
 	currentSpaces   map[string]*storageContainer
 	mu              sync.Mutex
+}
+
+func (s *storageService) onHashChange(spaceId, hash string) {
+	if s.onWriteHash != nil {
+		s.onWriteHash(context.Background(), spaceId, hash)
+	}
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
@@ -187,7 +184,7 @@ func (s *storageService) createDb(ctx context.Context, id string) (db anystore.D
 	if _, err := os.Stat(dbPath); err != nil {
 		err := os.MkdirAll(dbPath, 0755)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 	return anystore.Open(ctx, dbPath, nil)
@@ -246,10 +243,7 @@ func (s *storageService) WaitSpaceStorage(ctx context.Context, id string) (space
 	if err != nil {
 		return nil, err
 	}
-	return &releaseStorage{
-		SpaceStorage: st,
-		cont:         cont,
-	}, nil
+	return newNodeStorage(st, cont, s.onHashChange), nil
 }
 
 func (s *storageService) SpaceExists(id string) bool {
@@ -277,10 +271,7 @@ func (s *storageService) CreateSpaceStorage(ctx context.Context, payload spacest
 	if err != nil {
 		return nil, err
 	}
-	return &releaseStorage{
-		SpaceStorage: st,
-		cont:         cont,
-	}, nil
+	return newNodeStorage(st, cont, s.onHashChange), nil
 }
 
 func (s *storageService) TryLockAndDo(ctx context.Context, spaceId string, do func() error) (err error) {
