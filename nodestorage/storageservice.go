@@ -285,7 +285,7 @@ func (s *storageService) DumpStorage(ctx context.Context, id string, do func(pat
 	if err != nil {
 		return err
 	}
-	_, err = cont.Acquire()
+	db, err := cont.Acquire()
 	if err != nil {
 		return err
 	}
@@ -293,8 +293,11 @@ func (s *storageService) DumpStorage(ctx context.Context, id string, do func(pat
 	if err != nil {
 		return err
 	}
-	// TODO: dump and delete folder
 	defer os.RemoveAll(tempDir)
+	err = db.Backup(ctx, tempDir)
+	if err != nil {
+		return
+	}
 	return do(tempDir)
 }
 

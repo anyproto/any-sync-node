@@ -7,7 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
-	github.com/anyproto/any-store v0.1.3
+	github.com/anyproto/any-store v0.1.4-0.20241211133419-d0c2df992842
 	github.com/anyproto/any-sync v0.5.18-0.20241211180412-3ff8c909adcc
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
