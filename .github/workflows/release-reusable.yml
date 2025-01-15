@@ -98,6 +98,8 @@ jobs:
             --name ${{ github.event.repository.name }}
             --version ${{ steps.release-version.outputs.RELEASE_VERSION }}
             --architecture ${{ matrix.arch }}
+            --url ${{ github.repositoryUrl }}
+            --description "commit ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
             --exclude '*/.gitignore'
             --exclude '*/.git'
             --input-type dir
@@ -111,6 +113,8 @@ jobs:
             --name ${{ github.event.repository.name }}
             --version ${{ steps.release-version.outputs.RELEASE_VERSION }}
             --architecture ${{ matrix.rpm_arch }}
+            --url ${{ github.repositoryUrl }}
+            --description "commit ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
             --exclude '*/.gitignore'
             --exclude '*/.git'
             --input-type dir
