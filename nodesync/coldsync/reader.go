@@ -4,14 +4,20 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
-	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
-	"go.uber.org/multierr"
 	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"go.uber.org/multierr"
+
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
+
+var ErrIncorrectFile = errors.New("incorrect file")
 
 type streamReader struct {
 	dir    string
@@ -30,6 +36,9 @@ func (sr *streamReader) Read(ctx context.Context) (err error) {
 		msg, err = sr.stream.Recv()
 		if err != nil {
 			return
+		}
+		if !strings.Contains(msg.Filename, "store") {
+			return ErrIncorrectFile
 		}
 		if err = sr.writeChunk(ctx, msg); err != nil {
 			return
