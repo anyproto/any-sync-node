@@ -152,6 +152,12 @@ func (s *storageService) DeletionStorage() DeletionStorage {
 func (s *storageService) Init(a *app.App) (err error) {
 	cfg := a.MustComponent("config").(configGetter).GetStorage()
 	s.rootPath = cfg.Path
+	if _, err = os.Stat(s.rootPath); err != nil {
+		err = os.MkdirAll(s.rootPath, 0755)
+		if err != nil {
+			return err
+		}
+	}
 	s.cache = ocache.New(s.loadFunc,
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
@@ -164,21 +170,23 @@ func (s *storageService) Name() (name string) {
 }
 
 func (s *storageService) openDb(ctx context.Context, id string) (db anystore.DB, err error) {
-	dbPath := path.Join(s.rootPath, id)
+	dbPath := path.Join(s.rootPath, id, "store.db")
 	if _, err := os.Stat(dbPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, spacestorage.ErrSpaceStorageMissing
+		}
 		return nil, err
 	}
 	return anystore.Open(ctx, dbPath, nil)
 }
 
 func (s *storageService) createDb(ctx context.Context, id string) (db anystore.DB, err error) {
-	dbPath := path.Join(s.rootPath, id)
-	if _, err := os.Stat(dbPath); err != nil {
-		err := os.MkdirAll(dbPath, 0755)
-		if err != nil {
-			return nil, err
-		}
+	dirPath := path.Join(s.rootPath, id)
+	err = os.MkdirAll(dirPath, 0755)
+	if err != nil {
+		return nil, err
 	}
+	dbPath := path.Join(dirPath, "store.db")
 	return anystore.Open(ctx, dbPath, nil)
 }
 

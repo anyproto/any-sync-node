@@ -58,6 +58,7 @@ func newNodeStorage(spaceStorage spacestorage.SpaceStorage, cont *storageContain
 	st := &nodeStorage{
 		SpaceStorage: spaceStorage,
 		cont:         cont,
+		observer:     observer,
 	}
 	st.StateStorage().SetObserver(st)
 	return st
