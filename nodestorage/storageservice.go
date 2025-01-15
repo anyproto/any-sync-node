@@ -39,7 +39,6 @@ type storageContainer struct {
 	path      string
 	handlers  int
 	isClosing bool
-	onClose   func(path string) error
 	closeCh   chan struct{}
 }
 
@@ -51,7 +50,7 @@ func newStorageContainer(db anystore.DB, path string) *storageContainer {
 }
 
 func (s *storageContainer) Close() (err error) {
-	return fmt.Errorf("should not be called directly")
+	return s.db.Close()
 }
 
 func (s *storageContainer) Acquire() (anystore.DB, error) {
@@ -70,7 +69,7 @@ func (s *storageContainer) Acquire() (anystore.DB, error) {
 func (s *storageContainer) Release() {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.handlers++
+	s.handlers--
 }
 
 func (s *storageContainer) TryClose(objectTTL time.Duration) (res bool, err error) {
@@ -82,17 +81,10 @@ func (s *storageContainer) TryClose(objectTTL time.Duration) (res bool, err erro
 	s.isClosing = true
 	s.closeCh = make(chan struct{})
 	ch := s.closeCh
-	onClose := s.onClose
 	db := s.db
 	s.mx.Unlock()
 	if db != nil {
 		if err := db.Close(); err != nil {
-			log.Warn("failed to close db", zap.Error(err))
-		}
-	}
-	if onClose != nil {
-		err := onClose(s.path)
-		if err != nil {
 			log.Warn("failed to close db", zap.Error(err))
 		}
 	}
@@ -302,44 +294,21 @@ func (s *storageService) DumpStorage(ctx context.Context, id string, do func(pat
 }
 
 func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string) error {
-	dbPath := s.StoreDir(spaceId)
-	del := func(path string) error {
-		if _, err := os.Stat(path); err != nil {
-			if os.IsNotExist(err) {
-				return spacestorage.ErrSpaceStorageMissing
-			}
-			return fmt.Errorf("can't delete datadir '%s': %w", path, err)
-		}
-		if s.onDeleteStorage != nil {
-			s.onDeleteStorage(ctx, spaceId)
-		}
-		return os.RemoveAll(path)
+	db, err := s.get(ctx, spaceId)
+	if err == nil {
+		db.Close()
 	}
-	ctx = context.WithValue(ctx, doKeyVal, func() error {
-		err := del(dbPath)
-		if err != nil {
-			return err
+	spacePath := s.StoreDir(spaceId)
+	if _, err := os.Stat(spacePath); err != nil {
+		if os.IsNotExist(err) {
+			return spacestorage.ErrSpaceStorageMissing
 		}
-		return ErrDeleted
-	})
-	cont, err := s.get(ctx, spaceId)
-	if err != nil {
-		if errors.Is(err, ErrDeleted) {
-			return nil
-		}
-		return err
+		return fmt.Errorf("can't delete datadir '%s': %w", spacePath, err)
 	}
-	_, err = cont.Acquire()
-	if err != nil {
-		return s.DeleteSpaceStorage(ctx, spaceId)
+	if s.onDeleteStorage != nil {
+		s.onDeleteStorage(ctx, spaceId)
 	}
-	cont.mx.Lock()
-	cont.onClose = del
-	ch := cont.closeCh
-	cont.mx.Unlock()
-	cont.Release()
-	<-ch
-	return nil
+	return os.RemoveAll(spacePath)
 }
 
 func (s *storageService) AllSpaceIds() (ids []string, err error) {
