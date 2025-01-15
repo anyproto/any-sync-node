@@ -5,5 +5,6 @@ type configGetter interface {
 }
 
 type Config struct {
-	Path string `yaml:"path"`
+	Path         string `yaml:"path"`
+	AnyStorePath string `yaml:"anyStorePath"`
 }

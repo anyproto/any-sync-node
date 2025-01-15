@@ -99,6 +99,13 @@ var (
 
 const CName = spacestorage.CName
 
+var anyStoreConfig *anystore.Config = &anystore.Config{
+	ReadConnections: 4,
+	SQLiteConnectionOptions: map[string]string{
+		"synchronous": "off",
+	},
+}
+
 func New() NodeStorage {
 	return &storageService{}
 }
@@ -151,7 +158,7 @@ func (s *storageService) DeletionStorage() DeletionStorage {
 
 func (s *storageService) Init(a *app.App) (err error) {
 	cfg := a.MustComponent("config").(configGetter).GetStorage()
-	s.rootPath = cfg.Path
+	s.rootPath = cfg.AnyStorePath
 	if _, err = os.Stat(s.rootPath); err != nil {
 		err = os.MkdirAll(s.rootPath, 0755)
 		if err != nil {
@@ -177,7 +184,7 @@ func (s *storageService) openDb(ctx context.Context, id string) (db anystore.DB,
 		}
 		return nil, err
 	}
-	return anystore.Open(ctx, dbPath, nil)
+	return anystore.Open(ctx, dbPath, anyStoreConfig)
 }
 
 func (s *storageService) createDb(ctx context.Context, id string) (db anystore.DB, err error) {
@@ -187,7 +194,7 @@ func (s *storageService) createDb(ctx context.Context, id string) (db anystore.D
 		return nil, err
 	}
 	dbPath := path.Join(dirPath, "store.db")
-	return anystore.Open(ctx, dbPath, nil)
+	return anystore.Open(ctx, dbPath, anyStoreConfig)
 }
 
 func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.Object, err error) {
