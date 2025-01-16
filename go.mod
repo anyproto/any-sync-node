@@ -8,7 +8,7 @@ require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
 	github.com/anyproto/any-store v0.1.4-0.20241211133419-d0c2df992842
-	github.com/anyproto/any-sync v0.6.0-alpha.4.0.20250113102657-9e965782cca3
+	github.com/anyproto/any-sync v0.6.0-alpha.4.0.20250115234555-3a6c0c1cae63
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.20.5
