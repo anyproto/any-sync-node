@@ -31,7 +31,7 @@ const (
 	doKeyVal     optKey = 1
 )
 
-type doFunc func() error
+type doFunc = func() error
 
 type storageContainer struct {
 	db        anystore.DB
