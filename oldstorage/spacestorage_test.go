@@ -13,10 +13,13 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
 var ctx = context.Background()
@@ -46,8 +49,8 @@ type storeConfig string
 func (sc storeConfig) Name() string          { return "config" }
 func (sc storeConfig) Init(_ *app.App) error { return nil }
 
-func (sc storeConfig) GetStorage() Config {
-	return Config{Path: string(sc)}
+func (sc storeConfig) GetStorage() nodestorage.Config {
+	return nodestorage.Config{Path: string(sc)}
 }
 func newTestService(dir string) *storageService {
 	ss := New()
@@ -57,7 +60,7 @@ func newTestService(dir string) *storageService {
 	return ss.(*storageService)
 }
 
-func testSpace(t *testing.T, store spacestorage.SpaceStorage, payload spacestorage.SpaceStorageCreatePayload) {
+func testSpace(t *testing.T, store oldstorage.SpaceStorage, payload spacestorage.SpaceStorageCreatePayload) {
 	header, err := store.SpaceHeader()
 	require.NoError(t, err)
 	require.Equal(t, payload.SpaceHeaderWithId, header)
