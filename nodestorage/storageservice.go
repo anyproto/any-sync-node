@@ -301,7 +301,7 @@ func (s *storageService) DumpStorage(ctx context.Context, id string, do func(pat
 		return err
 	}
 	defer os.RemoveAll(tempDir)
-	err = db.Backup(ctx, tempDir)
+	err = db.Backup(ctx, filepath.Join(tempDir, "store.db"))
 	if err != nil {
 		return
 	}
