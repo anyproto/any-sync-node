@@ -204,7 +204,7 @@ func TestWaitStore(t *testing.T) {
 	store, err := ss.CreateSpaceStorage(payload)
 	require.NoError(t, err)
 
-	var storeCh = make(chan spacestorage.SpaceStorage)
+	var storeCh = make(chan oldstorage.SpaceStorage)
 
 	go func() {
 		st, e := ss.WaitSpaceStorage(context.Background(), payload.SpaceHeaderWithId.Id)

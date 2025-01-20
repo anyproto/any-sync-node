@@ -55,6 +55,7 @@ type storageService struct {
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
+	s.delStorage, err = OpenDeletionStorage(s.rootPath)
 	return
 }
 

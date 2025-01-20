@@ -86,20 +86,6 @@ func (mr *MockNodeStorageMockRecorder) DeleteSpaceStorage(arg0, arg1 any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).DeleteSpaceStorage), arg0, arg1)
 }
 
-// DeletionStorage mocks base method.
-func (m *MockNodeStorage) DeletionStorage() nodestorage.DeletionStorage {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletionStorage")
-	ret0, _ := ret[0].(nodestorage.DeletionStorage)
-	return ret0
-}
-
-// DeletionStorage indicates an expected call of DeletionStorage.
-func (mr *MockNodeStorageMockRecorder) DeletionStorage() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionStorage", reflect.TypeOf((*MockNodeStorage)(nil).DeletionStorage))
-}
-
 // DumpStorage mocks base method.
 func (m *MockNodeStorage) DumpStorage(arg0 context.Context, arg1 string, arg2 func(string) error) error {
 	m.ctrl.T.Helper()
@@ -112,6 +98,20 @@ func (m *MockNodeStorage) DumpStorage(arg0 context.Context, arg1 string, arg2 fu
 func (mr *MockNodeStorageMockRecorder) DumpStorage(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DumpStorage", reflect.TypeOf((*MockNodeStorage)(nil).DumpStorage), arg0, arg1, arg2)
+}
+
+// IndexStorage mocks base method.
+func (m *MockNodeStorage) IndexStorage() nodestorage.IndexStorage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IndexStorage")
+	ret0, _ := ret[0].(nodestorage.IndexStorage)
+	return ret0
+}
+
+// IndexStorage indicates an expected call of IndexStorage.
+func (mr *MockNodeStorageMockRecorder) IndexStorage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IndexStorage", reflect.TypeOf((*MockNodeStorage)(nil).IndexStorage))
 }
 
 // Init mocks base method.
