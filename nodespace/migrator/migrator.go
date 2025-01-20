@@ -88,6 +88,7 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 		tm := time.Now()
 		err := migrator.MigrateId(ctx, id, noOpProgress{})
 		if err != nil {
+			log.Error("failed to migrate space", zap.String("spaceId", id), zap.Error(err))
 			if errors.Is(err, migration.ErrAlreadyMigrated) || errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
 				continue
 			}
@@ -95,7 +96,6 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 			if err != nil {
 				return err
 			}
-			log.Error("failed to migrate space", zap.String("spaceId", id), zap.Error(err))
 			continue
 		}
 		err = m.setSpaceMigrated(ctx, id, migrateDb, true)
