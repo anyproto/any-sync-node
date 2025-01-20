@@ -142,17 +142,17 @@ func (mr *MockNodeHeadMockRecorder) Ranges(arg0, arg1, arg2, arg3 any) *gomock.C
 }
 
 // ReloadHeadFromStore mocks base method.
-func (m *MockNodeHead) ReloadHeadFromStore(arg0 string) error {
+func (m *MockNodeHead) ReloadHeadFromStore(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReloadHeadFromStore", arg0)
+	ret := m.ctrl.Call(m, "ReloadHeadFromStore", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReloadHeadFromStore indicates an expected call of ReloadHeadFromStore.
-func (mr *MockNodeHeadMockRecorder) ReloadHeadFromStore(arg0 any) *gomock.Call {
+func (mr *MockNodeHeadMockRecorder) ReloadHeadFromStore(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReloadHeadFromStore", reflect.TypeOf((*MockNodeHead)(nil).ReloadHeadFromStore), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReloadHeadFromStore", reflect.TypeOf((*MockNodeHead)(nil).ReloadHeadFromStore), arg0, arg1)
 }
 
 // Run mocks base method.

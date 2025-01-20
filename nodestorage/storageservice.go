@@ -112,7 +112,7 @@ func New() NodeStorage {
 
 type NodeStorage interface {
 	spacestorage.SpaceStorageProvider
-	DeletionStorage() DeletionStorage
+	IndexStorage() IndexStorage
 	SpaceStorage(ctx context.Context, spaceId string) (spacestorage.SpaceStorage, error)
 	TryLockAndDo(ctx context.Context, spaceId string, do func() error) (err error)
 	DumpStorage(ctx context.Context, id string, do func(path string) error) (err error)
@@ -126,7 +126,7 @@ type NodeStorage interface {
 type storageService struct {
 	rootPath        string
 	cache           ocache.OCache
-	delStorage      DeletionStorage
+	indexStorage    IndexStorage
 	onWriteHash     func(ctx context.Context, spaceId, hash string)
 	onDeleteStorage func(ctx context.Context, spaceId string)
 	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
@@ -141,19 +141,19 @@ func (s *storageService) onHashChange(spaceId, hash string) {
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
-	s.delStorage, err = OpenDeletionStorage(s.rootPath)
+	s.indexStorage, err = OpenIndexStorage(ctx, s.rootPath)
 	return
 }
 
 func (s *storageService) Close(ctx context.Context) (err error) {
-	if s.delStorage != nil {
-		return s.delStorage.Close()
+	if s.indexStorage != nil {
+		return s.indexStorage.Close()
 	}
 	return
 }
 
-func (s *storageService) DeletionStorage() DeletionStorage {
-	return s.delStorage
+func (s *storageService) IndexStorage() IndexStorage {
+	return s.indexStorage
 }
 
 func (s *storageService) Init(a *app.App) (err error) {

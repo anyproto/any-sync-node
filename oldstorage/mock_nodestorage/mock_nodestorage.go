@@ -58,18 +58,18 @@ func (mr *MockNodeStorageMockRecorder) AllSpaceIds() *gomock.Call {
 }
 
 // CreateSpaceStorage mocks base method.
-func (m *MockNodeStorage) CreateSpaceStorage(arg0 spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
+func (m *MockNodeStorage) CreateSpaceStorage(arg0 context.Context, arg1 spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSpaceStorage", arg0)
+	ret := m.ctrl.Call(m, "CreateSpaceStorage", arg0, arg1)
 	ret0, _ := ret[0].(spacestorage.SpaceStorage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateSpaceStorage indicates an expected call of CreateSpaceStorage.
-func (mr *MockNodeStorageMockRecorder) CreateSpaceStorage(arg0 any) *gomock.Call {
+func (mr *MockNodeStorageMockRecorder) CreateSpaceStorage(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).CreateSpaceStorage), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).CreateSpaceStorage), arg0, arg1)
 }
 
 // DeleteSpaceStorage mocks base method.
@@ -98,6 +98,20 @@ func (m *MockNodeStorage) DeletionStorage() nodestorage.DeletionStorage {
 func (mr *MockNodeStorageMockRecorder) DeletionStorage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionStorage", reflect.TypeOf((*MockNodeStorage)(nil).DeletionStorage))
+}
+
+// DumpStorage mocks base method.
+func (m *MockNodeStorage) DumpStorage(arg0 context.Context, arg1 string, arg2 func(string) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DumpStorage", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DumpStorage indicates an expected call of DumpStorage.
+func (mr *MockNodeStorageMockRecorder) DumpStorage(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DumpStorage", reflect.TypeOf((*MockNodeStorage)(nil).DumpStorage), arg0, arg1, arg2)
 }
 
 // Init mocks base method.
@@ -167,18 +181,18 @@ func (mr *MockNodeStorageMockRecorder) SpaceExists(arg0 any) *gomock.Call {
 }
 
 // SpaceStorage mocks base method.
-func (m *MockNodeStorage) SpaceStorage(arg0 string) (spacestorage.SpaceStorage, error) {
+func (m *MockNodeStorage) SpaceStorage(arg0 context.Context, arg1 string) (spacestorage.SpaceStorage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceStorage", arg0)
+	ret := m.ctrl.Call(m, "SpaceStorage", arg0, arg1)
 	ret0, _ := ret[0].(spacestorage.SpaceStorage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SpaceStorage indicates an expected call of SpaceStorage.
-func (mr *MockNodeStorageMockRecorder) SpaceStorage(arg0 any) *gomock.Call {
+func (mr *MockNodeStorageMockRecorder) SpaceStorage(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).SpaceStorage), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).SpaceStorage), arg0, arg1)
 }
 
 // StoreDir mocks base method.
@@ -196,17 +210,17 @@ func (mr *MockNodeStorageMockRecorder) StoreDir(arg0 any) *gomock.Call {
 }
 
 // TryLockAndDo mocks base method.
-func (m *MockNodeStorage) TryLockAndDo(arg0 string, arg1 func() error) error {
+func (m *MockNodeStorage) TryLockAndDo(arg0 context.Context, arg1 string, arg2 func() error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryLockAndDo", arg0, arg1)
+	ret := m.ctrl.Call(m, "TryLockAndDo", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // TryLockAndDo indicates an expected call of TryLockAndDo.
-func (mr *MockNodeStorageMockRecorder) TryLockAndDo(arg0, arg1 any) *gomock.Call {
+func (mr *MockNodeStorageMockRecorder) TryLockAndDo(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryLockAndDo", reflect.TypeOf((*MockNodeStorage)(nil).TryLockAndDo), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryLockAndDo", reflect.TypeOf((*MockNodeStorage)(nil).TryLockAndDo), arg0, arg1, arg2)
 }
 
 // WaitSpaceStorage mocks base method.
