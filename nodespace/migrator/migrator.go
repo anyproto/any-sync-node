@@ -25,13 +25,11 @@ const CName = "node.nodespace.migrator"
 var log = logger.NewNamed(CName)
 
 const (
-	migratedDbFolder = ".migrated"
-	spaceColl        = "space"
-	spaceIdKey       = "spaceId"
-	migratedColl     = "migration"
-	migratedTimeKey  = "time"
-	migratedDoc      = "state"
-	statusKey        = "status"
+	spaceMigrationColl = "migrationSpace"
+	migratedStateColl  = "migrationState"
+	migratedTimeKey    = "time"
+	migratedDoc        = "state"
+	statusKey          = "status"
 )
 
 type noOpProgress struct{}
@@ -67,7 +65,7 @@ func (m *migrator) Name() (name string) {
 }
 
 func (m *migrator) Run(ctx context.Context) (err error) {
-	dirPath := path.Join(m.oldPath, migratedDbFolder)
+	dirPath := path.Join(m.oldPath, nodestorage.IndexStorageName)
 	err = os.MkdirAll(dirPath, 0755)
 	if err != nil {
 		return err
@@ -119,7 +117,7 @@ func (m *migrator) Close(ctx context.Context) (err error) {
 }
 
 func (m *migrator) checkMigrated(ctx context.Context, anyStore anystore.DB) bool {
-	coll, err := anyStore.OpenCollection(ctx, migratedColl)
+	coll, err := anyStore.OpenCollection(ctx, migratedStateColl)
 	if err != nil {
 		return false
 	}
@@ -131,7 +129,7 @@ func (m *migrator) checkMigrated(ctx context.Context, anyStore anystore.DB) bool
 }
 
 func (m *migrator) setSpaceMigrated(ctx context.Context, id string, anyStore anystore.DB, isSuccess bool) error {
-	coll, err := anyStore.Collection(ctx, spaceColl)
+	coll, err := anyStore.Collection(ctx, spaceMigrationColl)
 	if err != nil {
 		return fmt.Errorf("migration: failed to get collection: %w", err)
 	}
@@ -156,7 +154,7 @@ func (m *migrator) setSpaceMigrated(ctx context.Context, id string, anyStore any
 }
 
 func (m *migrator) setAllMigrated(ctx context.Context, anyStore anystore.DB) error {
-	coll, err := anyStore.Collection(ctx, migratedColl)
+	coll, err := anyStore.Collection(ctx, migratedStateColl)
 	if err != nil {
 		return fmt.Errorf("migration: failed to get collection: %w", err)
 	}

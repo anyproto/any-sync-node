@@ -155,7 +155,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	defer func() {
 		log.InfoCtx(ctx, "space loaded", zap.String("id", id), zap.Error(err))
 	}()
-	if err = s.checkDeletionStatus(id); err != nil {
+	if err = s.checkDeletionStatus(ctx, id); err != nil {
 		return nil, err
 	}
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
@@ -175,11 +175,11 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	return ns, nil
 }
 
-func (s *service) checkDeletionStatus(spaceId string) (err error) {
-	delStorage := s.spaceStorageProvider.DeletionStorage()
-	status, err := delStorage.SpaceStatus(spaceId)
+func (s *service) checkDeletionStatus(ctx context.Context, spaceId string) (err error) {
+	delStorage := s.spaceStorageProvider.IndexStorage()
+	status, err := delStorage.SpaceStatus(ctx, spaceId)
 	if err != nil {
-		if err == nodestorage.ErrUnknownSpaceId {
+		if errors.Is(err, nodestorage.ErrUnknownSpaceId) {
 			return nil
 		}
 		return err

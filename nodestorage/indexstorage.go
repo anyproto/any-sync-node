@@ -3,6 +3,7 @@ package nodestorage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 
@@ -24,7 +25,7 @@ var (
 )
 
 const (
-	indexStorageName = ".index"
+	IndexStorageName = ".index"
 	collectionName   = "deletionIndex"
 	statusKey        = "s"
 	recordIdKey      = "r"
@@ -46,6 +47,7 @@ type indexStorage struct {
 func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error) {
 	doc, err := d.coll.FindId(ctx, spaceId)
 	if err != nil {
+		err = fmt.Errorf("find id: %w, %w", err, ErrUnknownSpaceId)
 		return
 	}
 	return SpaceStatus(doc.Value().GetInt(statusKey)), nil
@@ -90,7 +92,7 @@ func (d *indexStorage) Close() (err error) {
 
 func OpenIndexStorage(ctx context.Context, rootPath string) (ds IndexStorage, err error) {
 	log.Debug("deletion storage opening")
-	dbPath := path.Join(rootPath, indexStorageName)
+	dbPath := path.Join(rootPath, IndexStorageName)
 	err = os.MkdirAll(dbPath, 0755)
 	if err != nil {
 		return
