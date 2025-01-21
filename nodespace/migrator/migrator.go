@@ -12,7 +12,6 @@ import (
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/migration"
 	"go.uber.org/zap"
 
@@ -89,16 +88,16 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 		err := migrator.MigrateId(ctx, id, noOpProgress{})
 		if err != nil {
 			log.Error("failed to migrate space", zap.String("spaceId", id), zap.Error(err))
-			if errors.Is(err, migration.ErrAlreadyMigrated) || errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
+			if errors.Is(err, migration.ErrAlreadyMigrated) {
 				continue
 			}
-			err := m.setSpaceMigrated(ctx, id, migrateDb, false)
+			err := m.setSpaceMigrated(ctx, id, migrateDb, err)
 			if err != nil {
 				return err
 			}
 			continue
 		}
-		err = m.setSpaceMigrated(ctx, id, migrateDb, true)
+		err = m.setSpaceMigrated(ctx, id, migrateDb, nil)
 		if err != nil {
 			return err
 		}
@@ -128,7 +127,7 @@ func (m *migrator) checkMigrated(ctx context.Context, anyStore anystore.DB) bool
 	return true
 }
 
-func (m *migrator) setSpaceMigrated(ctx context.Context, id string, anyStore anystore.DB, isSuccess bool) error {
+func (m *migrator) setSpaceMigrated(ctx context.Context, id string, anyStore anystore.DB, migrationErr error) error {
 	coll, err := anyStore.Collection(ctx, spaceMigrationColl)
 	if err != nil {
 		return fmt.Errorf("migration: failed to get collection: %w", err)
@@ -140,10 +139,10 @@ func (m *migrator) setSpaceMigrated(ctx context.Context, id string, anyStore any
 	}
 	newVal := arena.NewObject()
 	newVal.Set("id", arena.NewString(id))
-	if isSuccess {
-		newVal.Set(statusKey, arena.NewTrue())
+	if migrationErr != nil {
+		newVal.Set(statusKey, arena.NewString(migrationErr.Error()))
 	} else {
-		newVal.Set(statusKey, arena.NewFalse())
+		newVal.Set(statusKey, arena.NewString("ok"))
 	}
 	err = coll.Insert(tx.Context(), newVal)
 	if err != nil {
