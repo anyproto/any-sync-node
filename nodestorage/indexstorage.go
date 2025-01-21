@@ -81,7 +81,7 @@ func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) 
 		if err != nil {
 			return "", err
 		}
-		return doc.Value().GetString("id"), nil
+		return doc.Value().GetString(recordIdKey), nil
 	}
 	return "", ErrNoLastRecordId
 }
@@ -103,6 +103,14 @@ func OpenIndexStorage(ctx context.Context, rootPath string) (ds IndexStorage, er
 		return
 	}
 	coll, err := db.Collection(ctx, collectionName)
+	if err != nil {
+		return
+	}
+	info := anystore.IndexInfo{
+		Fields: []string{recordIdKey},
+		Unique: true,
+	}
+	err = coll.EnsureIndex(ctx, info)
 	if err != nil {
 		return
 	}
