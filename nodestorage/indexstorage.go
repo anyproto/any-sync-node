@@ -76,6 +76,7 @@ func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) 
 	if err != nil {
 		return
 	}
+	defer iter.Close()
 	if iter.Next() {
 		doc, err := iter.Doc()
 		if err != nil {
