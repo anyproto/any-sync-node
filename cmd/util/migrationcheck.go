@@ -42,6 +42,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defer iter.Close()
 	results := map[string]int{}
 	for iter.Next() {
 		doc, err := iter.Doc()
