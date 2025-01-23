@@ -84,6 +84,9 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 		return err
 	}
 	for idx, id := range allIds {
+		if m.checkSpaceMigrated(ctx, id, migrateDb) {
+			continue
+		}
 		tm := time.Now()
 		err := migrator.MigrateId(ctx, id, noOpProgress{})
 		if err != nil {
@@ -113,6 +116,18 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 
 func (m *migrator) Close(ctx context.Context) (err error) {
 	return nil
+}
+
+func (m *migrator) checkSpaceMigrated(ctx context.Context, id string, anyStore anystore.DB) bool {
+	coll, err := anyStore.Collection(ctx, SpaceMigrationColl)
+	if err != nil {
+		return false
+	}
+	_, err = coll.FindId(ctx, id)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (m *migrator) setSpaceMigrated(ctx context.Context, id string, anyStore anystore.DB, migrationErr error) error {

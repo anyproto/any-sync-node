@@ -257,7 +257,7 @@ func (s *storageService) SpaceExists(id string) bool {
 	if id == "" {
 		return false
 	}
-	dbPath := path.Join(s.rootPath, id)
+	dbPath := path.Join(s.rootPath, id, "store.db")
 	if _, err := os.Stat(dbPath); err != nil {
 		return false
 	}
