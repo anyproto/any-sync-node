@@ -281,6 +281,11 @@ func (s *storageService) CreateSpaceStorage(ctx context.Context, payload spacest
 	return newNodeStorage(st, cont, s.onHashChange), nil
 }
 
+func (s *storageService) ForceRemove(id string) (err error) {
+	_, err = s.cache.Remove(context.Background(), id)
+	return
+}
+
 func (s *storageService) TryLockAndDo(ctx context.Context, spaceId string, do func() error) (err error) {
 	ctx = context.WithValue(ctx, doKeyVal, do)
 	_, err = s.get(ctx, spaceId)

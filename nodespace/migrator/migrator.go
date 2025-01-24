@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/migration"
 	"go.uber.org/zap"
 
@@ -35,9 +37,14 @@ type noOpProgress struct{}
 
 func (n noOpProgress) AddDone(done int64) {}
 
+type nodeStorage interface {
+	ForceRemove(id string) error
+	nodestorage.NodeStorage
+}
+
 type migrator struct {
 	oldStorage oldstorage.NodeStorage
-	newStorage nodestorage.NodeStorage
+	newStorage nodeStorage
 	path       string
 	oldPath    string
 }
@@ -55,7 +62,7 @@ func (m *migrator) Init(a *app.App) (err error) {
 	m.path = cfg.GetStorage().AnyStorePath
 	m.oldPath = cfg.GetStorage().AnyStorePath
 	m.oldStorage = app.MustComponent[oldstorage.NodeStorage](a)
-	m.newStorage = app.MustComponent[nodestorage.NodeStorage](a)
+	m.newStorage = app.MustComponent[nodeStorage](a)
 	return nil
 }
 
@@ -78,7 +85,15 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 	if CheckMigrated(ctx, migrateDb) {
 		return nil
 	}
-	migrator := migration.NewSpaceMigrator(m.oldStorage, m.newStorage, 40, m.path)
+	migrator := migration.NewSpaceMigratorWithRemoveFunc(m.oldStorage, m.newStorage, 40, m.path, func(st spacestorage.SpaceStorage, rootPath string) error {
+		anyStore := st.AnyStore()
+		err := m.newStorage.ForceRemove(st.Id())
+		if err != nil {
+			return err
+		}
+		anyStore.Close()
+		return os.RemoveAll(filepath.Join(rootPath, st.Id()))
+	})
 	allIds, err := m.oldStorage.AllSpaceIds()
 	if err != nil {
 		return err
