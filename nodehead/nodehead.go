@@ -44,19 +44,24 @@ type NodeHead interface {
 	app.ComponentRunnable
 }
 
+type nodeStorage interface {
+	ForceRemove(id string) error
+	nodestorage.NodeStorage
+}
+
 type nodeHead struct {
 	mu         sync.Mutex
 	partitions map[int]ldiff.Diff
 	oldHashes  map[string]string
 	nodeconf   nodeconf.NodeConf
-	spaceStore nodestorage.NodeStorage
+	spaceStore nodeStorage
 }
 
 func (n *nodeHead) Init(a *app.App) (err error) {
 	n.partitions = map[int]ldiff.Diff{}
 	n.oldHashes = map[string]string{}
 	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
-	n.spaceStore = a.MustComponent(spacestorage.CName).(nodestorage.NodeStorage)
+	n.spaceStore = a.MustComponent(spacestorage.CName).(nodeStorage)
 	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
 		if _, e := n.SetHead(spaceId, hash); e != nil {
 			log.Error("can't set head", zap.Error(e))
@@ -104,7 +109,13 @@ func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err e
 		return
 	}
 	defer func() {
-		_ = ss.Close(context.Background())
+		log.Debug("close space storage", zap.String("spaceId", spaceId))
+		anyStore := ss.AnyStore()
+		err := n.spaceStore.ForceRemove(ss.Id())
+		if err != nil {
+			log.Error("can't remove space storage", zap.Error(err))
+		}
+		anyStore.Close()
 	}()
 	state, err := ss.StateStorage().GetState(ctx)
 	if err != nil {
