@@ -22,7 +22,7 @@ type ChangeSizeStats struct {
 	Total  int     `json:"total"`
 }
 
-type SpaceStats struct {
+type ObjectSpaceStats struct {
 	ObjectsCount        int             `json:"objectsCount,omitempty"`
 	DeletedObjectsCount int             `json:"deletedObjectsCount"`
 	ChangesCount        int             `json:"changesCount"`
@@ -32,14 +32,23 @@ type SpaceStats struct {
 }
 
 type TreeStat struct {
-	Id             string `json:"id"`
-	ChangesCount   int    `json:"changesCount"`
-	SnapshotsCount int    `json:"snapshotsCount"`
-	ChangesSumSize int    `json:"payloadSize"`
+	Id                 string `json:"id"`
+	ChangesCount       int    `json:"changesCount"`
+	SnapshotsCount     int    `json:"snapshotsCount"`
+	MaxSnapshotCounter int    `json:"maxSnapshotCounter"`
+	ChangesSumSize     int    `json:"payloadSize"`
+}
+
+type SpaceStats struct {
+	Storage ObjectSpaceStats `json:"storage"`
+	Acl     struct {
+		Readers int `json:"readers"`
+		Writers int `json:"writers"`
+	} `json:"acl"`
 }
 
 type NodeStorageStats interface {
-	GetSpaceStats(treeTop int) (SpaceStats, error)
+	GetSpaceStats(ctx context.Context, treeTop int) (ObjectSpaceStats, error)
 }
 
 type nodeStorage struct {

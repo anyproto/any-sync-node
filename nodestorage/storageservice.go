@@ -15,6 +15,8 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 )
@@ -93,8 +95,9 @@ func (s *storageContainer) TryClose(objectTTL time.Duration) (res bool, err erro
 }
 
 var (
-	ErrLocked         = errors.New("space storage locked")
-	ErrSpaceIdIsEmpty = errors.New("space id is empty")
+	ErrLocked                  = errors.New("space storage locked")
+	ErrSpaceIdIsEmpty          = errors.New("space id is empty")
+	ErrDoesntSupportSpaceStats = errors.New("doesn't support nodestorage.ObjectSpaceStats")
 )
 
 const CName = spacestorage.CName
@@ -121,6 +124,7 @@ type NodeStorage interface {
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
 	StoreDir(spaceId string) (path string)
 	DeleteSpaceStorage(ctx context.Context, spaceId string) error
+	GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error)
 }
 
 type storageService struct {
@@ -279,6 +283,51 @@ func (s *storageService) CreateSpaceStorage(ctx context.Context, payload spacest
 		return nil, err
 	}
 	return newNodeStorage(st, cont, s.onHashChange), nil
+}
+
+func (s *storageService) GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error) {
+	storage, err := s.WaitSpaceStorage(ctx, id)
+	if err != nil {
+		err = fmt.Errorf("can't get space storage: %w", err)
+		return
+	}
+	defer storage.Close(ctx)
+	st, ok := storage.(NodeStorageStats)
+	if !ok {
+		err = ErrDoesntSupportSpaceStats
+		return
+	}
+	res, err := st.GetSpaceStats(ctx, treeTop)
+	if err != nil {
+		err = fmt.Errorf("can't get space stats: %w", err)
+		return
+	}
+	spaceStats.Storage = res
+	aclStorage, err := storage.AclStorage()
+	if err != nil {
+		err = fmt.Errorf("can't get aclStorage storage: %w", err)
+		return
+	}
+	identity, err := accountdata.NewRandom()
+	if err != nil {
+		err = fmt.Errorf("can't get random identity: %w", err)
+		return
+	}
+	aclList, err := list.BuildAclListWithIdentity(identity, aclStorage, list.NoOpAcceptorVerifier{})
+	if err != nil {
+		err = fmt.Errorf("can't build aclList: %w", err)
+		return
+	}
+	for _, acc := range aclList.AclState().CurrentAccounts() {
+		if !acc.Permissions.NoPermissions() {
+			if acc.Permissions.CanWrite() {
+				spaceStats.Acl.Writers++
+			} else {
+				spaceStats.Acl.Readers++
+			}
+		}
+	}
+	return
 }
 
 func (s *storageService) ForceRemove(id string) (err error) {
