@@ -7,20 +7,32 @@ import (
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/query"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"golang.org/x/exp/slices"
 )
 
 func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStats ObjectSpaceStats, err error) {
-	anyStore := r.AnyStore()
-	maxLen := 0
-	docsCount := 0
-	deletedObjectsCount := 0
-	changesCount := 0
-	changesSize := 0
-	lengths := make([]int, 0, 100)
+	var (
+		anyStore            = r.AnyStore()
+		docsCount           = 0
+		deletedObjectsCount = 0
+		changesCount        = 0
+		changesSize         = 0
+		lengths             = make([]int, 0, 100)
+	)
 	if treeTop > 0 {
 		spaceStats.treeMap = map[string]TreeStat{}
+	}
+	headsColl, err := anyStore.Collection(ctx, headstorage.HeadsCollectionName)
+	if err != nil {
+		err = fmt.Errorf("collection not found: %w", err)
+		return
+	}
+	deletedObjectsCount, err = headsColl.Find(query.Key{Path: []string{headstorage.DeletedStatusKey}, Filter: query.NewComp(query.CompOpGte, int(headstorage.DeletedStatusQueued))}).Count(ctx)
+	if err != nil {
+		err = fmt.Errorf("count not found: %w", err)
+		return
 	}
 	changesColl, err := anyStore.Collection(ctx, objecttree.CollName)
 	if err != nil {
@@ -41,7 +53,8 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 			err = fmt.Errorf("doc not found: %w", err)
 			return
 		}
-		newId := doc.Value().GetString("id")
+		changesCount++
+		newId := doc.Value().GetString(objecttree.TreeKey)
 		if treeStat.Id != newId {
 			if treeStat.Id != "" {
 				if treeTop > 0 {
@@ -56,6 +69,7 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 		lengths = append(lengths, chSize)
 		snapshotCounter := doc.Value().GetInt(objecttree.SnapshotCounterKey)
 		treeStat.ChangesSumSize += chSize
+		changesSize += chSize
 		if snapshotCounter > treeStat.MaxSnapshotCounter {
 			treeStat.MaxSnapshotCounter = snapshotCounter
 		}
@@ -77,7 +91,9 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 	spaceStats.ChangeSize.Median = calcMedian(lengths)
 	spaceStats.ChangeSize.Avg = calcAvg(lengths)
 	spaceStats.ChangeSize.P95 = calcP95(lengths)
-	spaceStats.ChangeSize.MaxLen = maxLen
+	if len(lengths) > 0 {
+		spaceStats.ChangeSize.MaxLen = lengths[len(lengths)-1]
+	}
 	spaceStats.ChangeSize.Total = changesSize
 
 	if treeTop > 0 {
@@ -85,7 +101,12 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 			spaceStats.TreeStats = append(spaceStats.TreeStats, treeStat)
 		}
 		slices.SortFunc(spaceStats.TreeStats, func(a, b TreeStat) int {
-			return cmp.Compare(b.ChangesCount, a.ChangesCount)
+			res := cmp.Compare(b.ChangesCount, a.ChangesCount)
+			if res == 0 {
+				return cmp.Compare(b.ChangesSumSize, a.ChangesSumSize)
+			} else {
+				return res
+			}
 		})
 		if len(spaceStats.TreeStats) > treeTop {
 			spaceStats.TreeStats = spaceStats.TreeStats[:treeTop]
