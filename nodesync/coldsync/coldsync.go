@@ -82,6 +82,7 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 		}
 		if err = rd.Read(ctx); err != nil {
 			_ = os.RemoveAll(rd.dir)
+			_ = stream.Close()
 			if err == io.EOF {
 				return ErrRemoteSpaceLocked
 			} else {
