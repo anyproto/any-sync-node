@@ -15,6 +15,7 @@ import (
 	time "time"
 
 	nodespace "github.com/anyproto/any-sync-node/nodespace"
+	nodestorage "github.com/anyproto/any-sync-node/nodestorage"
 	app "github.com/anyproto/any-sync/app"
 	ocache "github.com/anyproto/any-sync/app/ocache"
 	commonspace "github.com/anyproto/any-sync/commonspace"
@@ -113,10 +114,10 @@ func (mr *MockServiceMockRecorder) GetSpace(arg0, arg1 any) *gomock.Call {
 }
 
 // GetStats mocks base method.
-func (m *MockService) GetStats(arg0 context.Context, arg1 string, arg2 int) (nodespace.SpaceStats, error) {
+func (m *MockService) GetStats(arg0 context.Context, arg1 string, arg2 int) (nodestorage.SpaceStats, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStats", arg0, arg1, arg2)
-	ret0, _ := ret[0].(nodespace.SpaceStats)
+	ret0, _ := ret[0].(nodestorage.SpaceStats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
