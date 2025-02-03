@@ -70,7 +70,8 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 	}
 	return p.DoDrpc(ctx, func(conn drpc.Conn) error {
 		stream, err := nodesyncproto.NewDRPCNodeSyncClient(conn).ColdSync(ctx, &nodesyncproto.ColdSyncRequest{
-			SpaceId: spaceId,
+			SpaceId:      spaceId,
+			ProtocolType: nodesyncproto.ColdSyncProtocolType_AnystoreSqlite,
 		})
 		if err != nil {
 			return err
@@ -92,6 +93,9 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 }
 
 func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
+	if req.ProtocolType != nodesyncproto.ColdSyncProtocolType_AnystoreSqlite {
+		return errors.New("unsupported protocol type")
+	}
 	err := c.storage.DumpStorage(context.Background(), req.SpaceId, func(path string) error {
 		return c.coldSyncHandle(req.SpaceId, path, stream)
 	})

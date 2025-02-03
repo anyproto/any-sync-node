@@ -18,6 +18,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/metric"
 	"go.uber.org/zap"
 )
 
@@ -173,6 +174,9 @@ func (s *storageService) Init(a *app.App) (err error) {
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(60*time.Second))
+	if m := a.Component(metric.CName); m != nil {
+		registerMetric(&StorageStat{cache: s.cache}, m.(metric.Metric).Registry())
+	}
 	return nil
 }
 
@@ -350,6 +354,7 @@ func (s *storageService) DumpStorage(ctx context.Context, id string, do func(pat
 	if err != nil {
 		return err
 	}
+	defer cont.Release()
 	tempDir, err := os.MkdirTemp("", id)
 	if err != nil {
 		return err

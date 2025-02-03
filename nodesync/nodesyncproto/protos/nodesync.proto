@@ -50,10 +50,16 @@ message PartitionSyncResponse {
 
 message ColdSyncRequest {
     string spaceId = 1;
+    ColdSyncProtocolType protocolType = 2;
 }
 
 message ColdSyncResponse {
     string filename = 2;
     bytes data = 3;
     uint32 crc32 = 4;
+}
+
+enum ColdSyncProtocolType {
+    Pogreb = 0;
+    AnystoreSqlite = 1;
 }

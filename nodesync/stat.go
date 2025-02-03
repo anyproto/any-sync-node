@@ -1,9 +1,10 @@
 package nodesync
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"sync/atomic"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type SyncStat struct {
