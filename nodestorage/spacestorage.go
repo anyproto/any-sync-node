@@ -22,12 +22,25 @@ type ChangeSizeStats struct {
 	Total  int     `json:"total"`
 }
 
+type PerObjectSizeStats struct {
+	LenTotalMax     int     `json:"len"`
+	LenTotalP95     float64 `json:"lenTotalP95"`
+	LenTotalMedian  float64 `json:"lenTotalMedian"`
+	SizeTotalMax    int     `json:"sizeTotal"`
+	SizeTotalP95    float64 `json:"SizeTotalP95"`
+	SizeTotalMedian float64 `json:"SizeTotalMedian"`
+	SizeMax         int     `json:"sizeMax"`
+	SizeP95         float64 `json:"sizeP95"`
+	SizeMedian      float64 `json:"sizeMedian"`
+}
+
 type ObjectSpaceStats struct {
-	ObjectsCount        int             `json:"objectsCount,omitempty"`
-	DeletedObjectsCount int             `json:"deletedObjectsCount"`
-	ChangesCount        int             `json:"changesCount"`
-	ChangeSize          ChangeSizeStats `json:"changeSizeStats,omitempty"`
-	TreeStats           []TreeStat      `json:"treeStats,omitempty"`
+	ObjectsCount        int                `json:"objectsCount,omitempty"`
+	DeletedObjectsCount int                `json:"deletedObjectsCount"`
+	ChangesCount        int                `json:"changesCount"`
+	ChangeSize          ChangeSizeStats    `json:"changeSizeStats,omitempty"`
+	PerObjectSize       PerObjectSizeStats `json:"perObjectSizeStats,omitempty"`
+	TreeStats           []TreeStat         `json:"treeStats,omitempty"`
 	treeMap             map[string]TreeStat
 }
 
@@ -37,6 +50,7 @@ type TreeStat struct {
 	SnapshotsCount     int    `json:"snapshotsCount"`
 	MaxSnapshotCounter int    `json:"maxSnapshotCounter"`
 	ChangesSumSize     int    `json:"payloadSize"`
+	ChangeMaxSize      int    `json:"changeMaxSize"`
 }
 
 type SpaceStats struct {
