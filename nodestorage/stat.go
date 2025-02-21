@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/query"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
@@ -69,6 +68,9 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 		lengths = append(lengths, chSize)
 		snapshotCounter := doc.Value().GetInt(objecttree.SnapshotCounterKey)
 		treeStat.ChangesSumSize += chSize
+		if treeStat.ChangeMaxSize > chSize {
+			treeStat.ChangeMaxSize = chSize
+		}
 		changesSize += chSize
 		if snapshotCounter > treeStat.MaxSnapshotCounter {
 			treeStat.MaxSnapshotCounter = snapshotCounter
@@ -94,6 +96,7 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 	if len(lengths) > 0 {
 		spaceStats.ChangeSize.MaxLen = lengths[len(lengths)-1]
 	}
+	calculateStatsPerObject(&spaceStats)
 	spaceStats.ChangeSize.Total = changesSize
 
 	if treeTop > 0 {
@@ -113,6 +116,36 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 		}
 	}
 	return
+}
+
+func calculateStatsPerObject(stats *ObjectSpaceStats) {
+	var changesCounts []int
+	var changesSumSizes []int
+	var changesMaxSizes []int
+	if stats.treeMap != nil && len(stats.treeMap) == 0 {
+		return
+	}
+
+	for _, stat := range stats.treeMap {
+		changesCounts = append(changesCounts, stat.ChangesCount)
+		changesSumSizes = append(changesSumSizes, stat.ChangesSumSize)
+		changesMaxSizes = append(changesMaxSizes, stat.ChangeMaxSize)
+	}
+
+	slices.Sort(changesCounts)
+	stats.PerObjectSize.LenTotalMax = changesCounts[len(changesCounts)-1]
+	stats.PerObjectSize.LenTotalP95 = calcP95(changesCounts)
+	stats.PerObjectSize.LenTotalMedian = calcMedian(changesCounts)
+
+	slices.Sort(changesSumSizes)
+	stats.PerObjectSize.SizeTotalMax = changesSumSizes[len(changesSumSizes)-1]
+	stats.PerObjectSize.SizeTotalP95 = calcP95(changesSumSizes)
+	stats.PerObjectSize.SizeTotalMedian = calcMedian(changesSumSizes)
+
+	slices.Sort(changesMaxSizes)
+	stats.PerObjectSize.SizeMax = changesSumSizes[len(changesMaxSizes)-1]
+	stats.PerObjectSize.SizeP95 = calcP95(changesMaxSizes)
+	stats.PerObjectSize.SizeMedian = calcMedian(changesMaxSizes)
 }
 
 func calcMedian(sortedLengths []int) (median float64) {
