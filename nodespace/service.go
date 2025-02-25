@@ -193,7 +193,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	}()
 	loadSpaceLog := log.With(zap.String("spaceId", id))
 	if err = s.checkDeletionStatus(id); err != nil {
-		loadSpaceLog.Error("checkDeletionStatus returns nil")
+		loadSpaceLog.Error("checkDeletionStatus returns nil", zap.Error(err))
 		return nil, err
 	}
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
@@ -201,19 +201,19 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 		SyncStatus: syncstatus.NewNoOpSyncStatus(),
 	})
 	if err != nil {
-		loadSpaceLog.Error("s.commonSpace.NewSpace returns nil")
+		loadSpaceLog.Error("s.commonSpace.NewSpace returns nil", zap.Error(err))
 		return
 	}
 	ns, err := newNodeSpace(cc, s.consClient, s.spaceStorageProvider)
 	if err != nil {
-		loadSpaceLog.Error("newNodeSpace returns nil")
+		loadSpaceLog.Error("newNodeSpace returns nil", zap.Error(err))
 		return
 	}
 	if err = ns.Init(ctx); err != nil {
-		loadSpaceLog.Error("ns.Init( returns nil")
+		loadSpaceLog.Error("ns.Init( returns nil", zap.Error(err))
 		return
 	}
-	loadSpaceLog.Error("default return")
+	loadSpaceLog.Error("default return", zap.Error(err))
 	return ns, nil
 }
 
