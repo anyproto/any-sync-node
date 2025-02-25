@@ -4,6 +4,9 @@ package nodespace
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/anyproto/any-sync/util/debug"
+	"os"
 	"reflect"
 	"time"
 
@@ -112,7 +115,19 @@ type SpaceStats struct {
 	} `json:"acl"`
 }
 
+func OnPanic(err error) {
+	stack := debug.Stack(true)
+	os.Stderr.Write(stack)
+	log.With(zap.String("stack", string(stack))).Error("panic recovered: %v", zap.Error(err))
+}
+
 func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("GetStats panic: %v", r)
+			OnPanic(err)
+		}
+	}()
 	space, err := s.GetSpace(ctx, id)
 	if err != nil {
 		return
