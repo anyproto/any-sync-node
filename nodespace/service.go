@@ -116,7 +116,8 @@ func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceSt
 	if err != nil {
 		return
 	}
-
+	space.lockClose()
+	defer space.unlockClose()
 	storage, ok := space.Storage().(nodestorage.NodeStorageStats)
 	if ok {
 		spaceStats.Storage, err = storage.GetSpaceStats(treeTop)
