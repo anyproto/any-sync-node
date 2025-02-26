@@ -4,6 +4,10 @@ package nodespace
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/anyproto/any-sync/util/debug"
+	"os"
+	"reflect"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -111,7 +115,19 @@ type SpaceStats struct {
 	} `json:"acl"`
 }
 
+func OnPanic(err error) {
+	stack := debug.Stack(true)
+	os.Stderr.Write(stack)
+	log.With(zap.String("stack", string(stack))).Error("panic recovered: %v", zap.Error(err))
+}
+
 func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("GetStats panic: %v", r)
+			OnPanic(err)
+		}
+	}()
 	space, err := s.GetSpace(ctx, id)
 	if err != nil {
 		return
@@ -145,6 +161,9 @@ func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceSt
 
 func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
 	v, err := s.spaceCache.Get(ctx, id)
+	if err == nil && isNilish(v) {
+		log.With(zap.String("spaceId", id)).Error("nil space has been returned")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -152,11 +171,30 @@ func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
 	return space, nil
 }
 
+func isNilish(val any) bool {
+	if val == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(val)
+	k := v.Kind()
+	switch k {
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer,
+		reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+		log.With(zap.String("isNilish", v.String())).Error("nil value has been returned")
+		return v.IsNil()
+	}
+
+	return false
+}
+
 func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {
 	defer func() {
 		log.InfoCtx(ctx, "space loaded", zap.String("id", id), zap.Error(err))
 	}()
+	loadSpaceLog := log.With(zap.String("spaceId", id))
 	if err = s.checkDeletionStatus(id); err != nil {
+		loadSpaceLog.Error("checkDeletionStatus returns nil", zap.Error(err))
 		return nil, err
 	}
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
@@ -164,15 +202,19 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 		SyncStatus: syncstatus.NewNoOpSyncStatus(),
 	})
 	if err != nil {
+		loadSpaceLog.Error("s.commonSpace.NewSpace returns nil", zap.Error(err))
 		return
 	}
 	ns, err := newNodeSpace(cc, s.consClient, s.spaceStorageProvider)
 	if err != nil {
+		loadSpaceLog.Error("newNodeSpace returns nil", zap.Error(err))
 		return
 	}
 	if err = ns.Init(ctx); err != nil {
+		loadSpaceLog.Error("ns.Init( returns nil", zap.Error(err))
 		return
 	}
+	loadSpaceLog.Error("default return", zap.Error(err))
 	return ns, nil
 }
 
