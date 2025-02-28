@@ -1,13 +1,13 @@
 module github.com/anyproto/any-sync-node
 
-go 1.23
+go 1.23.0
 
 toolchain go1.23.5
 
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
-	github.com/anyproto/any-store v0.1.6
+	github.com/anyproto/any-store v0.1.8
 	github.com/anyproto/any-sync v0.6.0-alpha.11.0.20250130160634-81304714403f
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
@@ -17,8 +17,8 @@ require (
 	go.uber.org/mock v0.5.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-	golang.org/x/net v0.34.0
+	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
+	golang.org/x/net v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
 )
@@ -84,19 +84,21 @@ require (
 	github.com/valyala/fastjson v1.6.4 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	github.com/zeebo/errs v1.3.0 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/image v0.21.0 // indirect
-	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/tools v0.30.0 // indirect
 	google.golang.org/protobuf v1.36.0 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
-	modernc.org/libc v1.61.9 // indirect
+	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.2 // indirect
-	modernc.org/sqlite v1.34.5 // indirect
+	modernc.org/sqlite v1.36.0 // indirect
 	zombiezen.com/go/sqlite v1.4.0 // indirect
 )
+
+replace zombiezen.com/go/sqlite => github.com/anyproto/go-sqlite v0.0.0-20250226111550-9b81a8e3cff4
