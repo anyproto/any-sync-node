@@ -187,7 +187,7 @@ func (s *storageService) Name() (name string) {
 }
 
 func (s *storageService) openDb(ctx context.Context, id string) (db anystore.DB, err error) {
-	dbPath := path.Join(s.rootPath, id, "store.db")
+	dbPath := filepath.Join(s.StoreDir(id), "store.db")
 	if _, err := os.Stat(dbPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, spacestorage.ErrSpaceStorageMissing
@@ -198,7 +198,7 @@ func (s *storageService) openDb(ctx context.Context, id string) (db anystore.DB,
 }
 
 func (s *storageService) createDb(ctx context.Context, id string) (db anystore.DB, err error) {
-	dirPath := path.Join(s.rootPath, id)
+	dirPath := s.StoreDir(id)
 	err = os.MkdirAll(dirPath, 0755)
 	if err != nil {
 		return nil, err
@@ -223,7 +223,7 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 			return nil, err
 		}
 		cont := &storageContainer{
-			path: path.Join(s.rootPath, id),
+			path: s.StoreDir(id),
 			db:   db,
 		}
 		return cont, nil
@@ -232,7 +232,7 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 	if err != nil {
 		return nil, err
 	}
-	return newStorageContainer(db, path.Join(s.rootPath, id)), nil
+	return newStorageContainer(db, s.StoreDir(id)), nil
 }
 
 func (s *storageService) get(ctx context.Context, id string) (container *storageContainer, err error) {
@@ -267,7 +267,7 @@ func (s *storageService) SpaceExists(id string) bool {
 	if id == "" {
 		return false
 	}
-	dbPath := path.Join(s.rootPath, id, "store.db")
+	dbPath := filepath.Join(s.StoreDir(id), "store.db")
 	if _, err := os.Stat(dbPath); err != nil {
 		return false
 	}
@@ -372,6 +372,7 @@ func (s *storageService) DumpStorage(ctx context.Context, id string, do func(pat
 func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string) error {
 	db, err := s.get(ctx, spaceId)
 	if err == nil {
+		defer db.Release()
 		db.Close()
 	}
 	spacePath := s.StoreDir(spaceId)
@@ -407,10 +408,6 @@ func (s *storageService) StoreDir(spaceId string) (path string) {
 
 func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
 	s.onWriteHash = onWrite
-}
-
-func (s *storageService) OnWriteOldHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
-	s.onWriteOldHash = onWrite
 }
 
 func (s *storageService) OnDeleteStorage(onDelete func(ctx context.Context, spaceId string)) {

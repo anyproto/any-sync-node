@@ -63,7 +63,7 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 	doc.Set("id", d.arena.NewString(spaceId))
 	doc.Set(statusKey, d.arena.NewNumberFloat64(float64(status)))
 	doc.Set(recordIdKey, d.arena.NewString(recId))
-	err = d.coll.Insert(tx.Context(), doc)
+	err = d.coll.UpsertOne(tx.Context(), doc)
 	if err != nil {
 		tx.Rollback()
 		return

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/query"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
@@ -20,9 +21,10 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 		changesSize         = 0
 		lengths             = make([]int, 0, 100)
 	)
-	if treeTop > 0 {
-		spaceStats.treeMap = map[string]TreeStat{}
+	if treeTop <= 0 {
+		treeTop = 1
 	}
+	spaceStats.treeMap = map[string]TreeStat{}
 	headsColl, err := anyStore.Collection(ctx, headstorage.HeadsCollectionName)
 	if err != nil {
 		err = fmt.Errorf("collection not found: %w", err)
@@ -56,9 +58,7 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 		newId := doc.Value().GetString(objecttree.TreeKey)
 		if treeStat.Id != newId {
 			if treeStat.Id != "" {
-				if treeTop > 0 {
-					spaceStats.treeMap[treeStat.Id] = treeStat
-				}
+				spaceStats.treeMap[treeStat.Id] = treeStat
 				docsCount++
 			}
 			treeStat = TreeStat{Id: newId}
@@ -80,9 +80,7 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 		}
 	}
 	if treeStat.Id != "" {
-		if treeTop > 0 {
-			spaceStats.treeMap[treeStat.Id] = treeStat
-		}
+		spaceStats.treeMap[treeStat.Id] = treeStat
 		docsCount++
 	}
 	slices.Sort(lengths)
@@ -99,21 +97,19 @@ func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStat
 	calculateStatsPerObject(&spaceStats)
 	spaceStats.ChangeSize.Total = changesSize
 
-	if treeTop > 0 {
-		for _, treeStat := range spaceStats.treeMap {
-			spaceStats.TreeStats = append(spaceStats.TreeStats, treeStat)
+	for _, treeStat := range spaceStats.treeMap {
+		spaceStats.TreeStats = append(spaceStats.TreeStats, treeStat)
+	}
+	slices.SortFunc(spaceStats.TreeStats, func(a, b TreeStat) int {
+		res := cmp.Compare(b.ChangesCount, a.ChangesCount)
+		if res == 0 {
+			return cmp.Compare(b.ChangesSumSize, a.ChangesSumSize)
+		} else {
+			return res
 		}
-		slices.SortFunc(spaceStats.TreeStats, func(a, b TreeStat) int {
-			res := cmp.Compare(b.ChangesCount, a.ChangesCount)
-			if res == 0 {
-				return cmp.Compare(b.ChangesSumSize, a.ChangesSumSize)
-			} else {
-				return res
-			}
-		})
-		if len(spaceStats.TreeStats) > treeTop {
-			spaceStats.TreeStats = spaceStats.TreeStats[:treeTop]
-		}
+	})
+	if len(spaceStats.TreeStats) > treeTop {
+		spaceStats.TreeStats = spaceStats.TreeStats[:treeTop]
 	}
 	return
 }

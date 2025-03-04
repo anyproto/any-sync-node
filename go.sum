@@ -9,8 +9,8 @@ github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9 h1:GnBlbnor8ge
 github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9/go.mod h1:fPb3n+7H42SxX84B4/os7POrR+UGRKSRr3kNS5+xq/c=
 github.com/anyproto/any-store v0.1.8 h1:/bxUVq6sBTwYkmPL2g1xUAWNb3axF+zPhP2dvdEBH68=
 github.com/anyproto/any-store v0.1.8/go.mod h1:GpnVhcGm5aUQtOwCnKeTt4jsWgVXZ773WbQVLFdeCFo=
-github.com/anyproto/any-sync v0.6.1 h1:Dasbp7qGQme8diGGpzaDQfSDs5o7PAK3E5rxHHrB/+4=
-github.com/anyproto/any-sync v0.6.1/go.mod h1:5js8TNBdqe75zwlr9XEQSVDtwhsvEU2qLeC2wTnT/Fo=
+github.com/anyproto/any-sync v0.6.2-0.20250304202434-b1e153d57416 h1:GAJu2BmORc2Wjvbop46n/mVONwXjlD1aUwrfZwdun8g=
+github.com/anyproto/any-sync v0.6.2-0.20250304202434-b1e153d57416/go.mod h1:uqqI2ZD0afKWEoFOLzbAGTF6DOg08EMfIAeC0adALZo=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=
