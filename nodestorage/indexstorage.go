@@ -72,7 +72,7 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 }
 
 func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) {
-	iter, err := d.coll.Find(query.All{}).Sort(recordIdKey).Iter(ctx)
+	iter, err := d.coll.Find(query.All{}).Sort("-" + recordIdKey).Iter(ctx)
 	if err != nil {
 		return
 	}

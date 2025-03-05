@@ -208,28 +208,6 @@ func (m mockConfigGetter) GetStorage() Config {
 	}
 }
 
-func newPayloadWithAcc(t *testing.T, keys *accountdata.AccountKeys) spacestorage.SpaceStorageCreatePayload {
-	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	readKey := crypto.NewAES()
-	meta := []byte("account")
-	payload := commonspace.SpaceCreatePayload{
-		SigningKey:     keys.SignKey,
-		SpaceType:      "space",
-		ReplicationKey: 10,
-		SpacePayload:   nil,
-		MasterKey:      masterKey,
-		ReadKey:        readKey,
-		MetadataKey:    metaKey,
-		Metadata:       meta,
-	}
-	createSpace, err := commonspace.StoragePayloadForSpaceCreate(payload)
-	require.NoError(t, err)
-	return createSpace
-}
-
 func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayload {
 	keys, err := accountdata.NewRandom()
 	require.NoError(t, err)
