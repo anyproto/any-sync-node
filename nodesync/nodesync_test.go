@@ -99,7 +99,7 @@ func TestNodeSync_Sync(t *testing.T) {
 
 		// cold update for ld2Only
 		fx1.coldSync.EXPECT().Sync(gomock.Any(), "ld2Only", acc2.Account().PeerId)
-		fx1.nodeHead.EXPECT().ReloadHeadFromStore("ld2Only").Return(nil)
+		fx1.nodeHead.EXPECT().ReloadHeadFromStore(gomock.Any(), "ld2Only").Return(nil)
 
 		// hot update for spaceA
 		fx1.hotSync.EXPECT().UpdateQueue([]string{"spaceA"})

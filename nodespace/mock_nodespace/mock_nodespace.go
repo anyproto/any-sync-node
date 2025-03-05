@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_nodespace/mock_nodespace.go github.com/anyproto/any-sync-node/nodespace Service,NodeSpace
 //
-
 // Package mock_nodespace is a generated GoMock package.
 package mock_nodespace
 
@@ -15,6 +14,7 @@ import (
 	time "time"
 
 	nodespace "github.com/anyproto/any-sync-node/nodespace"
+	nodestorage "github.com/anyproto/any-sync-node/nodestorage"
 	app "github.com/anyproto/any-sync/app"
 	ocache "github.com/anyproto/any-sync/app/ocache"
 	commonspace "github.com/anyproto/any-sync/commonspace"
@@ -113,10 +113,10 @@ func (mr *MockServiceMockRecorder) GetSpace(arg0, arg1 any) *gomock.Call {
 }
 
 // GetStats mocks base method.
-func (m *MockService) GetStats(arg0 context.Context, arg1 string, arg2 int) (nodespace.SpaceStats, error) {
+func (m *MockService) GetStats(arg0 context.Context, arg1 string, arg2 int) (nodestorage.SpaceStats, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStats", arg0, arg1, arg2)
-	ret0, _ := ret[0].(nodespace.SpaceStats)
+	ret0, _ := ret[0].(nodestorage.SpaceStats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -278,18 +278,18 @@ func (mr *MockNodeSpaceMockRecorder) DeleteTree(arg0, arg1 any) *gomock.Call {
 }
 
 // Description mocks base method.
-func (m *MockNodeSpace) Description() (commonspace.SpaceDescription, error) {
+func (m *MockNodeSpace) Description(arg0 context.Context) (commonspace.SpaceDescription, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Description")
+	ret := m.ctrl.Call(m, "Description", arg0)
 	ret0, _ := ret[0].(commonspace.SpaceDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Description indicates an expected call of Description.
-func (mr *MockNodeSpaceMockRecorder) Description() *gomock.Call {
+func (mr *MockNodeSpaceMockRecorder) Description(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Description", reflect.TypeOf((*MockNodeSpace)(nil).Description))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Description", reflect.TypeOf((*MockNodeSpace)(nil).Description), arg0)
 }
 
 // GetNodePeers mocks base method.
@@ -305,21 +305,6 @@ func (m *MockNodeSpace) GetNodePeers(arg0 context.Context) ([]peer.Peer, error) 
 func (mr *MockNodeSpaceMockRecorder) GetNodePeers(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockNodeSpace)(nil).GetNodePeers), arg0)
-}
-
-// HandleDeprecatedObjectSyncRequest mocks base method.
-func (m *MockNodeSpace) HandleDeprecatedObjectSyncRequest(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleDeprecatedObjectSyncRequest", arg0, arg1)
-	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HandleDeprecatedObjectSyncRequest indicates an expected call of HandleDeprecatedObjectSyncRequest.
-func (mr *MockNodeSpaceMockRecorder) HandleDeprecatedObjectSyncRequest(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleDeprecatedObjectSyncRequest", reflect.TypeOf((*MockNodeSpace)(nil).HandleDeprecatedObjectSyncRequest), arg0, arg1)
 }
 
 // HandleMessage mocks base method.

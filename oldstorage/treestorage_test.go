@@ -1,4 +1,4 @@
-package nodestorage
+package oldstorage
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/util/cidutil"
 
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func (fx *fixture) testNoKeysExist(t *testing.T, treeId string) {
 	require.False(t, res)
 }
 
-func testTreePayload(t *testing.T, store treestorage.TreeStorage, payload treestorage.TreeStorageCreatePayload) {
+func testTreePayload(t *testing.T, store oldstorage.TreeStorage, payload treestorage.TreeStorageCreatePayload) {
 	require.Equal(t, payload.RootRawChange.Id, store.Id())
 
 	root, err := store.Root()

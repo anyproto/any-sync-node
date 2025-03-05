@@ -1,9 +1,10 @@
-package nodestorage
+package oldstorage
 
 import (
 	"errors"
-	"github.com/akrylysov/pogreb"
 	"path"
+
+	"github.com/akrylysov/pogreb"
 )
 
 type SpaceStatus int

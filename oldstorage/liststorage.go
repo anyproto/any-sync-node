@@ -1,10 +1,17 @@
-package nodestorage
+package oldstorage
 
 import (
 	"context"
+	"errors"
+
 	"github.com/akrylysov/pogreb"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
+)
+
+var (
+	ErrUnknownAclId  = errors.New("unknown acl id")
+	ErrUnknownRecord = errors.New("unknown record")
 )
 
 type listStorage struct {
@@ -14,14 +21,14 @@ type listStorage struct {
 	root *consensusproto.RawRecordWithId
 }
 
-func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
+func newListStorage(db *pogreb.DB) (ls oldstorage.ListStorage, err error) {
 	keys := aclKeys{}
 	rootId, err := db.Get(keys.RootIdKey())
 	if err != nil {
 		return
 	}
 	if rootId == nil {
-		err = liststorage.ErrUnknownAclId
+		err = ErrUnknownAclId
 		return
 	}
 
@@ -30,7 +37,7 @@ func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 		return
 	}
 	if root == nil {
-		err = liststorage.ErrUnknownAclId
+		err = ErrUnknownAclId
 		return
 	}
 
@@ -48,7 +55,7 @@ func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 	return
 }
 
-func createListStorage(db *pogreb.DB, root *consensusproto.RawRecordWithId) (ls liststorage.ListStorage, err error) {
+func createListStorage(db *pogreb.DB, root *consensusproto.RawRecordWithId) (ls oldstorage.ListStorage, err error) {
 	keys := aclKeys{}
 	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
@@ -96,7 +103,7 @@ func (l *listStorage) Head() (head string, err error) {
 		return
 	}
 	if bytes == nil {
-		err = liststorage.ErrUnknownAclId
+		err = ErrUnknownAclId
 		return
 	}
 	head = string(bytes)
@@ -109,7 +116,7 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *consens
 		return
 	}
 	if res == nil {
-		err = liststorage.ErrUnknownRecord
+		err = ErrUnknownRecord
 		return
 	}
 

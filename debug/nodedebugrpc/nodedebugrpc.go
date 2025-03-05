@@ -3,6 +3,7 @@ package nodedebugrpc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -116,11 +117,8 @@ func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Reques
 
 	if err != nil {
 		errStatus := http.StatusInternalServerError
-		switch err {
-		case nodespace.ErrDoesntSupportStats:
+		if errors.Is(err, nodestorage.ErrDoesntSupportSpaceStats) {
 			errStatus = http.StatusNotImplemented
-		case nodespace.ErrSpaceStorageIsLocked:
-			errStatus = http.StatusServiceUnavailable
 		}
 
 		errorStr := fmt.Sprintf("failed to get space stats: %s", err)

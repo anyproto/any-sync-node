@@ -5,12 +5,14 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
-	"go.uber.org/multierr"
 	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/multierr"
+
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
 
 type streamReader struct {
@@ -30,6 +32,9 @@ func (sr *streamReader) Read(ctx context.Context) (err error) {
 		msg, err = sr.stream.Recv()
 		if err != nil {
 			return
+		}
+		if msg.ProtocolType != currentStorageProtocol {
+			return nodesyncproto.ErrUnsupportedStorageType
 		}
 		if err = sr.writeChunk(ctx, msg); err != nil {
 			return

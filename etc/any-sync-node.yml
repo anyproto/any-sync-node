@@ -60,6 +60,7 @@ space:
   syncPeriod: 240
 storage:
   path: db
+  anyStorePath: anyDb
 metric:
   addr: ":7001"
 nodeSync:

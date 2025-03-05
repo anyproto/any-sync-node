@@ -40,7 +40,7 @@ type Service interface {
 	PickSpace(ctx context.Context, id string) (NodeSpace, error)
 	EvictSpace(ctx context.Context, id string) error
 	Cache() ocache.OCache
-	GetStats(ctx context.Context, id string, treeTop int) (SpaceStats, error)
+	GetStats(ctx context.Context, id string, treeTop int) (nodestorage.SpaceStats, error)
 	app.ComponentRunnable
 }
 
@@ -98,49 +98,8 @@ func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 	return v.(NodeSpace), nil
 }
 
-var (
-	ErrDoesntSupportStats   = errors.New("SpaceStorage doesn't support nodestorage.SpaceStats")
-	ErrSpaceStorageIsLocked = errors.New("SpaceStorage is locked, try again later")
-)
-
-type SpaceStats struct {
-	Storage nodestorage.SpaceStats `json:"storage"`
-	Acl     struct {
-		Readers int `json:"readers"`
-		Writers int `json:"writers"`
-	} `json:"acl"`
-}
-
-func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error) {
-	space, err := s.GetSpace(ctx, id)
-	if err != nil {
-		return
-	}
-	space.lockClose()
-	defer space.unlockClose()
-	storage, ok := space.Storage().(nodestorage.NodeStorageStats)
-	if ok {
-		spaceStats.Storage, err = storage.GetSpaceStats(treeTop)
-		if err != nil {
-			return
-		}
-	} else {
-		err = ErrDoesntSupportStats
-		return
-	}
-	space.Acl().Lock()
-	defer space.Acl().Unlock()
-	for _, acc := range space.Acl().AclState().CurrentAccounts() {
-		if !acc.Permissions.NoPermissions() {
-			if acc.Permissions.CanWrite() {
-				spaceStats.Acl.Writers++
-			} else {
-				spaceStats.Acl.Readers++
-			}
-		}
-	}
-
-	return
+func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceStats nodestorage.SpaceStats, err error) {
+	return s.spaceStorageProvider.GetStats(ctx, id, treeTop)
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
@@ -156,7 +115,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	defer func() {
 		log.InfoCtx(ctx, "space loaded", zap.String("id", id), zap.Error(err))
 	}()
-	if err = s.checkDeletionStatus(id); err != nil {
+	if err = s.checkDeletionStatus(ctx, id); err != nil {
 		return nil, err
 	}
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
@@ -176,11 +135,11 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	return ns, nil
 }
 
-func (s *service) checkDeletionStatus(spaceId string) (err error) {
-	delStorage := s.spaceStorageProvider.DeletionStorage()
-	status, err := delStorage.SpaceStatus(spaceId)
+func (s *service) checkDeletionStatus(ctx context.Context, spaceId string) (err error) {
+	delStorage := s.spaceStorageProvider.IndexStorage()
+	status, err := delStorage.SpaceStatus(ctx, spaceId)
 	if err != nil {
-		if err == nodestorage.ErrUnknownSpaceId {
+		if errors.Is(err, nodestorage.ErrUnknownSpaceId) {
 			return nil
 		}
 		return err

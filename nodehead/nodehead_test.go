@@ -9,12 +9,9 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
+	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/anyproto/any-sync/testutil/testnodeconf"
 	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/assert"
@@ -33,9 +30,9 @@ func TestNodeHead_Run(t *testing.T) {
 
 	fx := newFixture(t, tmpDir)
 	store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
-	ss, err := store.CreateSpaceStorage(spaceTestPayload())
+	ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
 	require.NoError(t, err)
-	require.NoError(t, ss.WriteSpaceHash("123"))
+	require.NoError(t, ss.StateStorage().SetHash(ctx, "123"))
 	require.NoError(t, ss.Close(ctx))
 	fx.Finish(t)
 
@@ -68,7 +65,6 @@ func TestNodeHead_SetHead(t *testing.T) {
 		h2 := getHash(part)
 		assert.NotEqual(t, h1, h2)
 	})
-
 }
 
 func TestNodeHead_Ranges(t *testing.T) {
@@ -135,10 +131,7 @@ func newFixture(t *testing.T, dataPath string) *fixture {
 		ctrl:          ctrl,
 	}
 	confServ := testnodeconf.GenNodeConfig(3)
-	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
-	fx.nodeConf.EXPECT().Init(fx.a).AnyTimes()
-	fx.nodeConf.EXPECT().Run(ctx).AnyTimes()
-	fx.nodeConf.EXPECT().Close(ctx).AnyTimes()
+	anymock.ExpectComp(fx.nodeConf.EXPECT(), nodeconf.CName)
 	ch, _ := chash.New(chash.Config{
 		PartitionCount:    3000,
 		ReplicationFactor: 3,
@@ -183,27 +176,8 @@ type config struct {
 
 func (c *config) GetStorage() nodestorage.Config {
 	return nodestorage.Config{
-		Path: c.dataPath,
-	}
-}
-
-func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
-	header := &spacesyncproto.RawSpaceHeaderWithId{
-		RawHeader: []byte("header"),
-		Id:        "headerId",
-	}
-	aclRoot := &consensusproto.RawRecordWithId{
-		Payload: []byte("aclRoot"),
-		Id:      "aclRootId",
-	}
-	settings := &treechangeproto.RawTreeChangeWithId{
-		RawChange: []byte("settings"),
-		Id:        "settingsId",
-	}
-	return spacestorage.SpaceStorageCreatePayload{
-		AclWithId:           aclRoot,
-		SpaceHeaderWithId:   header,
-		SpaceSettingsWithId: settings,
+		Path:         c.dataPath,
+		AnyStorePath: c.dataPath,
 	}
 }
 

@@ -2,7 +2,6 @@ package nodespace
 
 import (
 	"context"
-	"sync/atomic"
 	"time"
 
 	"github.com/anyproto/any-sync/app/logger"
@@ -18,8 +17,6 @@ import (
 
 type NodeSpace interface {
 	commonspace.Space
-	lockClose()
-	unlockClose()
 }
 
 func newNodeSpace(cc commonspace.Space, consClient consensusclient.Service, nodeStorage nodestorage.NodeStorage) (*nodeSpace, error) {
@@ -36,7 +33,6 @@ type nodeSpace struct {
 	consClient  consensusclient.Service
 	nodeStorage nodestorage.NodeStorage
 	log         logger.CtxLogger
-	isLocked    atomic.Bool
 }
 
 func (s *nodeSpace) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) {
@@ -80,9 +76,6 @@ func (s *nodeSpace) Init(ctx context.Context) (err error) {
 }
 
 func (s *nodeSpace) TryClose(objectTTL time.Duration) (close bool, err error) {
-	if s.isLocked.Load() {
-		return false, nil
-	}
 	if close, err = s.Space.TryClose(objectTTL); close {
 		unwatchErr := s.consClient.UnWatch(s.Id())
 		if unwatchErr != nil {
@@ -98,12 +91,4 @@ func (s *nodeSpace) Close() (err error) {
 		s.log.Warn("failed to unwatch space", zap.Error(err))
 	}
 	return s.Space.Close()
-}
-
-func (s *nodeSpace) lockClose() {
-	s.isLocked.Store(true)
-}
-
-func (s *nodeSpace) unlockClose() {
-	s.isLocked.Store(false)
 }

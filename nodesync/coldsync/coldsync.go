@@ -4,16 +4,20 @@ package coldsync
 import (
 	"context"
 	"errors"
+	"io"
+	"os"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/net/pool"
+	"go.uber.org/zap"
+	"storj.io/drpc"
+
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/net/pool"
-	"go.uber.org/zap"
-	"io"
-	"os"
-	"storj.io/drpc"
 )
 
 const CName = "node.nodesync.coldsync"
@@ -23,6 +27,13 @@ var log = logger.NewNamed(CName)
 var (
 	ErrSpaceExistsLocally = errors.New("space exists locally")
 	ErrRemoteSpaceLocked  = errors.New("remote space locked")
+)
+
+const currentStorageProtocol = nodesyncproto.ColdSyncProtocolType_AnystoreSqlite
+
+var (
+	currentReqProtocol  = currentStorageProtocol
+	currentRespProtocol = currentStorageProtocol
 )
 
 func New() ColdSync {
@@ -53,7 +64,7 @@ func (c *coldSync) Name() (name string) {
 }
 
 func (c *coldSync) Sync(ctx context.Context, spaceId, peerId string) (err error) {
-	return c.storage.TryLockAndDo(spaceId, func() error {
+	return c.storage.TryLockAndDo(ctx, spaceId, func() error {
 		if c.storage.SpaceExists(spaceId) {
 			return ErrSpaceExistsLocally
 		}
@@ -68,7 +79,8 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 	}
 	return p.DoDrpc(ctx, func(conn drpc.Conn) error {
 		stream, err := nodesyncproto.NewDRPCNodeSyncClient(conn).ColdSync(ctx, &nodesyncproto.ColdSyncRequest{
-			SpaceId: spaceId,
+			SpaceId:      spaceId,
+			ProtocolType: currentReqProtocol,
 		})
 		if err != nil {
 			return err
@@ -79,6 +91,7 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 		}
 		if err = rd.Read(ctx); err != nil {
 			_ = os.RemoveAll(rd.dir)
+			_ = stream.Close()
 			if err == io.EOF {
 				return ErrRemoteSpaceLocked
 			} else {
@@ -90,23 +103,25 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 }
 
 func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
-	err := c.storage.TryLockAndDo(req.SpaceId, func() error {
-		return c.coldSyncHandle(req.SpaceId, stream)
-	})
-	if err == nodestorage.ErrLocked {
-		// TODO: we need to force headSync here
-		_, err = c.nodespace.GetSpace(stream.Context(), req.SpaceId)
+	if req.ProtocolType != currentStorageProtocol {
+		return nodesyncproto.ErrUnsupportedStorageType
 	}
+	err := c.storage.DumpStorage(context.Background(), req.SpaceId, func(path string) error {
+		return c.coldSyncHandle(req.SpaceId, path, stream)
+	})
 	if err != nil {
 		log.Info("handle error", zap.Error(err))
+		if errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
+			return spacesyncproto.ErrSpaceMissing
+		}
 		return err
 	}
 	return nil
 }
 
-func (c *coldSync) coldSyncHandle(spaceId string, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
+func (c *coldSync) coldSyncHandle(spaceId, path string, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
 	sw := &streamWriter{
-		dir:    c.storage.StoreDir(spaceId),
+		dir:    path,
 		stream: stream,
 	}
 	return sw.Write()

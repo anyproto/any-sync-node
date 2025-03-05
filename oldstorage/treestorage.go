@@ -1,4 +1,4 @@
-package nodestorage
+package oldstorage
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/akrylysov/pogreb"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 )
 
 type treeStorage struct {
@@ -16,7 +17,7 @@ type treeStorage struct {
 	root *treechangeproto.RawTreeChangeWithId
 }
 
-func newTreeStorage(db *pogreb.DB, treeId string) (ts treestorage.TreeStorage, err error) {
+func newTreeStorage(db *pogreb.DB, treeId string) (ts oldstorage.TreeStorage, err error) {
 	keys := newTreeKeys(treeId)
 	heads, err := db.Get(keys.HeadsKey())
 	if err != nil {
@@ -49,7 +50,7 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts treestorage.TreeStorage, e
 	return
 }
 
-func createTreeStorage(db *pogreb.DB, payload treestorage.TreeStorageCreatePayload) (ts treestorage.TreeStorage, err error) {
+func createTreeStorage(db *pogreb.DB, payload treestorage.TreeStorageCreatePayload) (ts oldstorage.TreeStorage, err error) {
 	keys := newTreeKeys(payload.RootRawChange.Id)
 	has, err := db.Has(keys.HeadsKey())
 	if err != nil {
