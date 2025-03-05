@@ -6,14 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anyproto/any-sync/commonspace"
-	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusclient/mock_consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/testutil/anymock"
-	"github.com/anyproto/any-sync/util/crypto"
 
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
@@ -22,7 +19,6 @@ import (
 	"github.com/anyproto/any-sync-node/nodesync/mock_nodesync"
 
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient/mock_coordinatorclient"
 	"github.com/stretchr/testify/require"
@@ -34,7 +30,7 @@ var ctx = context.Background()
 func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
-	payload := newStorageCreatePayload(t)
+	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
@@ -59,7 +55,7 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
-	payload := newStorageCreatePayload(t)
+	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
 	lg := mockDeletionLogNewPush(store.Id())
@@ -82,7 +78,7 @@ func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
 func TestSpaceDeleter_Run_Ok_LogNotFound(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
-	payload := newStorageCreatePayload(t)
+	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
@@ -124,7 +120,7 @@ func TestSpaceDeleter_Run_Ok_NoStorage(t *testing.T) {
 
 func TestSpaceDeleter_Run_Failure_LogError(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
-	payload := newStorageCreatePayload(t)
+	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
@@ -176,30 +172,6 @@ type spaceDeleterFixture struct {
 	ctrl         *gomock.Controller
 	dir          string
 	app          *app.App
-}
-
-func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayload {
-	keys, err := accountdata.NewRandom()
-	require.NoError(t, err)
-	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	readKey := crypto.NewAES()
-	meta := []byte("account")
-	payload := commonspace.SpaceCreatePayload{
-		SigningKey:     keys.SignKey,
-		SpaceType:      "space",
-		ReplicationKey: 10,
-		SpacePayload:   nil,
-		MasterKey:      masterKey,
-		ReadKey:        readKey,
-		MetadataKey:    metaKey,
-		Metadata:       meta,
-	}
-	createSpace, err := commonspace.StoragePayloadForSpaceCreate(payload)
-	require.NoError(t, err)
-	return createSpace
 }
 
 type storeConfig string

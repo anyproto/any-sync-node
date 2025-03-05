@@ -2,25 +2,17 @@ package coldsync
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
-	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/testutil/anymock"
-	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -51,7 +43,7 @@ func TestColdSync_Sync(t *testing.T) {
 		fxC, fxS, peerId := makeClientServer(t)
 		defer fxC.Finish(t)
 		defer fxS.Finish(t)
-		store := genStorage(t, fxS.store, 100, 100)
+		store := nodestorage.GenStorage(t, fxS.store, 100, 100)
 		require.NoError(t, fxC.Sync(ctx, store.Id(), peerId))
 		store, err := fxC.store.SpaceStorage(ctx, store.Id())
 		require.NoError(t, err)
@@ -75,7 +67,7 @@ func TestColdSync_Sync(t *testing.T) {
 		fxC, fxS, peerId := makeClientServer(t)
 		defer fxC.Finish(t)
 		defer fxS.Finish(t)
-		store := genStorage(t, fxS.store, 100, 100)
+		store := nodestorage.GenStorage(t, fxS.store, 100, 100)
 		currentReqProtocol = nodesyncproto.ColdSyncProtocolType_Pogreb
 		err := fxC.Sync(ctx, store.Id(), peerId)
 		require.ErrorIs(t, nodesyncproto.ErrUnsupportedStorageType, rpcerr.Unwrap(err))
@@ -84,7 +76,7 @@ func TestColdSync_Sync(t *testing.T) {
 		fxC, fxS, peerId := makeClientServer(t)
 		defer fxC.Finish(t)
 		defer fxS.Finish(t)
-		store := genStorage(t, fxS.store, 100, 100)
+		store := nodestorage.GenStorage(t, fxS.store, 100, 100)
 		currentRespProtocol = nodesyncproto.ColdSyncProtocolType_Pogreb
 		err := fxC.Sync(ctx, store.Id(), peerId)
 		require.ErrorIs(t, nodesyncproto.ErrUnsupportedStorageType, rpcerr.Unwrap(err))
@@ -143,82 +135,6 @@ type testServer struct {
 
 func (t *testServer) ColdSync(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
 	return t.cs.ColdSyncHandle(req, stream)
-}
-
-type testChangeBuilder struct {
-}
-
-func (t testChangeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *objecttree.Change, err error) {
-	return &objecttree.Change{IsDerived: false}, nil
-}
-
-func (t testChangeBuilder) UnmarshallReduced(rawIdChange *treechangeproto.RawTreeChangeWithId) (ch *objecttree.Change, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) Build(payload objecttree.BuilderContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) BuildRoot(payload objecttree.InitialContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) BuildDerivedRoot(payload objecttree.InitialDerivedContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) Marshall(ch *objecttree.Change) (*treechangeproto.RawTreeChangeWithId, error) {
-	panic("should not call")
-}
-
-func createTreeStorage(t *testing.T, storage spacestorage.SpaceStorage, treeLen, changeLen int) {
-	for i := 0; i < treeLen; i++ {
-		raw := make([]byte, changeLen)
-		payload := treestorage.TreeStorageCreatePayload{
-			RootRawChange: &treechangeproto.RawTreeChangeWithId{
-				Id:        fmt.Sprintf("root-%d", i),
-				RawChange: raw,
-			},
-		}
-		_, err := storage.CreateTreeStorage(ctx, payload)
-		require.NoError(t, err)
-	}
-}
-
-func genStorage(t *testing.T, ss nodestorage.NodeStorage, treeLen, changeLen int) spacestorage.SpaceStorage {
-	payload := newStorageCreatePayload(t)
-	store, err := ss.CreateSpaceStorage(ctx, payload)
-	objecttree.StorageChangeBuilder = func(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) objecttree.ChangeBuilder {
-		return testChangeBuilder{}
-	}
-	require.NoError(t, err)
-	createTreeStorage(t, store, treeLen, changeLen)
-	return store
-}
-
-func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayload {
-	keys, err := accountdata.NewRandom()
-	require.NoError(t, err)
-	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	readKey := crypto.NewAES()
-	meta := []byte("account")
-	payload := commonspace.SpaceCreatePayload{
-		SigningKey:     keys.SignKey,
-		SpaceType:      "space",
-		ReplicationKey: 10,
-		SpacePayload:   nil,
-		MasterKey:      masterKey,
-		ReadKey:        readKey,
-		MetadataKey:    metaKey,
-		Metadata:       meta,
-	}
-	createSpace, err := commonspace.StoragePayloadForSpaceCreate(payload)
-	require.NoError(t, err)
-	return createSpace
 }
 
 type mockConfigGetter struct {

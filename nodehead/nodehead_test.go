@@ -9,14 +9,10 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
-	"github.com/anyproto/any-sync/commonspace"
-	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/anyproto/any-sync/testutil/testnodeconf"
-	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +30,7 @@ func TestNodeHead_Run(t *testing.T) {
 
 	fx := newFixture(t, tmpDir)
 	store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
-	ss, err := store.CreateSpaceStorage(ctx, newStorageCreatePayload(t))
+	ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
 	require.NoError(t, err)
 	require.NoError(t, ss.StateStorage().SetHash(ctx, "123"))
 	require.NoError(t, ss.Close(ctx))
@@ -195,28 +191,4 @@ func (m member) Id() string {
 
 func (m member) Capacity() float64 {
 	return 1
-}
-
-func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayload {
-	keys, err := accountdata.NewRandom()
-	require.NoError(t, err)
-	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	readKey := crypto.NewAES()
-	meta := []byte("account")
-	payload := commonspace.SpaceCreatePayload{
-		SigningKey:     keys.SignKey,
-		SpaceType:      "space",
-		ReplicationKey: 10,
-		SpacePayload:   nil,
-		MasterKey:      masterKey,
-		ReadKey:        readKey,
-		MetadataKey:    metaKey,
-		Metadata:       meta,
-	}
-	createSpace, err := commonspace.StoragePayloadForSpaceCreate(payload)
-	require.NoError(t, err)
-	return createSpace
 }

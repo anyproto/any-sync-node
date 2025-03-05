@@ -12,13 +12,7 @@ import (
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace"
-	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
-	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
 )
@@ -27,7 +21,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 	t.Run("create and get", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
-		payload := newStorageCreatePayload(t)
+		payload := NewStorageCreatePayload(t)
 		store, err := ss.CreateSpaceStorage(ctx, payload)
 		require.NoError(t, err)
 		nodeStore := store.(*nodeStorage)
@@ -45,7 +39,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		defer ss.Close(ctx)
 		var allIds []string
 		for i := 0; i < 10; i++ {
-			payload := newStorageCreatePayload(t)
+			payload := NewStorageCreatePayload(t)
 			store, err := ss.CreateSpaceStorage(ctx, payload)
 			require.NoError(t, err)
 			allIds = append(allIds, payload.SpaceHeaderWithId.Id)
@@ -60,7 +54,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 	t.Run("create and exists", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
-		payload := newStorageCreatePayload(t)
+		payload := NewStorageCreatePayload(t)
 		store, err := ss.CreateSpaceStorage(ctx, payload)
 		require.NoError(t, err)
 		nodeStore := store.(*nodeStorage)
@@ -70,7 +64,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 	t.Run("create and dump", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
-		payload := newStorageCreatePayload(t)
+		payload := NewStorageCreatePayload(t)
 		store, err := ss.CreateSpaceStorage(ctx, payload)
 		require.NoError(t, err)
 		var tempPath string
@@ -88,7 +82,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 	t.Run("try lock and do", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
-		payload := newStorageCreatePayload(t)
+		payload := NewStorageCreatePayload(t)
 		err := ss.TryLockAndDo(ctx, payload.SpaceHeaderWithId.Id, func() error {
 			waitCh := make(chan struct{})
 			go func() {
@@ -115,7 +109,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
-		payload := newStorageCreatePayload(t)
+		payload := NewStorageCreatePayload(t)
 		_, err := ss.CreateSpaceStorage(ctx, payload)
 		require.NoError(t, err)
 		err = ss.DeleteSpaceStorage(ctx, payload.SpaceHeaderWithId.Id)
@@ -131,7 +125,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 	t.Run("get stats", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
-		st := genStorage(t, ss, 1000, 1000)
+		st := GenStorage(t, ss, 1000, 1000)
 		stats, err := ss.GetStats(ctx, st.Id(), 0)
 		require.NoError(t, err)
 		require.Equal(t, 1001, stats.Storage.ObjectsCount)
@@ -208,57 +202,6 @@ func (m mockConfigGetter) GetStorage() Config {
 	}
 }
 
-func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayload {
-	keys, err := accountdata.NewRandom()
-	require.NoError(t, err)
-	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	readKey := crypto.NewAES()
-	meta := []byte("account")
-	payload := commonspace.SpaceCreatePayload{
-		SigningKey:     keys.SignKey,
-		SpaceType:      "space",
-		ReplicationKey: 10,
-		SpacePayload:   nil,
-		MasterKey:      masterKey,
-		ReadKey:        readKey,
-		MetadataKey:    metaKey,
-		Metadata:       meta,
-	}
-	createSpace, err := commonspace.StoragePayloadForSpaceCreate(payload)
-	require.NoError(t, err)
-	return createSpace
-}
-
-type testChangeBuilder struct {
-}
-
-func (t testChangeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *objecttree.Change, err error) {
-	return &objecttree.Change{IsDerived: false}, nil
-}
-
-func (t testChangeBuilder) UnmarshallReduced(rawIdChange *treechangeproto.RawTreeChangeWithId) (ch *objecttree.Change, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) Build(payload objecttree.BuilderContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) BuildRoot(payload objecttree.InitialContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) BuildDerivedRoot(payload objecttree.InitialDerivedContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not call")
-}
-
-func (t testChangeBuilder) Marshall(ch *objecttree.Change) (*treechangeproto.RawTreeChangeWithId, error) {
-	panic("should not call")
-}
-
 var ctx = context.Background()
 
 func newStorageService(t *testing.T) *storageService {
@@ -269,29 +212,4 @@ func newStorageService(t *testing.T) *storageService {
 	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss)
 	a.Start(ctx)
 	return ss.(*storageService)
-}
-
-func createTreeStorage(t *testing.T, storage spacestorage.SpaceStorage, treeLen, changeLen int) {
-	for i := 0; i < treeLen; i++ {
-		raw := make([]byte, changeLen)
-		payload := treestorage.TreeStorageCreatePayload{
-			RootRawChange: &treechangeproto.RawTreeChangeWithId{
-				Id:        fmt.Sprintf("root-%d", i),
-				RawChange: raw,
-			},
-		}
-		_, err := storage.CreateTreeStorage(ctx, payload)
-		require.NoError(t, err)
-	}
-}
-
-func genStorage(t *testing.T, ss *storageService, treeLen, changeLen int) *nodeStorage {
-	payload := newStorageCreatePayload(t)
-	store, err := ss.CreateSpaceStorage(ctx, payload)
-	objecttree.StorageChangeBuilder = func(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) objecttree.ChangeBuilder {
-		return testChangeBuilder{}
-	}
-	require.NoError(t, err)
-	createTreeStorage(t, store, treeLen, changeLen)
-	return store.(*nodeStorage)
 }
