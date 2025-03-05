@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_nodesync/mock_nodesync.go github.com/anyproto/any-sync-node/nodesync NodeSync
 //
-
 // Package mock_nodesync is a generated GoMock package.
 package mock_nodesync
 

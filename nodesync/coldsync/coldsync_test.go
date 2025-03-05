@@ -2,126 +2,96 @@ package coldsync
 
 import (
 	"context"
-	"io"
-	"math/rand"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
-	"github.com/stretchr/testify/assert"
+	"github.com/anyproto/any-sync/testutil/anymock"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
 	"github.com/anyproto/any-sync-node/nodestorage"
-	"github.com/anyproto/any-sync-node/nodestorage/mock_nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
 
 var ctx = context.Background()
 
-//
-//func TestColdSync_Sync(t *testing.T) {
-//	var makeClientServer = func(t *testing.T) (fxC, fxS *fixture, peerId string) {
-//		fxC = newFixture(t)
-//		fxS = newFixture(t)
-//		peerId = "peer"
-//		mcS, mcC := rpctest.MultiConnPair(peerId, peerId+"client")
-//		pS, err := peer.NewPeer(mcS, fxC.ts)
-//		require.NoError(t, err)
-//		fxC.tp.AddPeer(ctx, pS)
-//		_, err = peer.NewPeer(mcC, fxS.ts)
-//		require.NoError(t, err)
-//		return
-//	}
-//
-//	t.Run("sync", func(t *testing.T) {
-//		var spaceId = "spaceId"
-//		fxC, fxS, peerId := makeClientServer(t)
-//		defer fxC.Finish(t)
-//		defer fxS.Finish(t)
-//		writeFiles(t, fxS.store.StoreDir(spaceId), testFiles...)
-//		fxC.store.EXPECT().
-//			TryLockAndDo(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
-//			DoAndReturn(func(ctx context.Context, spaceId string, do func() error) (err error) {
-//				return do()
-//			})
-//		fxS.store.EXPECT().
-//			TryLockAndDo(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
-//			DoAndReturn(func(ctx context.Context, spaceId string, do func() error) (err error) {
-//				return do()
-//			})
-//		fxC.store.EXPECT().SpaceExists(spaceId).Return(false)
-//
-//		require.NoError(t, fxC.Sync(ctx, "spaceId", peerId))
-//
-//		for _, tf := range testFiles {
-//			cBytes, err := os.ReadFile(filepath.Join(fxC.store.StoreDir(spaceId), tf.name))
-//			require.NoError(t, err)
-//			sBytes, err := os.ReadFile(filepath.Join(fxS.store.StoreDir(spaceId), tf.name))
-//			require.NoError(t, err)
-//			assert.True(t, bytes.Equal(cBytes, sBytes))
-//		}
-//	})
-//	t.Run("remote space in cache", func(t *testing.T) {
-//		var spaceId = "spaceId"
-//		fxC, fxS, peerId := makeClientServer(t)
-//		defer fxC.Finish(t)
-//		defer fxS.Finish(t)
-//		fxC.store.EXPECT().
-//			TryLockAndDo(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
-//			DoAndReturn(func(ctx context.Context, spaceId string, do func() error) (err error) {
-//				return do()
-//			})
-//		fxC.store.EXPECT().SpaceExists(spaceId).Return(false)
-//		fxS.store.EXPECT().TryLockAndDo(gomock.Any(), gomock.Any(), gomock.Any()).Return(nodestorage.ErrLocked)
-//		fxS.space.EXPECT().GetSpace(gomock.Any(), spaceId).Return(nil, nil)
-//		err := fxC.Sync(ctx, "spaceId", peerId)
-//		assert.Equal(t, ErrRemoteSpaceLocked, err)
-//	})
-//	t.Run("remote error", func(t *testing.T) {
-//		var spaceId = "spaceId"
-//		fxC, fxS, peerId := makeClientServer(t)
-//		defer fxC.Finish(t)
-//		defer fxS.Finish(t)
-//		fxC.store.EXPECT().
-//			TryLockAndDo(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().
-//			DoAndReturn(func(ctx context.Context, spaceId string, do func() error) (err error) {
-//				return do()
-//			})
-//		fxC.store.EXPECT().SpaceExists(spaceId).Return(false)
-//		testErr := errors.New("test remote error")
-//		fxS.store.EXPECT().TryLockAndDo(gomock.Any(), gomock.Any(), gomock.Any()).Return(testErr)
-//		err := fxC.Sync(ctx, "spaceId", peerId)
-//		assert.EqualError(t, err, testErr.Error())
-//	})
-//}
-
-type fInfo struct {
-	name string
-	size int
-}
-
-func writeFiles(t *testing.T, dir string, files ...fInfo) {
-	for _, fi := range files {
-		fpath := filepath.Join(dir, fi.name)
-		_ = os.MkdirAll(filepath.Dir(fpath), 0755)
-		f, err := os.Create(fpath)
+func TestColdSync_Sync(t *testing.T) {
+	var makeClientServer = func(t *testing.T) (fxC, fxS *fixture, peerId string) {
+		fxC = newFixture(t)
+		fxS = newFixture(t)
+		peerId = "peer"
+		mcS, mcC := rpctest.MultiConnPair(peerId, peerId+"client")
+		pS, err := peer.NewPeer(mcS, fxC.ts)
 		require.NoError(t, err)
-		defer f.Close()
-		written, err := io.CopyN(f, rand.New(rand.NewSource(time.Now().UnixNano())), int64(fi.size))
+		fxC.tp.AddPeer(ctx, pS)
+		_, err = peer.NewPeer(mcC, fxS.ts)
 		require.NoError(t, err)
-		assert.Equal(t, int64(fi.size), written)
+		return
 	}
+	t.Run("sync", func(t *testing.T) {
+		// whether the space in cache or not doesn't matter
+		// because we do backup
+		fxC, fxS, peerId := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+		store := genStorage(t, fxS.store, 100, 100)
+		require.NoError(t, fxC.Sync(ctx, store.Id(), peerId))
+		store, err := fxC.store.SpaceStorage(ctx, store.Id())
+		require.NoError(t, err)
+		cnt := 0
+		err = store.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
+			cnt++
+			return true, nil
+		})
+		require.NoError(t, err)
+		// 100 trees + acl + settings
+		require.Equal(t, 102, cnt)
+	})
+	t.Run("space missing", func(t *testing.T) {
+		fxC, fxS, peerId := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+		err := fxC.Sync(ctx, "id", peerId)
+		require.ErrorIs(t, spacesyncproto.ErrSpaceMissing, rpcerr.Unwrap(err))
+	})
+	t.Run("unsupported storage request", func(t *testing.T) {
+		fxC, fxS, peerId := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+		store := genStorage(t, fxS.store, 100, 100)
+		currentReqProtocol = nodesyncproto.ColdSyncProtocolType_Pogreb
+		err := fxC.Sync(ctx, store.Id(), peerId)
+		require.ErrorIs(t, nodesyncproto.ErrUnsupportedStorageType, rpcerr.Unwrap(err))
+	})
+	t.Run("unsupported storage response", func(t *testing.T) {
+		fxC, fxS, peerId := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+		store := genStorage(t, fxS.store, 100, 100)
+		currentRespProtocol = nodesyncproto.ColdSyncProtocolType_Pogreb
+		err := fxC.Sync(ctx, store.Id(), peerId)
+		require.ErrorIs(t, nodesyncproto.ErrUnsupportedStorageType, rpcerr.Unwrap(err))
+	})
 }
 
 func newFixture(t *testing.T) (fx *fixture) {
-	tmpDir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
 	ts := rpctest.NewTestServer()
 	fx = &fixture{
 		ColdSync: New(),
@@ -129,22 +99,19 @@ func newFixture(t *testing.T) (fx *fixture) {
 		a:        new(app.App),
 		ts:       ts,
 		tp:       rpctest.NewTestPool(),
-		tmpDir:   tmpDir,
+		tmpDir:   t.TempDir(),
 	}
-	fx.store = mock_nodestorage.NewMockNodeStorage(fx.ctrl)
-	fx.store.EXPECT().Name().Return(nodestorage.CName).AnyTimes()
-	fx.store.EXPECT().Init(gomock.Any()).AnyTimes()
-	fx.store.EXPECT().StoreDir(gomock.Any()).AnyTimes().
-		DoAndReturn(func(spaceId string) string {
-			return filepath.Join(fx.tmpDir, spaceId)
-		})
+	tempDir := fx.tmpDir
+	fx.store = nodestorage.New()
 	fx.space = mock_nodespace.NewMockService(fx.ctrl)
-	fx.space.EXPECT().Name().Return(nodespace.CName).AnyTimes()
-	fx.space.EXPECT().Init(gomock.Any()).AnyTimes()
-	fx.space.EXPECT().Run(gomock.Any()).AnyTimes()
-	fx.space.EXPECT().Close(gomock.Any()).AnyTimes()
-
-	fx.a.Register(fx.ColdSync).Register(fx.tp).Register(fx.ts).Register(fx.store).Register(fx.space)
+	configGetter := mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}
+	anymock.ExpectComp(fx.space.EXPECT(), nodespace.CName)
+	fx.a.Register(configGetter).
+		Register(fx.store).
+		Register(fx.ColdSync).
+		Register(fx.tp).
+		Register(fx.ts).
+		Register(fx.space)
 	require.NoError(t, nodesyncproto.DRPCRegisterNodeSync(ts, &testServer{cs: fx.ColdSync}))
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
@@ -153,7 +120,7 @@ func newFixture(t *testing.T) (fx *fixture) {
 type fixture struct {
 	ColdSync
 	a      *app.App
-	store  *mock_nodestorage.MockNodeStorage
+	store  nodestorage.NodeStorage
 	ctrl   *gomock.Controller
 	tmpDir string
 	space  *mock_nodespace.MockService
@@ -178,21 +145,98 @@ func (t *testServer) ColdSync(req *nodesyncproto.ColdSyncRequest, stream nodesyn
 	return t.cs.ColdSyncHandle(req, stream)
 }
 
-var testFiles = []fInfo{
-	{
-		name: "small.t",
-		size: 3,
-	},
-	{
-		name: "dir1/chunkSize.t",
-		size: chunkSize,
-	},
-	{
-		name: "dir2/2chunkSize.t",
-		size: chunkSize * 2,
-	},
-	{
-		name: "dir1/big.t",
-		size: (chunkSize * 10) - 5,
-	},
+type testChangeBuilder struct {
+}
+
+func (t testChangeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *objecttree.Change, err error) {
+	return &objecttree.Change{IsDerived: false}, nil
+}
+
+func (t testChangeBuilder) UnmarshallReduced(rawIdChange *treechangeproto.RawTreeChangeWithId) (ch *objecttree.Change, err error) {
+	panic("should not call")
+}
+
+func (t testChangeBuilder) Build(payload objecttree.BuilderContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
+	panic("should not call")
+}
+
+func (t testChangeBuilder) BuildRoot(payload objecttree.InitialContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
+	panic("should not call")
+}
+
+func (t testChangeBuilder) BuildDerivedRoot(payload objecttree.InitialDerivedContent) (ch *objecttree.Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
+	panic("should not call")
+}
+
+func (t testChangeBuilder) Marshall(ch *objecttree.Change) (*treechangeproto.RawTreeChangeWithId, error) {
+	panic("should not call")
+}
+
+func createTreeStorage(t *testing.T, storage spacestorage.SpaceStorage, treeLen, changeLen int) {
+	for i := 0; i < treeLen; i++ {
+		raw := make([]byte, changeLen)
+		payload := treestorage.TreeStorageCreatePayload{
+			RootRawChange: &treechangeproto.RawTreeChangeWithId{
+				Id:        fmt.Sprintf("root-%d", i),
+				RawChange: raw,
+			},
+		}
+		_, err := storage.CreateTreeStorage(ctx, payload)
+		require.NoError(t, err)
+	}
+}
+
+func genStorage(t *testing.T, ss nodestorage.NodeStorage, treeLen, changeLen int) spacestorage.SpaceStorage {
+	payload := newStorageCreatePayload(t)
+	store, err := ss.CreateSpaceStorage(ctx, payload)
+	objecttree.StorageChangeBuilder = func(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) objecttree.ChangeBuilder {
+		return testChangeBuilder{}
+	}
+	require.NoError(t, err)
+	createTreeStorage(t, store, treeLen, changeLen)
+	return store
+}
+
+func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayload {
+	keys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	readKey := crypto.NewAES()
+	meta := []byte("account")
+	payload := commonspace.SpaceCreatePayload{
+		SigningKey:     keys.SignKey,
+		SpaceType:      "space",
+		ReplicationKey: 10,
+		SpacePayload:   nil,
+		MasterKey:      masterKey,
+		ReadKey:        readKey,
+		MetadataKey:    metaKey,
+		Metadata:       meta,
+	}
+	createSpace, err := commonspace.StoragePayloadForSpaceCreate(payload)
+	require.NoError(t, err)
+	return createSpace
+}
+
+type mockConfigGetter struct {
+	tempStoreNew string
+	tempStoreOld string
+}
+
+func (m mockConfigGetter) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (m mockConfigGetter) Name() (name string) {
+	return "config"
+}
+
+func (m mockConfigGetter) GetStorage() nodestorage.Config {
+	return nodestorage.Config{
+		Path:         m.tempStoreOld,
+		AnyStorePath: m.tempStoreNew,
+	}
 }

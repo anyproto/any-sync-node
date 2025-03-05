@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_hotsync/mock_hotsync.go github.com/anyproto/any-sync-node/nodesync/hotsync HotSync
 //
-
 // Package mock_hotsync is a generated GoMock package.
 package mock_hotsync
 

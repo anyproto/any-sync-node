@@ -6,6 +6,7 @@ option go_package = "nodesync/nodesyncproto";
 enum ErrCodes {
     Unexpected = 0;
     ExpectedCoordinator = 1;
+    UnsupportedStorage = 2;
     ErrorOffset = 1000;
 }
 
@@ -57,6 +58,7 @@ message ColdSyncResponse {
     string filename = 2;
     bytes data = 3;
     uint32 crc32 = 4;
+    ColdSyncProtocolType protocolType = 5;
 }
 
 enum ColdSyncProtocolType {

@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_coldsync/mock_coldsync.go github.com/anyproto/any-sync-node/nodesync/coldsync ColdSync
 //
-
 // Package mock_coldsync is a generated GoMock package.
 package mock_coldsync
 

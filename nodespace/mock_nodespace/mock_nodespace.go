@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_nodespace/mock_nodespace.go github.com/anyproto/any-sync-node/nodespace Service,NodeSpace
 //
-
 // Package mock_nodespace is a generated GoMock package.
 package mock_nodespace
 

@@ -9,6 +9,8 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/pool"
 	"go.uber.org/zap"
 	"storj.io/drpc"
@@ -25,6 +27,13 @@ var log = logger.NewNamed(CName)
 var (
 	ErrSpaceExistsLocally = errors.New("space exists locally")
 	ErrRemoteSpaceLocked  = errors.New("remote space locked")
+)
+
+const currentStorageProtocol = nodesyncproto.ColdSyncProtocolType_AnystoreSqlite
+
+var (
+	currentReqProtocol  = currentStorageProtocol
+	currentRespProtocol = currentStorageProtocol
 )
 
 func New() ColdSync {
@@ -71,7 +80,7 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 	return p.DoDrpc(ctx, func(conn drpc.Conn) error {
 		stream, err := nodesyncproto.NewDRPCNodeSyncClient(conn).ColdSync(ctx, &nodesyncproto.ColdSyncRequest{
 			SpaceId:      spaceId,
-			ProtocolType: nodesyncproto.ColdSyncProtocolType_AnystoreSqlite,
+			ProtocolType: currentReqProtocol,
 		})
 		if err != nil {
 			return err
@@ -94,14 +103,17 @@ func (c *coldSync) coldSync(ctx context.Context, spaceId, peerId string) (err er
 }
 
 func (c *coldSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
-	if req.ProtocolType != nodesyncproto.ColdSyncProtocolType_AnystoreSqlite {
-		return errors.New("unsupported protocol type")
+	if req.ProtocolType != currentStorageProtocol {
+		return nodesyncproto.ErrUnsupportedStorageType
 	}
 	err := c.storage.DumpStorage(context.Background(), req.SpaceId, func(path string) error {
 		return c.coldSyncHandle(req.SpaceId, path, stream)
 	})
 	if err != nil {
 		log.Info("handle error", zap.Error(err))
+		if errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
+			return spacesyncproto.ErrSpaceMissing
+		}
 		return err
 	}
 	return nil

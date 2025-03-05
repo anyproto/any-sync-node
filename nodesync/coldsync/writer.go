@@ -3,12 +3,13 @@ package coldsync
 import (
 	"bufio"
 	"compress/gzip"
-	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 	"hash/crc32"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/anyproto/any-sync-node/nodesync/nodesyncproto"
 )
 
 const chunkSize = 1024 * 1024 // 1 Mb
@@ -74,9 +75,10 @@ type fileWriter struct {
 
 func (f *fileWriter) Write(p []byte) (n int, err error) {
 	if err = f.sw.stream.Send(&nodesyncproto.ColdSyncResponse{
-		Filename: f.filename,
-		Data:     p,
-		Crc32:    crc32.ChecksumIEEE(p),
+		Filename:     f.filename,
+		Data:         p,
+		Crc32:        crc32.ChecksumIEEE(p),
+		ProtocolType: currentRespProtocol,
 	}); err != nil {
 		return
 	}
