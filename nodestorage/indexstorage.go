@@ -17,6 +17,7 @@ type SpaceStatus int
 const (
 	SpaceStatusOk SpaceStatus = iota
 	SpaceStatusRemove
+	SpaceStatusRemovePrepare
 )
 
 var (

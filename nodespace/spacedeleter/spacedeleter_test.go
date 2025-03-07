@@ -176,7 +176,7 @@ func TestSpaceDeleter_Run_Failure_LogError(t *testing.T) {
 
 	id, err := fx.storage.IndexStorage().LastRecordId(ctx)
 	require.NoError(t, err)
-	require.Equal(t, lg[0].Id, id)
+	require.Equal(t, lg[1].Id, id)
 	// checking that storage is still there
 	store, err = fx.storage.WaitSpaceStorage(ctx, payload.SpaceHeaderWithId.Id)
 	require.NoError(t, err)
