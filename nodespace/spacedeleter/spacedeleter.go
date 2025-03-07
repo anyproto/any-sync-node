@@ -118,24 +118,20 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 	deleteSpace := func() error {
 		// trying to get the storage
 		st, err := s.storageProvider.WaitSpaceStorage(ctx, rec.SpaceId)
-		if err != nil {
-			if errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
-				return s.deletionStorage.SetSpaceStatus(ctx, rec.SpaceId, nodestorage.SpaceStatusRemove, rec.Id)
+		if err == nil {
+			// getting the log Id
+			acl, err := st.AclStorage()
+			if err != nil {
+				st.Close(ctx)
+				return err
 			}
-			return err
-		}
-		// getting the log Id
-		acl, err := st.AclStorage()
-		if err != nil {
+			logId := acl.Id()
 			st.Close(ctx)
-			return err
-		}
-		logId := acl.Id()
-		st.Close(ctx)
-		// deleting log from consensus
-		err = s.consClient.DeleteLog(ctx, logId)
-		if err != nil && !errors.Is(err, consensuserr.ErrLogNotFound) {
-			return err
+			// deleting log from consensus
+			err = s.consClient.DeleteLog(ctx, logId)
+			if err != nil && !errors.Is(err, consensuserr.ErrLogNotFound) {
+				return err
+			}
 		}
 		// deleting space storage
 		err = s.storageProvider.DeleteSpaceStorage(ctx, rec.SpaceId)
