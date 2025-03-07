@@ -120,7 +120,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
 		err := ss.DeleteSpaceStorage(ctx, "1")
-		require.Equal(t, spacestorage.ErrSpaceStorageMissing, err)
+		require.NoError(t, err)
 	})
 	t.Run("get stats", func(t *testing.T) {
 		ss := newStorageService(t)

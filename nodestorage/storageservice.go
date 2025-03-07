@@ -228,9 +228,15 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 		}
 		return cont, nil
 	}
+	// we assume that the database is not empty
 	db, err := s.openDb(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	collNames, err := db.GetCollectionNames(ctx)
+	if len(collNames) == 0 {
+		os.RemoveAll(s.StoreDir(id))
+		return nil, spacestorage.ErrSpaceStorageMissing
 	}
 	return newStorageContainer(db, s.StoreDir(id)), nil
 }
@@ -376,12 +382,6 @@ func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string)
 		db.Close()
 	}
 	spacePath := s.StoreDir(spaceId)
-	if _, err := os.Stat(spacePath); err != nil {
-		if os.IsNotExist(err) {
-			return spacestorage.ErrSpaceStorageMissing
-		}
-		return fmt.Errorf("can't delete datadir '%s': %w", spacePath, err)
-	}
 	if s.onDeleteStorage != nil {
 		s.onDeleteStorage(ctx, spaceId)
 	}

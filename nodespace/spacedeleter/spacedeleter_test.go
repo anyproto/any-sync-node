@@ -118,6 +118,48 @@ func TestSpaceDeleter_Run_Ok_NoStorage(t *testing.T) {
 	require.Equal(t, nodestorage.SpaceStatusRemove, status)
 }
 
+type forceRemover interface {
+	nodestorage.NodeStorage
+	ForceRemove(id string) (err error)
+}
+
+func TestSpaceDeleter_Run_Ok_EmptyStorage(t *testing.T) {
+	fx := newSpaceDeleterFixture(t)
+	defer fx.stop(t)
+	payload := nodestorage.NewStorageCreatePayload(t)
+	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
+	require.NoError(t, err)
+	lg := mockDeletionLog(store.Id())
+	collNames, err := store.AnyStore().GetCollectionNames(ctx)
+	require.NoError(t, err)
+	for _, name := range collNames {
+		coll, err := store.AnyStore().Collection(ctx, name)
+		require.NoError(t, err)
+		err = coll.Drop(ctx)
+		require.NoError(t, err)
+	}
+	collNames, err = store.AnyStore().GetCollectionNames(ctx)
+	require.NoError(t, err)
+	require.Empty(t, collNames)
+	err = fx.storage.(forceRemover).ForceRemove(store.Id())
+	require.NoError(t, err)
+
+	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
+	store.Close(context.Background())
+
+	close(fx.waiterChan)
+	<-fx.deleter.testChan
+
+	id, err := fx.storage.IndexStorage().LastRecordId(ctx)
+	require.NoError(t, err)
+	require.Equal(t, lg[2].Id, id)
+	store, err = fx.storage.WaitSpaceStorage(context.Background(), payload.SpaceHeaderWithId.Id)
+	require.Error(t, err)
+	status, err := fx.storage.IndexStorage().SpaceStatus(ctx, payload.SpaceHeaderWithId.Id)
+	require.NoError(t, err)
+	require.Equal(t, nodestorage.SpaceStatusRemove, status)
+}
+
 func TestSpaceDeleter_Run_Failure_LogError(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	payload := nodestorage.NewStorageCreatePayload(t)
