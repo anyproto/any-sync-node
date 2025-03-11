@@ -14,6 +14,7 @@ import (
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
@@ -39,16 +40,19 @@ type doFunc = func() error
 type storageContainer struct {
 	db        anystore.DB
 	mx        sync.Mutex
-	path      string
+	id        string
+	debugInfo string
+	created   time.Time
 	handlers  int
 	isClosing bool
 	closeCh   chan struct{}
 }
 
-func newStorageContainer(db anystore.DB, path string) *storageContainer {
+func newStorageContainer(db anystore.DB, id string) *storageContainer {
 	return &storageContainer{
 		db:      db,
-		closeCh: make(chan struct{}),
+		id:      id,
+		created: time.Now(),
 	}
 }
 
@@ -130,6 +134,18 @@ type NodeStorage interface {
 	GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error)
 }
 
+type StorageStats struct {
+	Total  int                `json:"total"`
+	Spaces []SpaceStorageStat `json:"spaces"`
+}
+
+type SpaceStorageStat struct {
+	Id            string `json:"id"`
+	Refs          int    `json:"refs"`
+	Info          string `json:"info"`
+	InStorageSecs int    `json:"inStorageSecs"`
+}
+
 type storageService struct {
 	rootPath        string
 	cache           ocache.OCache
@@ -139,6 +155,33 @@ type storageService struct {
 	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
 	currentSpaces   map[string]*storageContainer
 	mu              sync.Mutex
+	statService     debugstat.StatService
+}
+
+func (s *storageService) ProvideStat() any {
+	stat := &StorageStats{}
+	s.cache.ForEach(func(v ocache.Object) (isContinue bool) {
+		cont := v.(*storageContainer)
+		cont.mx.Lock()
+		defer cont.mx.Unlock()
+		stat.Total++
+		stat.Spaces = append(stat.Spaces, SpaceStorageStat{
+			Id:            cont.id,
+			Refs:          cont.handlers,
+			Info:          cont.debugInfo,
+			InStorageSecs: int(time.Since(cont.created).Seconds()),
+		})
+		return true
+	})
+	return stat
+}
+
+func (s *storageService) StatId() string {
+	return CName
+}
+
+func (s *storageService) StatType() string {
+	return "storages"
 }
 
 func (s *storageService) onHashChange(spaceId, hash string) {
@@ -156,6 +199,7 @@ func (s *storageService) Close(ctx context.Context) (err error) {
 	if s.indexStorage != nil {
 		return s.indexStorage.Close()
 	}
+	s.statService.RemoveProvider(s)
 	return
 }
 
@@ -172,6 +216,12 @@ func (s *storageService) Init(a *app.App) (err error) {
 			return err
 		}
 	}
+	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
+	if !ok {
+		comp = debugstat.NewNoOp()
+	}
+	s.statService = comp
+	s.statService.AddProvider(s)
 	s.cache = ocache.New(s.loadFunc,
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
@@ -207,12 +257,28 @@ func (s *storageService) createDb(ctx context.Context, id string) (db anystore.D
 	return anystore.Open(ctx, dbPath, anyStoreConfig())
 }
 
+const (
+	debugInfoIsCreate  = "create"
+	debugInfoIsOpen    = "open"
+	debugInfoIsAfterDo = "afterDo"
+)
+
 func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.Object, err error) {
+	var (
+		info string
+		cont *storageContainer
+	)
+	defer func() {
+		if cont != nil {
+			cont.debugInfo = info
+		}
+	}()
 	if fn, ok := ctx.Value(doKeyVal).(doFunc); ok {
 		err := fn()
 		if err != nil {
 			return nil, err
 		}
+		info = debugInfoIsAfterDo
 		// continue to open
 	} else if ctx.Value(createKeyVal) != nil {
 		if s.SpaceExists(id) {
@@ -222,11 +288,11 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 		if err != nil {
 			return nil, err
 		}
-		cont := &storageContainer{
-			path: s.StoreDir(id),
-			db:   db,
-		}
+		info = debugInfoIsCreate
+		cont = newStorageContainer(db, id)
 		return cont, nil
+	} else {
+		info = debugInfoIsOpen
 	}
 	// we assume that the database is not empty
 	db, err := s.openDb(ctx, id)
@@ -238,7 +304,8 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 		os.RemoveAll(s.StoreDir(id))
 		return nil, spacestorage.ErrSpaceStorageMissing
 	}
-	return newStorageContainer(db, s.StoreDir(id)), nil
+	cont = newStorageContainer(db, id)
+	return cont, nil
 }
 
 func (s *storageService) get(ctx context.Context, id string) (container *storageContainer, err error) {
