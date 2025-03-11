@@ -181,7 +181,7 @@ func (s *storageService) StatId() string {
 }
 
 func (s *storageService) StatType() string {
-	return "storages"
+	return CName
 }
 
 func (s *storageService) onHashChange(spaceId, hash string) {
