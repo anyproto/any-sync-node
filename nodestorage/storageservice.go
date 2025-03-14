@@ -331,6 +331,8 @@ func (s *storageService) WaitSpaceStorage(ctx context.Context, id string) (space
 	}
 	st, err := spacestorage.New(ctx, id, db)
 	if err != nil {
+		log.Error("can't wait for space storage", zap.Error(err))
+		cont.Release()
 		return nil, err
 	}
 	return newNodeStorage(st, cont, s.onHashChange), nil
@@ -359,6 +361,8 @@ func (s *storageService) CreateSpaceStorage(ctx context.Context, payload spacest
 	}
 	st, err := spacestorage.Create(ctx, db, payload)
 	if err != nil {
+		log.Error("can't create space storage", zap.Error(err))
+		cont.Release()
 		return nil, err
 	}
 	return newNodeStorage(st, cont, s.onHashChange), nil
