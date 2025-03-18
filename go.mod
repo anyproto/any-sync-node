@@ -7,8 +7,8 @@ toolchain go1.23.5
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
-	github.com/anyproto/any-store v0.1.8
-	github.com/anyproto/any-sync v0.6.4
+	github.com/anyproto/any-store v0.1.11
+	github.com/anyproto/any-sync v0.6.6
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.21.1
@@ -17,7 +17,7 @@ require (
 	go.uber.org/mock v0.5.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	golang.org/x/net v0.37.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
@@ -97,7 +97,7 @@ require (
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.2 // indirect
-	modernc.org/sqlite v1.36.0 // indirect
+	modernc.org/sqlite v1.36.1 // indirect
 	zombiezen.com/go/sqlite v1.4.0 // indirect
 )
 
