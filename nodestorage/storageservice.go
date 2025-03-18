@@ -449,7 +449,6 @@ func (s *storageService) DumpStorage(ctx context.Context, id string, do func(pat
 func (s *storageService) DeleteSpaceStorage(ctx context.Context, spaceId string) error {
 	db, err := s.get(ctx, spaceId)
 	if err == nil {
-		defer db.Release()
 		db.Close()
 	}
 	spacePath := s.StoreDir(spaceId)
