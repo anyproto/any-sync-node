@@ -35,8 +35,9 @@ func New() NodeHead {
 
 // NodeHead keeps current state of all spaces by partitions
 type NodeHead interface {
-	SetHead(spaceId, head string) (part int, err error)
+	SetHead(spaceId, oldHead, newHead string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
+	GetOldHead(spaceId string) (head string, err error)
 	DeleteHeads(spaceId string) error
 	ReloadHeadFromStore(ctx context.Context, spaceId string) error
 	LDiff(partId int) ldiff.Diff
@@ -62,8 +63,8 @@ func (n *nodeHead) Init(a *app.App) (err error) {
 	n.oldHashes = map[string]string{}
 	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	n.spaceStore = a.MustComponent(spacestorage.CName).(nodeStorage)
-	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
-		if _, e := n.SetHead(spaceId, hash); e != nil {
+	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, oldHash, newHash string) {
+		if _, e := n.SetHead(spaceId, oldHash, newHash); e != nil {
 			log.Error("can't set head", zap.Error(e))
 		}
 	})
@@ -121,7 +122,7 @@ func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err e
 	if err != nil {
 		return
 	}
-	_, err = n.SetHead(spaceId, state.Hash)
+	_, err = n.SetHead(spaceId, state.OldHash, state.NewHash)
 	return
 }
 
@@ -136,7 +137,7 @@ func (n *nodeHead) DeleteHeads(spaceId string) error {
 	return nil
 }
 
-func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
+func (n *nodeHead) SetHead(spaceId, oldHead, newHead string) (part int, err error) {
 	part = n.nodeconf.Partition(spaceId)
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -145,7 +146,8 @@ func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
 		ld = ldiff.New(16, 16)
 		n.partitions[part] = ld
 	}
-	ld.Set(ldiff.Element{Id: spaceId, Head: head})
+	ld.Set(ldiff.Element{Id: spaceId, Head: newHead})
+	n.oldHashes[spaceId] = oldHead
 	return
 }
 
@@ -181,6 +183,16 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 		return
 	}
 	return el.Head, nil
+}
+
+func (n *nodeHead) GetOldHead(spaceId string) (hash string, err error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	hash, ok := n.oldHashes[spaceId]
+	if !ok {
+		err = ErrSpaceNotFound
+	}
+	return
 }
 
 func (n *nodeHead) ReloadHeadFromStore(ctx context.Context, spaceId string) error {

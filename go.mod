@@ -8,7 +8,7 @@ require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
 	github.com/anyproto/any-store v0.1.11
-	github.com/anyproto/any-sync v0.6.6
+	github.com/anyproto/any-sync v0.6.9-0.20250325141609-4aefff8cafdf
 	github.com/anyproto/go-chash v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/prometheus/client_golang v1.21.1
@@ -100,5 +100,3 @@ require (
 	modernc.org/sqlite v1.36.1 // indirect
 	zombiezen.com/go/sqlite v1.4.0 // indirect
 )
-
-replace zombiezen.com/go/sqlite => github.com/anyproto/go-sqlite v0.0.0-20250226111550-9b81a8e3cff4
