@@ -248,6 +248,9 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 	if len(req.Ranges) == 1 && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
 		switch req.DiffType {
 		case spacesyncproto.DiffType_V2:
+			if req.Ranges[0].Elements {
+				return nil
+			}
 			hash, err := r.s.nodeHead.GetHead(req.SpaceId)
 			if err != nil {
 				return
