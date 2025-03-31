@@ -83,6 +83,21 @@ func (mr *MockNodeHeadMockRecorder) GetHead(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHead", reflect.TypeOf((*MockNodeHead)(nil).GetHead), arg0)
 }
 
+// GetOldHead mocks base method.
+func (m *MockNodeHead) GetOldHead(arg0 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOldHead", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOldHead indicates an expected call of GetOldHead.
+func (mr *MockNodeHeadMockRecorder) GetOldHead(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOldHead", reflect.TypeOf((*MockNodeHead)(nil).GetOldHead), arg0)
+}
+
 // Init mocks base method.
 func (m *MockNodeHead) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
@@ -169,16 +184,16 @@ func (mr *MockNodeHeadMockRecorder) Run(arg0 any) *gomock.Call {
 }
 
 // SetHead mocks base method.
-func (m *MockNodeHead) SetHead(arg0, arg1 string) (int, error) {
+func (m *MockNodeHead) SetHead(arg0, arg1, arg2 string) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHead", arg0, arg1)
+	ret := m.ctrl.Call(m, "SetHead", arg0, arg1, arg2)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SetHead indicates an expected call of SetHead.
-func (mr *MockNodeHeadMockRecorder) SetHead(arg0, arg1 any) *gomock.Call {
+func (mr *MockNodeHeadMockRecorder) SetHead(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHead", reflect.TypeOf((*MockNodeHead)(nil).SetHead), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHead", reflect.TypeOf((*MockNodeHead)(nil).SetHead), arg0, arg1, arg2)
 }
