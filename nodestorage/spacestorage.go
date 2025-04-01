@@ -71,11 +71,11 @@ type nodeStorage struct {
 	observer hashObserver
 }
 
-func (r *nodeStorage) OnHashChange(hash string) {
-	r.observer(r.Id(), hash)
+func (st *nodeStorage) OnHashChange(oldHash, newHash string) {
+	st.observer(st.Id(), oldHash, newHash)
 }
 
-type hashObserver = func(spaceId, hash string)
+type hashObserver = func(spaceId, oldHash, newHash string)
 
 func newNodeStorage(spaceStorage spacestorage.SpaceStorage, cont *storageContainer, observer hashObserver) *nodeStorage {
 	st := &nodeStorage{
@@ -87,7 +87,7 @@ func newNodeStorage(spaceStorage spacestorage.SpaceStorage, cont *storageContain
 	return st
 }
 
-func (r *nodeStorage) Close(ctx context.Context) (err error) {
-	defer r.cont.Release()
-	return r.SpaceStorage.Close(ctx)
+func (st *nodeStorage) Close(ctx context.Context) (err error) {
+	defer st.cont.Release()
+	return st.SpaceStorage.Close(ctx)
 }

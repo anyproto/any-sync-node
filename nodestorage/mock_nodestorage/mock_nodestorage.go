@@ -169,7 +169,7 @@ func (mr *MockNodeStorageMockRecorder) OnDeleteStorage(arg0 any) *gomock.Call {
 }
 
 // OnWriteHash mocks base method.
-func (m *MockNodeStorage) OnWriteHash(arg0 func(context.Context, string, string)) {
+func (m *MockNodeStorage) OnWriteHash(arg0 func(context.Context, string, string, string)) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "OnWriteHash", arg0)
 }

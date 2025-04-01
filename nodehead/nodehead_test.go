@@ -32,7 +32,7 @@ func TestNodeHead_Run(t *testing.T) {
 	store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
 	ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
 	require.NoError(t, err)
-	require.NoError(t, ss.StateStorage().SetHash(ctx, "123"))
+	require.NoError(t, ss.StateStorage().SetHash(ctx, "123", "456"))
 	require.NoError(t, ss.Close(ctx))
 	fx.Finish(t)
 
@@ -57,10 +57,10 @@ func TestNodeHead_SetHead(t *testing.T) {
 	}
 
 	t.Run("set head", func(t *testing.T) {
-		part, err := fx.SetHead("2.2", "head")
+		part, err := fx.SetHead("2.2", "oldHead", "newhead")
 		require.NoError(t, err)
 		h1 := getHash(part)
-		part2, err := fx.SetHead("3.2", "head")
+		part2, err := fx.SetHead("3.2", "oldHead", "newhead")
 		assert.Equal(t, part, part2)
 		h2 := getHash(part)
 		assert.NotEqual(t, h1, h2)
@@ -86,13 +86,18 @@ func TestNodeHead_Ranges(t *testing.T) {
 func TestNodeHead_GetSpaceHash(t *testing.T) {
 	fx := newFixture(t, "")
 	defer fx.Finish(t)
-	hash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
-	_, err := fx.SetHead("space1", hash)
+	oldHash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+	newHash := "bf1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+	_, err := fx.SetHead("space1", oldHash, newHash)
 	require.NoError(t, err)
 
 	head, err := fx.GetHead("space1")
 	require.NoError(t, err)
-	assert.Equal(t, hash, head)
+	assert.Equal(t, newHash, head)
+
+	head, err = fx.GetOldHead("space1")
+	require.NoError(t, err)
+	assert.Equal(t, oldHash, head)
 
 	_, err = fx.GetHead("not found")
 	assert.Equal(t, ErrSpaceNotFound, err)
@@ -102,7 +107,7 @@ func TestNodeHead_DeleteHeads(t *testing.T) {
 	fx := newFixture(t, "")
 	defer fx.Finish(t)
 	hash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
-	_, err := fx.SetHead("space1", hash)
+	_, err := fx.SetHead("space1", hash, hash)
 	require.NoError(t, err)
 
 	err = fx.NodeHead.(*nodeHead).DeleteHeads("space1")

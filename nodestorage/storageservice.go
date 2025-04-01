@@ -128,7 +128,7 @@ type NodeStorage interface {
 	DumpStorage(ctx context.Context, id string, do func(path string) error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnDeleteStorage(onDelete func(ctx context.Context, spaceId string))
-	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
+	OnWriteHash(onWrite func(ctx context.Context, spaceId, oldHash, newHash string))
 	StoreDir(spaceId string) (path string)
 	DeleteSpaceStorage(ctx context.Context, spaceId string) error
 	GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error)
@@ -150,7 +150,7 @@ type storageService struct {
 	rootPath        string
 	cache           ocache.OCache
 	indexStorage    IndexStorage
-	onWriteHash     func(ctx context.Context, spaceId, hash string)
+	onWriteHash     func(ctx context.Context, spaceId, oldHash, newHash string)
 	onDeleteStorage func(ctx context.Context, spaceId string)
 	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
 	currentSpaces   map[string]*storageContainer
@@ -184,9 +184,9 @@ func (s *storageService) StatType() string {
 	return CName
 }
 
-func (s *storageService) onHashChange(spaceId, hash string) {
+func (s *storageService) onHashChange(spaceId, oldHash, newHash string) {
 	if s.onWriteHash != nil {
-		s.onWriteHash(context.Background(), spaceId, hash)
+		s.onWriteHash(context.Background(), spaceId, oldHash, newHash)
 	}
 }
 
@@ -476,7 +476,7 @@ func (s *storageService) StoreDir(spaceId string) (path string) {
 	return filepath.Join(s.rootPath, spaceId)
 }
 
-func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
+func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, oldHash, newHash string)) {
 	s.onWriteHash = onWrite
 }
 
