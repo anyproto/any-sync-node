@@ -31,7 +31,7 @@ func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.A
 		)
 	}()
 	var record = &consensusproto.RawRecord{}
-	if err = record.Unmarshal(request.Payload); err != nil {
+	if err = record.UnmarshalVT(request.Payload); err != nil {
 		return
 	}
 	res, err := r.s.coordClient.AclAddRecord(ctx, request.SpaceId, record)
@@ -66,7 +66,7 @@ func (r *rpcHandler) AclGetRecords(ctx context.Context, request *spacesyncproto.
 		Records: make([][]byte, len(res)),
 	}
 	for i, rec := range res {
-		if resp.Records[i], err = rec.Marshal(); err != nil {
+		if resp.Records[i], err = rec.MarshalVT(); err != nil {
 			return
 		}
 	}

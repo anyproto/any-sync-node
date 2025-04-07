@@ -61,7 +61,7 @@ func (s *streamOpener) HandleMessage(peerCtx context.Context, peerId string, msg
 	}
 	if syncMsg.SpaceId() == "" {
 		var msg = &spacesyncproto.SpaceSubscription{}
-		if err = msg.Unmarshal(syncMsg.Bytes); err != nil {
+		if err = msg.UnmarshalVT(syncMsg.Bytes); err != nil {
 			return
 		}
 		log.InfoCtx(peerCtx, "got subscription message", zap.Strings("spaceIds", msg.SpaceIds))
