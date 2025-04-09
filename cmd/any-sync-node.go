@@ -30,14 +30,11 @@ import (
 	"github.com/anyproto/any-sync/util/syncqueues"
 
 	"github.com/anyproto/any-sync-node/nodehead"
-	"github.com/anyproto/any-sync-node/nodespace/migrator"
 	"github.com/anyproto/any-sync-node/nodespace/peermanager"
 	"github.com/anyproto/any-sync-node/nodespace/spacedeleter"
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
-	"github.com/anyproto/any-sync-node/oldstorage"
-
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
 	"github.com/anyproto/any-sync/app"
@@ -128,9 +125,7 @@ func Bootstrap(a *app.App) {
 		Register(nodeconfstore.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconf.New()).
-		Register(oldstorage.New()).
 		Register(nodestorage.New()).
-		Register(migrator.New()).
 		Register(syncqueues.New()).
 		Register(server.New()).
 		Register(peerservice.New()).
