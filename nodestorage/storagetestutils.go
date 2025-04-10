@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/anyproto/any-sync/commonspace"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
@@ -76,7 +76,7 @@ func NewStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayloa
 	require.NoError(t, err)
 	readKey := crypto.NewAES()
 	meta := []byte("account")
-	payload := commonspace.SpaceCreatePayload{
+	payload := spacepayloads.SpaceCreatePayload{
 		SigningKey:     keys.SignKey,
 		SpaceType:      "space",
 		ReplicationKey: 10,
@@ -86,7 +86,7 @@ func NewStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayloa
 		MetadataKey:    metaKey,
 		Metadata:       meta,
 	}
-	createSpace, err := commonspace.StoragePayloadForSpaceCreate(payload)
+	createSpace, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	require.NoError(t, err)
 	return createSpace
 }

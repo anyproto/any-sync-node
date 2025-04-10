@@ -279,24 +279,49 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 
 func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
 	if len(req.Ranges) == 1 && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
-		hash, err := r.s.nodeHead.GetHead(req.SpaceId)
-		if err != nil {
-			return
-		}
-		hashB, err := hex.DecodeString(hash)
-		if err != nil {
-			return
-		}
-		log.Debug("got head sync with nodehead", zap.String("spaceId", req.SpaceId))
-		return &spacesyncproto.HeadSyncResponse{
-			Results: []*spacesyncproto.HeadSyncResult{
-				{
-					Hash: hashB,
-					// this makes diff not compareResults and create new batch directly (see (d *diff) Diff)
-					Count: 1,
+		switch req.DiffType {
+		case spacesyncproto.DiffType_V2:
+			if req.Ranges[0].Elements {
+				return nil
+			}
+			hash, err := r.s.nodeHead.GetHead(req.SpaceId)
+			if err != nil {
+				return
+			}
+			hashB, err := hex.DecodeString(hash)
+			if err != nil {
+				return
+			}
+			log.Debug("got head sync with nodehead", zap.String("spaceId", req.SpaceId))
+			return &spacesyncproto.HeadSyncResponse{
+				DiffType: spacesyncproto.DiffType_V2,
+				Results: []*spacesyncproto.HeadSyncResult{
+					{
+						Hash: hashB,
+						// this makes diff not compareResults and create new batch directly (see (d *diff) Diff)
+						Count: 1,
+					},
 				},
-			},
-			DiffType: spacesyncproto.DiffType_Precalculated,
+			}
+		default:
+			hash, err := r.s.nodeHead.GetOldHead(req.SpaceId)
+			if err != nil {
+				return
+			}
+			hashB, err := hex.DecodeString(hash)
+			if err != nil {
+				return
+			}
+			log.Debug("got head sync with old nodehead", zap.String("spaceId", req.SpaceId))
+			return &spacesyncproto.HeadSyncResponse{
+				Results: []*spacesyncproto.HeadSyncResult{
+					{
+						Hash: hashB,
+						// this makes diff not compareResults and create new batch directly (see (d *diff) Diff)
+						Count: 1,
+					},
+				},
+			}
 		}
 	}
 	return nil
