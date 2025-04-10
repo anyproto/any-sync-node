@@ -21,6 +21,39 @@ type rpcHandler struct {
 	s *service
 }
 
+func (r *rpcHandler) StoreDiff(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (resp *spacesyncproto.StoreDiffResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "space.storeDiff",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(req.SpaceId),
+			zap.Error(err),
+		)
+	}()
+	sp, err := r.s.GetSpace(ctx, req.SpaceId)
+	if err != nil {
+		return nil, err
+	}
+	return sp.KeyValue().HandleStoreDiffRequest(ctx, req)
+}
+
+func (r *rpcHandler) StoreElements(stream spacesyncproto.DRPCSpaceSync_StoreElementsStream) error {
+	msg, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	spaceId := msg.SpaceId
+	if spaceId == "" {
+		return errUnexpectedMessage
+	}
+	ctx := stream.Context()
+	sp, err := r.s.GetSpace(ctx, spaceId)
+	if err != nil {
+		return err
+	}
+	return sp.KeyValue().HandleStoreElementsRequest(ctx, stream)
+}
+
 func (r *rpcHandler) AclAddRecord(ctx context.Context, request *spacesyncproto.AclAddRecordRequest) (resp *spacesyncproto.AclAddRecordResponse, err error) {
 	st := time.Now()
 	defer func() {
