@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
+	"go.uber.org/zap"
 )
 
 var (
@@ -56,6 +57,10 @@ type storageService struct {
 
 func (s *storageService) Run(ctx context.Context) (err error) {
 	s.delStorage, err = OpenDeletionStorage(s.rootPath)
+	if err != nil {
+		log.Debug("failed to open deletion storage", zap.Error(err))
+		return nil
+	}
 	return
 }
 
