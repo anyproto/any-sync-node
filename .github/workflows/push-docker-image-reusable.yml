@@ -1,3 +1,5 @@
+name: push-docker-image
+
 on:
   workflow_call:
     inputs:
@@ -25,8 +27,13 @@ on:
         type: boolean
         required: false
         default: true
-name: push-docker-image
+      deploy-arm:
+        type: boolean
+        required: false
+        default: true
+
 permissions: write-all
+
 jobs:
   push-docker-image:
     name: Build Docker image and push to registry
@@ -46,6 +53,14 @@ jobs:
         run: |
           echo inputs.release = ${{ inputs.release }}
 
+      - name: Set deploy-platforms
+        run: |
+          if [ "${{ inputs.deploy-arm }}" = "true" ]; then
+            echo "DEPLOY_PLATFORMS=linux/amd64,linux/arm64" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_PLATFORMS=linux/amd64" >> $GITHUB_ENV
+          fi
+
       - name: release version only numbers
         id: release-version
         run: |
@@ -63,6 +78,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download release asset arm64
+        if: ${{ inputs.deploy-arm }}
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: tags/${{ inputs.release }}
@@ -109,7 +125,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.DEPLOY_PLATFORMS }}
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
@@ -130,7 +146,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.DEPLOY_PLATFORMS }}
           push: true
           tags: |
             docker.io/${{ github.repository }}:latest
