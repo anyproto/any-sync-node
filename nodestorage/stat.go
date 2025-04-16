@@ -12,9 +12,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func (r *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStats ObjectSpaceStats, err error) {
+func (st *nodeStorage) GetSpaceStats(ctx context.Context, treeTop int) (spaceStats ObjectSpaceStats, err error) {
 	var (
-		anyStore            = r.AnyStore()
+		anyStore            = st.AnyStore()
 		docsCount           = 0
 		deletedObjectsCount = 0
 		changesCount        = 0
