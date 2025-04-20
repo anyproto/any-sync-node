@@ -4,6 +4,9 @@ package nodehead
 import (
 	"context"
 	"errors"
+	"io"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -106,6 +109,12 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err error) {
 	ss, err := n.spaceStore.SpaceStorage(ctx, spaceId)
 	if err != nil {
+		storeDir := n.spaceStore.StoreDir(spaceId)
+		newDir := n.spaceStore.StoreDir("." + spaceId)
+		copyErr := copyDir(storeDir, newDir)
+		if copyErr != nil {
+			log.Error("copyDir error", zap.Error(copyErr))
+		}
 		return
 	}
 	defer func() {
@@ -218,4 +227,33 @@ func (n *nodeHead) registerMetrics(m metric.Metric) {
 
 func (n *nodeHead) Close(ctx context.Context) (err error) {
 	return
+}
+
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(src, path)
+		target := filepath.Join(dst, rel)
+
+		if info.IsDir() {
+			return os.MkdirAll(target, info.Mode())
+		}
+
+		in, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+
+		out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, info.Mode())
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		_, err = io.Copy(out, in)
+		return err
+	})
 }
