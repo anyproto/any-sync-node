@@ -122,7 +122,11 @@ func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err e
 	if err != nil {
 		return
 	}
-	_, err = n.SetHead(spaceId, state.OldHash, state.NewHash)
+	if state.OldHash != "" && state.NewHash != "" {
+		_, err = n.SetHead(spaceId, state.OldHash, state.NewHash)
+	} else {
+		_, err = n.SetHead(spaceId, state.LegacyHash, state.LegacyHash)
+	}
 	return
 }
 
