@@ -123,8 +123,10 @@ func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err e
 		return
 	}
 	if state.OldHash != "" && state.NewHash != "" {
+		log.Debug("set hashes", zap.String("spaceId", spaceId), zap.String("oldHash", state.OldHash), zap.String("newHash", state.NewHash))
 		_, err = n.SetHead(spaceId, state.OldHash, state.NewHash)
 	} else {
+		log.Debug("set legacy hashes", zap.String("spaceId", spaceId), zap.String("legacyHash", state.LegacyHash))
 		_, err = n.SetHead(spaceId, state.LegacyHash, state.LegacyHash)
 	}
 	return
