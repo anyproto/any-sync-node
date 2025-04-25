@@ -85,20 +85,19 @@ func (n *nodeHead) Name() (name string) {
 
 func (n *nodeHead) Run(ctx context.Context) (err error) {
 	st := time.Now()
+	err = n.spaceStore.IndexStorage().ReadHashes(ctx, func(update nodestorage.SpaceUpdate) (bool, error) {
+		if _, e := n.SetHead(update.SpaceId, update.OldHash, update.NewHash); e != nil {
+			log.Error("can't set head", zap.Error(e))
+			return false, e
+		}
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
 	allSpaceIds, err := n.spaceStore.AllSpaceIds()
 	if err != nil {
-		return
-	}
-	log.Info("start loading heads...", zap.Int("spaces", len(allSpaceIds)))
-	for _, spaceId := range allSpaceIds {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		if e := n.loadHeadFromStore(ctx, spaceId); e != nil {
-			log.Warn("loadHeadFromStore error", zap.String("spaceId", spaceId), zap.Error(e))
-		}
+		return err
 	}
 	log.Info("space heads loaded", zap.Int("spaces", len(allSpaceIds)), zap.Duration("dur", time.Since(st)))
 	return
@@ -233,5 +232,5 @@ func (n *nodeHead) registerMetrics(m metric.Metric) {
 }
 
 func (n *nodeHead) Close(ctx context.Context) (err error) {
-	return
+	return n.updater.Close()
 }

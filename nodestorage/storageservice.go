@@ -150,9 +150,9 @@ type storageService struct {
 	rootPath        string
 	cache           ocache.OCache
 	indexStorage    IndexStorage
+	updater         *spaceUpdater
 	onWriteHash     func(ctx context.Context, spaceId, oldHash, newHash string)
 	onDeleteStorage func(ctx context.Context, spaceId string)
-	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
 	currentSpaces   map[string]*storageContainer
 	mu              sync.Mutex
 	statService     debugstat.StatService
@@ -185,17 +185,25 @@ func (s *storageService) StatType() string {
 }
 
 func (s *storageService) onHashChange(spaceId, oldHash, newHash string) {
-	if s.onWriteHash != nil {
-		s.onWriteHash(context.Background(), spaceId, oldHash, newHash)
-	}
+	_ = s.updater.Add(SpaceUpdate{
+		SpaceId: spaceId,
+		OldHash: oldHash,
+		NewHash: newHash,
+		Updated: time.Now(),
+	})
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
+	s.updater.Run()
 	s.indexStorage, err = OpenIndexStorage(ctx, s.rootPath)
 	return
 }
 
 func (s *storageService) Close(ctx context.Context) (err error) {
+	err = s.updater.Close()
+	if err != nil {
+		log.Error("failed to close updater", zap.Error(err))
+	}
 	if s.indexStorage != nil {
 		return s.indexStorage.Close()
 	}
@@ -209,6 +217,21 @@ func (s *storageService) IndexStorage() IndexStorage {
 
 func (s *storageService) Init(a *app.App) (err error) {
 	cfg := a.MustComponent("config").(configGetter).GetStorage()
+	s.updater = newSpaceUpdater(func(updates []SpaceUpdate) {
+		if s.indexStorage == nil {
+			return
+		}
+		for _, update := range updates {
+			if err := s.indexStorage.UpdateHash(context.Background(), update); err != nil {
+				log.Error("failed to update hash", zap.String("spaceId", update.SpaceId), zap.Error(err))
+			}
+		}
+		if s.onWriteHash != nil {
+			for _, update := range updates {
+				s.onWriteHash(context.Background(), update.SpaceId, update.OldHash, update.NewHash)
+			}
+		}
+	})
 	s.rootPath = cfg.AnyStorePath
 	if _, err = os.Stat(s.rootPath); err != nil {
 		err = os.MkdirAll(s.rootPath, 0755)

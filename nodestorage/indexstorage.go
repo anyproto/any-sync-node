@@ -27,12 +27,17 @@ var (
 
 const (
 	IndexStorageName = ".index"
-	collectionName   = "deletionIndex"
+	delCollName      = "deletionIndex"
+	hashCollName     = "hashesIndex"
+	newHashKey       = "nh"
+	oldHashKey       = "oh"
 	statusKey        = "s"
 	recordIdKey      = "r"
 )
 
 type IndexStorage interface {
+	UpdateHash(ctx context.Context, update SpaceUpdate) (err error)
+	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	LastRecordId(ctx context.Context) (id string, err error)
@@ -40,13 +45,56 @@ type IndexStorage interface {
 }
 
 type indexStorage struct {
-	db    anystore.DB
-	coll  anystore.Collection
-	arena *anyenc.Arena
+	db         anystore.DB
+	statusColl anystore.Collection
+	hashesColl anystore.Collection
+	arenaPool  *anyenc.ArenaPool
+}
+
+func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err error) {
+	tx, err := d.statusColl.WriteTx(ctx)
+	if err != nil {
+		return err
+	}
+	arena := d.arenaPool.Get()
+	defer d.arenaPool.Put(arena)
+	doc := arena.NewObject()
+	doc.Set("id", arena.NewString(update.SpaceId))
+	doc.Set(oldHashKey, arena.NewString(update.OldHash))
+	doc.Set(newHashKey, arena.NewString(update.NewHash))
+	err = d.statusColl.UpsertOne(tx.Context(), doc)
+	if err != nil {
+		tx.Rollback()
+		return
+	}
+	return tx.Commit()
+}
+
+func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
+	iter, err := d.hashesColl.Find(query.Key{}).Iter(ctx)
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return
+		}
+		cont, err := iterFunc(SpaceUpdate{
+			SpaceId: doc.Value().GetString("id"),
+			OldHash: doc.Value().GetString(oldHashKey),
+			NewHash: doc.Value().GetString(newHashKey),
+		})
+		if err != nil || !cont {
+			return err
+		}
+	}
+	return nil
 }
 
 func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error) {
-	doc, err := d.coll.FindId(ctx, spaceId)
+	doc, err := d.statusColl.FindId(ctx, spaceId)
 	if err != nil {
 		err = fmt.Errorf("find id: %w, %w", err, ErrUnknownSpaceId)
 		return
@@ -55,16 +103,17 @@ func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status 
 }
 
 func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error) {
-	tx, err := d.coll.WriteTx(ctx)
+	tx, err := d.statusColl.WriteTx(ctx)
 	if err != nil {
 		return
 	}
-	defer d.arena.Reset()
-	doc := d.arena.NewObject()
-	doc.Set("id", d.arena.NewString(spaceId))
-	doc.Set(statusKey, d.arena.NewNumberFloat64(float64(status)))
-	doc.Set(recordIdKey, d.arena.NewString(recId))
-	err = d.coll.UpsertOne(tx.Context(), doc)
+	arena := d.arenaPool.Get()
+	defer d.arenaPool.Put(arena)
+	doc := arena.NewObject()
+	doc.Set("id", arena.NewString(spaceId))
+	doc.Set(statusKey, arena.NewNumberFloat64(float64(status)))
+	doc.Set(recordIdKey, arena.NewString(recId))
+	err = d.statusColl.UpsertOne(tx.Context(), doc)
 	if err != nil {
 		tx.Rollback()
 		return
@@ -73,7 +122,7 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 }
 
 func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) {
-	iter, err := d.coll.Find(query.All{}).Sort("-" + recordIdKey).Iter(ctx)
+	iter, err := d.statusColl.Find(query.All{}).Sort("-" + recordIdKey).Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -104,7 +153,11 @@ func OpenIndexStorage(ctx context.Context, rootPath string) (ds IndexStorage, er
 	if err != nil {
 		return
 	}
-	coll, err := db.Collection(ctx, collectionName)
+	statusColl, err := db.Collection(ctx, delCollName)
+	if err != nil {
+		return
+	}
+	hashesColl, err := db.Collection(ctx, hashCollName)
 	if err != nil {
 		return
 	}
@@ -112,10 +165,10 @@ func OpenIndexStorage(ctx context.Context, rootPath string) (ds IndexStorage, er
 		Fields: []string{recordIdKey},
 		Unique: true,
 	}
-	err = coll.EnsureIndex(ctx, info)
+	err = statusColl.EnsureIndex(ctx, info)
 	if err != nil {
 		return
 	}
-	ds = &indexStorage{db: db, coll: coll, arena: &anyenc.Arena{}}
+	ds = &indexStorage{db: db, statusColl: statusColl, hashesColl: hashesColl, arenaPool: &anyenc.ArenaPool{}}
 	return
 }
