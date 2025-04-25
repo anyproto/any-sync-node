@@ -103,32 +103,6 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (n *nodeHead) loadHeadFromStore(ctx context.Context, spaceId string) (err error) {
-	ss, err := n.spaceStore.SpaceStorage(ctx, spaceId)
-	if err != nil {
-		return
-	}
-	defer func() {
-		log.Debug("close space storage", zap.String("spaceId", spaceId))
-		anyStore := ss.AnyStore()
-		err := n.spaceStore.ForceRemove(ss.Id())
-		if err != nil {
-			log.Error("can't remove space storage", zap.Error(err))
-		}
-		anyStore.Close()
-	}()
-	state, err := ss.StateStorage().GetState(ctx)
-	if err != nil {
-		return
-	}
-	if state.OldHash != "" && state.NewHash != "" {
-		_, err = n.SetHead(spaceId, state.OldHash, state.NewHash)
-	} else {
-		_, err = n.SetHead(spaceId, state.LegacyHash, state.LegacyHash)
-	}
-	return
-}
-
 func (n *nodeHead) DeleteHeads(spaceId string) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -199,7 +173,8 @@ func (n *nodeHead) GetOldHead(spaceId string) (hash string, err error) {
 }
 
 func (n *nodeHead) ReloadHeadFromStore(ctx context.Context, spaceId string) error {
-	return n.loadHeadFromStore(ctx, spaceId)
+	_, err := n.spaceStore.IndexSpace(ctx, spaceId, true)
+	return err
 }
 
 func (n *nodeHead) registerMetrics(m metric.Metric) {
@@ -232,5 +207,5 @@ func (n *nodeHead) registerMetrics(m metric.Metric) {
 }
 
 func (n *nodeHead) Close(ctx context.Context) (err error) {
-	return n.updater.Close()
+	return nil
 }

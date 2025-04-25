@@ -71,7 +71,7 @@ func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err 
 }
 
 func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
-	iter, err := d.hashesColl.Find(query.Key{}).Iter(ctx)
+	iter, err := d.hashesColl.Find(query.Key{Path: []string{"id"}}).Sort("id").Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -117,6 +117,13 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 	if err != nil {
 		tx.Rollback()
 		return
+	}
+	if status == SpaceStatusRemove {
+		err = d.hashesColl.DeleteId(tx.Context(), spaceId)
+		if err != nil {
+			tx.Rollback()
+			return
+		}
 	}
 	return tx.Commit()
 }
