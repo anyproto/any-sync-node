@@ -212,17 +212,28 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 	var (
 		toUpdate []string
 		toRemove []string
+		finished bool
 	)
 	err = s.indexStorage.ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
+		if finished {
+			// idx is max so we only have irrelevant hashes
+			toRemove = append(toRemove, update.SpaceId)
+			return true, nil
+		}
 		for allIds[idx] < update.SpaceId {
 			toUpdate = append(toUpdate, allIds[idx])
 			idx++
 			if idx >= len(allIds) {
-				return false, nil
+				finished = true
+				return true, nil
 			}
 		}
 		if allIds[idx] == update.SpaceId {
 			idx++
+			if idx >= len(allIds) {
+				finished = true
+				return true, nil
+			}
 		} else {
 			toRemove = append(toRemove, update.SpaceId)
 		}
