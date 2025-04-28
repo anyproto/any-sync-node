@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -208,7 +207,6 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		log.Error("failed to get all space ids", zap.Error(err))
 		return err
 	}
-	slices.Sort(allIds)
 	var (
 		toUpdate   []string
 		toRemove   []string
