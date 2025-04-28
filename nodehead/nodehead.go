@@ -85,7 +85,9 @@ func (n *nodeHead) Name() (name string) {
 
 func (n *nodeHead) Run(ctx context.Context) (err error) {
 	st := time.Now()
+	var total int
 	err = n.spaceStore.IndexStorage().ReadHashes(ctx, func(update nodestorage.SpaceUpdate) (bool, error) {
+		total++
 		if _, e := n.SetHead(update.SpaceId, update.OldHash, update.NewHash); e != nil {
 			log.Error("can't set head", zap.Error(e))
 			return false, e
@@ -95,11 +97,7 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	allSpaceIds, err := n.spaceStore.AllSpaceIds()
-	if err != nil {
-		return err
-	}
-	log.Info("space heads loaded", zap.Int("spaces", len(allSpaceIds)), zap.Duration("dur", time.Since(st)))
+	log.Info("space heads loaded", zap.Int("spaces", total), zap.Duration("dur", time.Since(st)))
 	return
 }
 

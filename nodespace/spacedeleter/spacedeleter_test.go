@@ -33,6 +33,8 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
+	err = store.StateStorage().SetHash(ctx, "123", "456")
+	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
@@ -50,6 +52,12 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	status, err := fx.storage.IndexStorage().SpaceStatus(ctx, payload.SpaceHeaderWithId.Id)
 	require.NoError(t, err)
 	require.Equal(t, nodestorage.SpaceStatusRemove, status)
+	var allIds []string
+	fx.storage.IndexStorage().ReadHashes(ctx, func(update nodestorage.SpaceUpdate) (bool, error) {
+		allIds = append(allIds, update.SpaceId)
+		return true, nil
+	})
+	require.Empty(t, allIds)
 }
 
 func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {

@@ -85,7 +85,11 @@ func (d *indexStorage) RemoveHash(ctx context.Context, spaceId string) (err erro
 }
 
 func (d *indexStorage) removeHashTx(ctx context.Context, spaceId string) (err error) {
-	return d.hashesColl.DeleteId(ctx, spaceId)
+	err = d.hashesColl.DeleteId(ctx, spaceId)
+	if errors.Is(err, anystore.ErrDocNotFound) {
+		return nil
+	}
+	return err
 }
 
 func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
