@@ -52,7 +52,7 @@ type indexStorage struct {
 }
 
 func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err error) {
-	tx, err := d.statusColl.WriteTx(ctx)
+	tx, err := d.hashesColl.WriteTx(ctx)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err 
 	doc.Set("id", arena.NewString(update.SpaceId))
 	doc.Set(oldHashKey, arena.NewString(update.OldHash))
 	doc.Set(newHashKey, arena.NewString(update.NewHash))
-	err = d.statusColl.UpsertOne(tx.Context(), doc)
+	err = d.hashesColl.UpsertOne(tx.Context(), doc)
 	if err != nil {
 		tx.Rollback()
 		return
@@ -71,7 +71,7 @@ func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err 
 }
 
 func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
-	iter, err := d.hashesColl.Find(query.Key{Path: []string{"id"}}).Sort("id").Iter(ctx)
+	iter, err := d.hashesColl.Find(query.Key{Path: []string{"id"}, Filter: query.All{}}).Sort("id").Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -79,7 +79,7 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 	for iter.Next() {
 		doc, err := iter.Doc()
 		if err != nil {
-			return
+			return err
 		}
 		cont, err := iterFunc(SpaceUpdate{
 			SpaceId: doc.Value().GetString("id"),

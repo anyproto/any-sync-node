@@ -210,10 +210,9 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 	slices.Sort(allIds)
 	idx := 0
 	var toUpdate []string
+	var allHashes []string
 	err = s.indexStorage.ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
-		if allIds[idx] > update.SpaceId {
-			return true, nil
-		}
+		allHashes = append(allHashes, update.SpaceId)
 		for allIds[idx] < update.SpaceId {
 			toUpdate = append(toUpdate, allIds[idx])
 			idx++
@@ -221,8 +220,14 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 				return false, nil
 			}
 		}
+		if allIds[idx] == update.SpaceId {
+			idx++
+		}
 		return true, nil
 	})
+	for i := idx; i < len(allIds); i++ {
+		toUpdate = append(toUpdate, allIds[i])
+	}
 	if err != nil {
 		log.Error("failed to read hashes", zap.Error(err))
 		return err
