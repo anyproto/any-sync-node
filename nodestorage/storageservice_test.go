@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +47,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
 			require.NoError(t, err)
 		}
+		ss.updater.Close()
 		var allIds []string
 		err := ss.IndexStorage().ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
 			allIds = append(allIds, update.SpaceId)
@@ -78,6 +80,44 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Len(t, allIds, total)
+	})
+	t.Run("hashes reflect removed folders", func(t *testing.T) {
+		dir := t.TempDir()
+		ss := newStorageServiceWithDir(t, dir)
+		total := 100
+		for i := 0; i < total; i++ {
+			payload := NewStorageCreatePayload(t)
+			storage, err := ss.CreateSpaceStorage(ctx, payload)
+			require.NoError(t, err)
+			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
+			require.NoError(t, err)
+		}
+		err := ss.indexStorage.(*indexStorage).hashesColl.Drop(ctx)
+		require.NoError(t, err)
+		err = ss.Close(ctx)
+		require.NoError(t, err)
+		newDir := filepath.Join(dir, "new")
+		entries, err := os.ReadDir(newDir)
+		require.NoError(t, err)
+		for i := 0; i < total/2+1; i++ {
+			if strings.HasPrefix(entries[i].Name(), ".") {
+				continue
+			}
+			err = os.RemoveAll(filepath.Join(newDir, entries[i].Name()))
+			require.NoError(t, err)
+		}
+		ss = newStorageServiceWithDir(t, dir)
+		defer ss.Close(ctx)
+		var allIds []string
+		err = ss.IndexStorage().ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
+			allIds = append(allIds, update.SpaceId)
+			return true, nil
+		})
+		require.NoError(t, err)
+		l, err := ss.AllSpaceIds()
+		require.NoError(t, err)
+		require.Len(t, allIds, total/2)
+		require.Equal(t, len(allIds), len(l))
 	})
 	t.Run("create and all spaces", func(t *testing.T) {
 		ss := newStorageService(t)

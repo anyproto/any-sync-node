@@ -19,12 +19,14 @@ type SpaceUpdate struct {
 type spaceUpdater struct {
 	updateFunc func(update []SpaceUpdate)
 	batcher    *mb.MB[SpaceUpdate]
+	done       chan struct{}
 }
 
 func newSpaceUpdater(update func(updates []SpaceUpdate)) *spaceUpdater {
 	return &spaceUpdater{
 		batcher:    mb.New[SpaceUpdate](0),
 		updateFunc: update,
+		done:       make(chan struct{}),
 	}
 }
 
@@ -37,6 +39,7 @@ func (hu *spaceUpdater) Run() {
 }
 
 func (hu *spaceUpdater) process() {
+	defer close(hu.done)
 	for {
 		msgs, err := hu.batcher.Wait(context.Background())
 		if err != nil {
@@ -48,7 +51,9 @@ func (hu *spaceUpdater) process() {
 }
 
 func (hu *spaceUpdater) Close() error {
-	return hu.batcher.Close()
+	_ = hu.batcher.Close()
+	<-hu.done
+	return nil
 }
 
 func removeDuplicatedUpdates(updates []SpaceUpdate) []SpaceUpdate {
@@ -69,5 +74,7 @@ func removeDuplicatedUpdates(updates []SpaceUpdate) []SpaceUpdate {
 			cnt++
 		}
 	}
-	return updates[:cnt+1]
+	updates[cnt] = updates[len(updates)-1]
+	cnt++
+	return updates[:cnt]
 }
