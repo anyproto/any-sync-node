@@ -209,10 +209,11 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 	}
 	slices.Sort(allIds)
 	idx := 0
-	var toUpdate []string
-	var allHashes []string
+	var (
+		toUpdate []string
+		toRemove []string
+	)
 	err = s.indexStorage.ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
-		allHashes = append(allHashes, update.SpaceId)
 		for allIds[idx] < update.SpaceId {
 			toUpdate = append(toUpdate, allIds[idx])
 			idx++
@@ -222,6 +223,8 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		}
 		if allIds[idx] == update.SpaceId {
 			idx++
+		} else {
+			toRemove = append(toRemove, update.SpaceId)
 		}
 		return true, nil
 	})
@@ -241,6 +244,12 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		err = s.ForceRemove(id)
 		if err != nil {
 			log.Error("failed to remove space", zap.String("spaceId", id), zap.Error(err))
+		}
+	}
+	for _, id := range toRemove {
+		err := s.indexStorage.RemoveHash(ctx, id)
+		if err != nil {
+			log.Error("failed to remove hash", zap.String("spaceId", id), zap.Error(err))
 		}
 	}
 	return

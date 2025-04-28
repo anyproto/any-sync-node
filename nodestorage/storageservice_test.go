@@ -34,6 +34,18 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		require.NoError(t, otherStore.Close(ctx))
 		require.Equal(t, 0, nodeStore.cont.handlers)
 	})
+	t.Run("fill index storage", func(t *testing.T) {
+		dir := t.TempDir()
+		ss := newStorageServiceWithDir(t, dir)
+		for i := 0; i < 100; i++ {
+			payload := NewStorageCreatePayload(t)
+			_, err := ss.CreateSpaceStorage(ctx, payload)
+			require.NoError(t, err)
+		}
+		ss.Close(ctx)
+		ss = newStorageServiceWithDir(t, dir)
+		defer ss.Close(ctx)
+	})
 	t.Run("create and all spaces", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
@@ -205,9 +217,12 @@ func (m mockConfigGetter) GetStorage() Config {
 var ctx = context.Background()
 
 func newStorageService(t *testing.T) *storageService {
+	return newStorageServiceWithDir(t, t.TempDir())
+}
+
+func newStorageServiceWithDir(t *testing.T, tempDir string) *storageService {
 	ss := New()
 	a := new(app.App)
-	tempDir := t.TempDir()
 
 	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss)
 	a.Start(ctx)

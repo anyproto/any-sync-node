@@ -37,6 +37,7 @@ const (
 
 type IndexStorage interface {
 	UpdateHash(ctx context.Context, update SpaceUpdate) (err error)
+	RemoveHash(ctx context.Context, spaceId string) (err error)
 	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
@@ -68,6 +69,23 @@ func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err 
 		return
 	}
 	return tx.Commit()
+}
+
+func (d *indexStorage) RemoveHash(ctx context.Context, spaceId string) (err error) {
+	tx, err := d.hashesColl.WriteTx(ctx)
+	if err != nil {
+		return
+	}
+	err = d.removeHashTx(tx.Context(), spaceId)
+	if err != nil {
+		tx.Rollback()
+		return
+	}
+	return tx.Commit()
+}
+
+func (d *indexStorage) removeHashTx(ctx context.Context, spaceId string) (err error) {
+	return d.hashesColl.DeleteId(ctx, spaceId)
 }
 
 func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
@@ -119,7 +137,7 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 		return
 	}
 	if status == SpaceStatusRemove {
-		err = d.hashesColl.DeleteId(tx.Context(), spaceId)
+		err = d.removeHashTx(tx.Context(), spaceId)
 		if err != nil {
 			tx.Rollback()
 			return
