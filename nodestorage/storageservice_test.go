@@ -34,17 +34,50 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		require.NoError(t, otherStore.Close(ctx))
 		require.Equal(t, 0, nodeStore.cont.handlers)
 	})
-	t.Run("fill index storage", func(t *testing.T) {
+	t.Run("fill index storage via set hash", func(t *testing.T) {
 		dir := t.TempDir()
 		ss := newStorageServiceWithDir(t, dir)
-		for i := 0; i < 100; i++ {
+		defer ss.Close(ctx)
+		total := 100
+		for i := 0; i < total; i++ {
 			payload := NewStorageCreatePayload(t)
-			_, err := ss.CreateSpaceStorage(ctx, payload)
+			storage, err := ss.CreateSpaceStorage(ctx, payload)
+			require.NoError(t, err)
+			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
 			require.NoError(t, err)
 		}
-		ss.Close(ctx)
+		var allIds []string
+		err := ss.IndexStorage().ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
+			allIds = append(allIds, update.SpaceId)
+			return true, nil
+		})
+		require.NoError(t, err)
+		require.Len(t, allIds, total)
+	})
+	t.Run("fill index storage from start", func(t *testing.T) {
+		dir := t.TempDir()
+		ss := newStorageServiceWithDir(t, dir)
+		total := 100
+		for i := 0; i < total; i++ {
+			payload := NewStorageCreatePayload(t)
+			storage, err := ss.CreateSpaceStorage(ctx, payload)
+			require.NoError(t, err)
+			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
+			require.NoError(t, err)
+		}
+		err := ss.indexStorage.(*indexStorage).hashesColl.Drop(ctx)
+		require.NoError(t, err)
+		err = ss.Close(ctx)
+		require.NoError(t, err)
 		ss = newStorageServiceWithDir(t, dir)
 		defer ss.Close(ctx)
+		var allIds []string
+		err = ss.IndexStorage().ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
+			allIds = append(allIds, update.SpaceId)
+			return true, nil
+		})
+		require.NoError(t, err)
+		require.Len(t, allIds, total)
 	})
 	t.Run("create and all spaces", func(t *testing.T) {
 		ss := newStorageService(t)
