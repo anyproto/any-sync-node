@@ -21,6 +21,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
 )
 
@@ -208,40 +209,16 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		return err
 	}
 	slices.Sort(allIds)
-	idx := 0
 	var (
-		toUpdate []string
-		toRemove []string
-		finished bool
+		toUpdate   []string
+		toRemove   []string
+		currentIds = make([]string, 0, len(allIds))
 	)
 	err = s.indexStorage.ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
-		if finished {
-			// idx is max so we only have irrelevant hashes
-			toRemove = append(toRemove, update.SpaceId)
-			return true, nil
-		}
-		for allIds[idx] < update.SpaceId {
-			toUpdate = append(toUpdate, allIds[idx])
-			idx++
-			if idx >= len(allIds) {
-				finished = true
-				return true, nil
-			}
-		}
-		if allIds[idx] == update.SpaceId {
-			idx++
-			if idx >= len(allIds) {
-				finished = true
-				return true, nil
-			}
-		} else {
-			toRemove = append(toRemove, update.SpaceId)
-		}
+		currentIds = append(currentIds, update.SpaceId)
 		return true, nil
 	})
-	for i := idx; i < len(allIds); i++ {
-		toUpdate = append(toUpdate, allIds[i])
-	}
+	toRemove, toUpdate = slice.DifferenceRemovedAdded(currentIds, allIds)
 	if err != nil {
 		log.Error("failed to read hashes", zap.Error(err))
 		return err
