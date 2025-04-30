@@ -24,21 +24,43 @@ import (
 var ctx = context.Background()
 
 func TestNodeHead_Run(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	t.Run("simple", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
 
-	fx := newFixture(t, tmpDir)
-	store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
-	ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
-	require.NoError(t, err)
-	require.NoError(t, ss.StateStorage().SetHash(ctx, "123", "456"))
-	require.NoError(t, ss.Close(ctx))
-	fx.Finish(t)
+		fx := newFixture(t, tmpDir)
+		store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
+		ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
+		require.NoError(t, err)
+		require.NoError(t, ss.StateStorage().SetHash(ctx, "123", "456"))
+		require.NoError(t, ss.Close(ctx))
+		fx.Finish(t)
 
-	fx = newFixture(t, tmpDir)
-	defer fx.Finish(t)
-	assert.Len(t, fx.NodeHead.(*nodeHead).partitions, 1)
+		fx = newFixture(t, tmpDir)
+		defer fx.Finish(t)
+		assert.Len(t, fx.NodeHead.(*nodeHead).partitions, 1)
+	})
+	t.Run("many spaces", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		fx := newFixture(t, tmpDir)
+		store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
+		for i := 0; i < 10; i++ {
+			ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
+			require.NoError(t, err)
+			require.NoError(t, ss.StateStorage().SetHash(ctx, "123", "456"))
+			require.NoError(t, ss.Close(ctx))
+		}
+		fx.Finish(t)
+
+		fx = newFixture(t, tmpDir)
+		defer fx.Finish(t)
+		assert.Len(t, fx.NodeHead.(*nodeHead).partitions, 1)
+		assert.Len(t, fx.NodeHead.(*nodeHead).oldHashes, 10)
+	})
 }
 
 func TestNodeHead_SetHead(t *testing.T) {

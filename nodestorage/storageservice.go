@@ -20,6 +20,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
 )
 
@@ -123,6 +124,7 @@ func New() NodeStorage {
 type NodeStorage interface {
 	spacestorage.SpaceStorageProvider
 	IndexStorage() IndexStorage
+	IndexSpace(ctx context.Context, spaceId string, setHead bool) (spacestorage.SpaceStorage, error)
 	SpaceStorage(ctx context.Context, spaceId string) (spacestorage.SpaceStorage, error)
 	TryLockAndDo(ctx context.Context, spaceId string, do func() error) (err error)
 	DumpStorage(ctx context.Context, id string, do func(path string) error) (err error)
@@ -150,9 +152,9 @@ type storageService struct {
 	rootPath        string
 	cache           ocache.OCache
 	indexStorage    IndexStorage
+	updater         *spaceUpdater
 	onWriteHash     func(ctx context.Context, spaceId, oldHash, newHash string)
 	onDeleteStorage func(ctx context.Context, spaceId string)
-	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
 	currentSpaces   map[string]*storageContainer
 	mu              sync.Mutex
 	statService     debugstat.StatService
@@ -185,17 +187,65 @@ func (s *storageService) StatType() string {
 }
 
 func (s *storageService) onHashChange(spaceId, oldHash, newHash string) {
-	if s.onWriteHash != nil {
-		s.onWriteHash(context.Background(), spaceId, oldHash, newHash)
-	}
+	_ = s.updater.Add(SpaceUpdate{
+		SpaceId: spaceId,
+		OldHash: oldHash,
+		NewHash: newHash,
+		Updated: time.Now(),
+	})
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
+	s.updater.Run()
 	s.indexStorage, err = OpenIndexStorage(ctx, s.rootPath)
+	if err != nil {
+		log.Error("failed to open index storage", zap.Error(err))
+		return err
+	}
+	allIds, err := s.AllSpaceIds()
+	if err != nil {
+		log.Error("failed to get all space ids", zap.Error(err))
+		return err
+	}
+	var (
+		toUpdate   []string
+		toRemove   []string
+		currentIds = make([]string, 0, len(allIds))
+	)
+	err = s.indexStorage.ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
+		currentIds = append(currentIds, update.SpaceId)
+		return true, nil
+	})
+	toRemove, toUpdate = slice.DifferenceRemovedAdded(currentIds, allIds)
+	if err != nil {
+		log.Error("failed to read hashes", zap.Error(err))
+		return err
+	}
+	for _, id := range toUpdate {
+		_, err := s.IndexSpace(ctx, id, false)
+		if err != nil {
+			log.Error("failed to index space", zap.String("spaceId", id), zap.Error(err))
+			continue
+		}
+		err = s.ForceRemove(id)
+		if err != nil {
+			log.Error("failed to remove space", zap.String("spaceId", id), zap.Error(err))
+		}
+	}
+	for _, id := range toRemove {
+		err := s.indexStorage.RemoveHash(ctx, id)
+		if err != nil {
+			log.Error("failed to remove hash", zap.String("spaceId", id), zap.Error(err))
+		}
+	}
 	return
 }
 
 func (s *storageService) Close(ctx context.Context) (err error) {
+	err = s.updater.Close()
+	if err != nil {
+		log.Error("failed to close updater", zap.Error(err))
+	}
 	if s.indexStorage != nil {
 		return s.indexStorage.Close()
 	}
@@ -209,6 +259,21 @@ func (s *storageService) IndexStorage() IndexStorage {
 
 func (s *storageService) Init(a *app.App) (err error) {
 	cfg := a.MustComponent("config").(configGetter).GetStorage()
+	s.updater = newSpaceUpdater(func(updates []SpaceUpdate) {
+		if s.indexStorage == nil {
+			return
+		}
+		for _, update := range updates {
+			if err := s.indexStorage.UpdateHash(context.Background(), update); err != nil {
+				log.Error("failed to update hash", zap.String("spaceId", update.SpaceId), zap.Error(err))
+			}
+		}
+		if s.onWriteHash != nil {
+			for _, update := range updates {
+				s.onWriteHash(context.Background(), update.SpaceId, update.OldHash, update.NewHash)
+			}
+		}
+	})
 	s.rootPath = cfg.AnyStorePath
 	if _, err = os.Stat(s.rootPath); err != nil {
 		err = os.MkdirAll(s.rootPath, 0755)
@@ -349,6 +414,30 @@ func (s *storageService) SpaceExists(id string) bool {
 	return true
 }
 
+func (s *storageService) IndexSpace(ctx context.Context, spaceId string, setHead bool) (ss spacestorage.SpaceStorage, err error) {
+	ss, err = s.SpaceStorage(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	state, err := ss.StateStorage().GetState(ctx)
+	if err != nil {
+		return
+	}
+	err = s.indexStorage.UpdateHash(ctx, SpaceUpdate{
+		SpaceId: spaceId,
+		OldHash: state.OldHash,
+		NewHash: state.NewHash,
+	})
+	if err != nil {
+		log.Error("can't update hash", zap.String("spaceId", spaceId), zap.Error(err))
+		return
+	}
+	if setHead && s.onWriteHash != nil {
+		s.onWriteHash(ctx, spaceId, state.OldHash, state.NewHash)
+	}
+	return
+}
+
 func (s *storageService) CreateSpaceStorage(ctx context.Context, payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
 	ctx = context.WithValue(ctx, createKeyVal, true)
 	cont, err := s.get(ctx, payload.SpaceHeaderWithId.Id)
@@ -414,7 +503,14 @@ func (s *storageService) GetStats(ctx context.Context, id string, treeTop int) (
 }
 
 func (s *storageService) ForceRemove(id string) (err error) {
-	_, err = s.cache.Remove(context.Background(), id)
+	ctx := context.Background()
+	ss, err := s.cache.Pick(ctx, id)
+	if err != nil {
+		return nil
+	}
+	anyStore := ss.(*storageContainer).db
+	_, err = s.cache.Remove(ctx, id)
+	anyStore.Close()
 	return
 }
 
