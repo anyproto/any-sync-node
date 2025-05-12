@@ -18,7 +18,7 @@ require (
 	go.uber.org/mock v0.5.2
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
+	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
 	golang.org/x/net v0.40.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
@@ -93,7 +93,7 @@ require (
 	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	lukechampine.com/blake3 v1.4.0 // indirect
-	modernc.org/libc v1.65.0 // indirect
+	modernc.org/libc v1.65.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.10.0 // indirect
 	modernc.org/sqlite v1.37.0 // indirect
