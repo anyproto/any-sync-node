@@ -18,6 +18,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/util/slice"
@@ -485,7 +486,7 @@ func (s *storageService) GetStats(ctx context.Context, id string, treeTop int) (
 		err = fmt.Errorf("can't get random identity: %w", err)
 		return
 	}
-	aclList, err := list.BuildAclListWithIdentity(identity, aclStorage, list.NoOpAcceptorVerifier{})
+	aclList, err := list.BuildAclListWithIdentity(identity, aclStorage, recordverifier.NewValidateFull())
 	if err != nil {
 		err = fmt.Errorf("can't build aclList: %w", err)
 		return
