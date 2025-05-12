@@ -1,8 +1,8 @@
 module github.com/anyproto/any-sync-node
 
-go 1.23.0
+go 1.23.2
 
-toolchain go1.23.5
+toolchain go1.24.0
 
 require (
 	github.com/ahmetb/govvv v0.3.0
@@ -28,7 +28,6 @@ require (
 	github.com/anyproto/go-slip10 v1.0.0 // indirect
 	github.com/anyproto/go-slip21 v1.0.0 // indirect
 	github.com/anyproto/lexid v0.0.4 // indirect
-	github.com/anyproto/protobuf v1.3.3-0.20240814124528-72b8c7e0e0f5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 // indirect
@@ -72,6 +71,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/onsi/ginkgo/v2 v2.22.2 // indirect
+	github.com/planetscale/vtprotobuf v0.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
@@ -100,3 +100,5 @@ require (
 	modernc.org/sqlite v1.36.2 // indirect
 	zombiezen.com/go/sqlite v1.4.0 // indirect
 )
+
+replace github.com/anyproto/any-sync => ../any-sync

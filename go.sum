@@ -9,8 +9,6 @@ github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9 h1:GnBlbnor8ge
 github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9/go.mod h1:fPb3n+7H42SxX84B4/os7POrR+UGRKSRr3kNS5+xq/c=
 github.com/anyproto/any-store v0.1.12 h1:VgTyfxM4BvFnYMbwWxV9FQmXWNlwp9xriWFh6VOjcm0=
 github.com/anyproto/any-store v0.1.12/go.mod h1:T6WNuCHcuXIRiaZ+QAcBHdxIbPbgNCMIf1u3P9jvAyU=
-github.com/anyproto/any-sync v0.6.11-0.20250401112556-55bd46028260 h1:8WvWyiMMLqkHFdEoI/eQRRRLVSpYh6P5V1F6nQkdyUI=
-github.com/anyproto/any-sync v0.6.11-0.20250401112556-55bd46028260/go.mod h1:TSKgCoTV40Bt8AfCh3RxPUUAfYGrhc8Mzh8/AiVlvX4=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=
@@ -19,8 +17,6 @@ github.com/anyproto/go-slip21 v1.0.0 h1:CI7lUqTIwmPOEGVAj4jyNLoICvueh++0U2HoAi3m
 github.com/anyproto/go-slip21 v1.0.0/go.mod h1:gbIJt7HAdr5DuT4f2pFTKCBSUWYsm/fysHBNqgsuxT0=
 github.com/anyproto/lexid v0.0.4 h1:2ztI0y5pNdtojd3vChw/YV/P6IO9pB7PccYysImDxWI=
 github.com/anyproto/lexid v0.0.4/go.mod h1:2RfpYiZkgoNmSDklXdwCCwGlso1FIp9Te8ZtoF3/Ehg=
-github.com/anyproto/protobuf v1.3.3-0.20240814124528-72b8c7e0e0f5 h1:aY7tBzQ+z8Hr/v8vOL4/EaKwPZx+J/ClZ1WuD6sqPvE=
-github.com/anyproto/protobuf v1.3.3-0.20240814124528-72b8c7e0e0f5/go.mod h1:5+PHE01DgsDPkralb8MYmGg2sPQahsqEJ9ue7ciDHKg=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
@@ -160,6 +156,8 @@ github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1Cpa
 github.com/onsi/gomega v1.36.2 h1:koNYke6TVk6ZmnyHrCXba/T/MoLBXFjeC1PtvYgw0A8=
 github.com/onsi/gomega v1.36.2/go.mod h1:DdwyADRjrc825LhMEkD76cHR5+pUnjhUN8GlHlRPHzY=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/planetscale/vtprotobuf v0.6.0 h1:nBeETjudeJ5ZgBHUz1fVHvbqUKnYOXNhsIEabROxmNA=
+github.com/planetscale/vtprotobuf v0.6.0/go.mod h1:t/avpk3KcrXxUnYOhZhMXJlSEyie6gQbtLq5NM3loB8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_golang v1.21.1 h1:DOvXXTqVzvkIewV/CDPFdejpMCGeMcbGCQ8YOmu+Ibk=
