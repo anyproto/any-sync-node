@@ -85,12 +85,14 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 	if CheckMigrated(ctx, migrateDb) {
 		return nil
 	}
-	migrator := migration.NewSpaceMigratorWithRemoveFunc(m.oldStorage, m.newStorage, 40, m.path, func(st spacestorage.SpaceStorage, rootPath string) error {
-		err := m.newStorage.ForceRemove(st.Id())
-		if err != nil {
-			return err
+	migrator := migration.NewSpaceMigrator(m.oldStorage, m.newStorage, 40, m.path, func(st spacestorage.SpaceStorage, id, rootPath string) error {
+		if st != nil {
+			err := m.newStorage.ForceRemove(id)
+			if err != nil {
+				return err
+			}
 		}
-		return os.RemoveAll(filepath.Join(rootPath, st.Id()))
+		return os.RemoveAll(filepath.Join(rootPath, id))
 	})
 	allIds, err := m.oldStorage.AllSpaceIds()
 	if err != nil {
