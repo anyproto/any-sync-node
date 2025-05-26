@@ -7,7 +7,7 @@ toolchain go1.23.5
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
-	github.com/anyproto/any-store v0.2.1
+	github.com/anyproto/any-store v0.2.2
 	github.com/anyproto/any-sync v0.8.3
 	github.com/anyproto/go-chash v0.1.0
 	github.com/cheggaaa/mb/v3 v3.0.2
@@ -93,9 +93,9 @@ require (
 	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	lukechampine.com/blake3 v1.4.0 // indirect
-	modernc.org/libc v1.65.6 // indirect
+	modernc.org/libc v1.65.7 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.10.0 // indirect
+	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.37.0 // indirect
 	zombiezen.com/go/sqlite v1.4.0 // indirect
 )
