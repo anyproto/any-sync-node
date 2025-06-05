@@ -149,6 +149,7 @@ func (r *rpcHandler) SpacePull(ctx context.Context, req *spacesyncproto.SpacePul
 			SpaceSettingsPayload:   spaceDesc.SpaceSettingsPayload,
 			SpaceSettingsPayloadId: spaceDesc.SpaceSettingsId,
 		},
+		AclRecords: spaceDesc.AclRecords,
 	}
 	return
 }
