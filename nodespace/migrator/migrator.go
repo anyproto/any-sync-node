@@ -85,14 +85,14 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 	if CheckMigrated(ctx, migrateDb) {
 		return nil
 	}
-	migrator := migration.NewSpaceMigratorWithRemoveFunc(m.oldStorage, m.newStorage, 40, m.path, func(st spacestorage.SpaceStorage, rootPath string) error {
-		anyStore := st.AnyStore()
-		err := m.newStorage.ForceRemove(st.Id())
-		if err != nil {
-			return err
+	migrator := migration.NewSpaceMigrator(m.oldStorage, m.newStorage, 40, m.path, func(st spacestorage.SpaceStorage, id, rootPath string) error {
+		if st != nil {
+			err := m.newStorage.ForceRemove(id)
+			if err != nil {
+				return err
+			}
 		}
-		anyStore.Close()
-		return os.RemoveAll(filepath.Join(rootPath, st.Id()))
+		return os.RemoveAll(filepath.Join(rootPath, id))
 	})
 	allIds, err := m.oldStorage.AllSpaceIds()
 	if err != nil {
@@ -120,6 +120,22 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 			return err
 		}
 		log.Info("migrated space", zap.String("spaceId", id), zap.String("total", fmt.Sprintf("%d/%d", idx, len(allIds))), zap.String("time", time.Since(tm).String()))
+		st, err := m.newStorage.WaitSpaceStorage(ctx, id)
+		if err != nil {
+			return fmt.Errorf("migration: failed to get new space storage: %w", err)
+		}
+		state, err := st.StateStorage().GetState(ctx)
+		if err != nil {
+			return fmt.Errorf("migration: failed to get state: %w", err)
+		}
+		err = m.newStorage.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
+			SpaceId: id,
+			OldHash: state.OldHash,
+			NewHash: state.NewHash,
+		})
+		if err != nil {
+			return fmt.Errorf("migration: failed to update hash: %w", err)
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
