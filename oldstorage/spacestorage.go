@@ -429,8 +429,8 @@ func (s *spaceStorage) GetSpaceStats(treeTop int) (spaceStats SpaceStats, err er
 
 func isSnapshot(payload []byte) bool {
 	change := &treechangeproto.RawTreeChange{}
-	_ = change.Unmarshal(payload)
+	_ = change.UnmarshalVT(payload)
 	treeChange := &treechangeproto.TreeChange{}
-	_ = treeChange.Unmarshal(change.Payload)
+	_ = treeChange.UnmarshalVT(change.Payload)
 	return treeChange.IsSnapshot
 }

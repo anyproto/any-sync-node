@@ -2,11 +2,11 @@ package nodespace
 
 import (
 	"context"
+
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +33,7 @@ func checkReceipt(ctx context.Context, confService nodeconf.Service, spaceId str
 		return
 	}
 	receipt := &coordinatorproto.SpaceReceiptWithSignature{}
-	err = proto.Unmarshal(credential, receipt)
+	err = receipt.UnmarshalVT(credential)
 	if err != nil {
 		log.Debug("space validation failed", zap.Error(err))
 		return spacesyncproto.ErrReceiptInvalid
