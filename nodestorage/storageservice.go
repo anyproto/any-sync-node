@@ -203,6 +203,12 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		log.Error("failed to open index storage", zap.Error(err))
 		return err
 	}
+	
+	// Run migrations
+	if err := s.indexStorage.RunMigrations(ctx); err != nil {
+		log.Error("failed to run migrations", zap.Error(err))
+		return err
+	}
 	allIds, err := s.AllSpaceIds()
 	if err != nil {
 		log.Error("failed to get all space ids", zap.Error(err))

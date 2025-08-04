@@ -26,22 +26,29 @@ var (
 )
 
 const (
-	IndexStorageName = ".index"
-	delCollName      = "deletionIndex"
-	hashCollName     = "hashesIndex"
-	newHashKey       = "nh"
-	oldHashKey       = "oh"
-	statusKey        = "s"
-	recordIdKey      = "r"
+	IndexStorageName       = ".index"
+	delCollName            = "deletionIndex"
+	hashCollName           = "hashesIndex"
+	migrationStateCollName = "migrationState"
+	newHashKey             = "nh"
+	oldHashKey             = "oh"
+	statusKey              = "s"
+	recordIdKey            = "r"
+	diffMigrationKey       = "diffState"
+	diffVersionKey         = "diffVersion"
 )
 
 type IndexStorage interface {
 	UpdateHash(ctx context.Context, update SpaceUpdate) (err error)
 	RemoveHash(ctx context.Context, spaceId string) (err error)
 	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
+	UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	LastRecordId(ctx context.Context) (id string, err error)
+	GetDiffMigrationVersion(ctx context.Context) (version int, err error)
+	SetDiffMigrationVersion(ctx context.Context, version int) (err error)
+	RunMigrations(ctx context.Context) (err error)
 	Close() (err error)
 }
 
@@ -164,6 +171,100 @@ func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) 
 		return doc.Value().GetString(recordIdKey), nil
 	}
 	return "", ErrNoLastRecordId
+}
+
+func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {
+	diffMigration, err := newDiffMigration(d, log)
+	if err != nil {
+		return fmt.Errorf("failed to create diff migration: %w", err)
+	}
+
+	if err := diffMigration.Run(ctx); err != nil {
+		return fmt.Errorf("diff migration failed: %w", err)
+	}
+
+	return nil
+}
+
+func (d *indexStorage) UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error) {
+	iter, err := d.hashesColl.Find(query.All{}).Iter(ctx)
+	if err != nil {
+		return err
+	}
+	defer iter.Close()
+
+	tx, err := d.hashesColl.WriteTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return err
+		}
+
+		value := doc.Value()
+		spaceId := value.GetString("id")
+		newHash := value.GetString(newHashKey)
+		oldHash := value.GetString(oldHashKey)
+
+		newNewHash, newOldHash, shouldUpdate := updateFunc(spaceId, newHash, oldHash)
+		if !shouldUpdate {
+			continue
+		}
+
+		arena := d.arenaPool.Get()
+		updatedDoc := arena.NewObject()
+		updatedDoc.Set("id", arena.NewString(spaceId))
+		updatedDoc.Set(newHashKey, arena.NewString(newNewHash))
+		updatedDoc.Set(oldHashKey, arena.NewString(newOldHash))
+
+		err = d.hashesColl.UpsertOne(tx.Context(), updatedDoc)
+		d.arenaPool.Put(arena)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (d *indexStorage) GetDiffMigrationVersion(ctx context.Context) (version int, err error) {
+	migrationColl, err := d.db.Collection(ctx, migrationStateCollName)
+	if err != nil {
+		return 0, err
+	}
+
+	doc, err := migrationColl.FindId(ctx, diffMigrationKey)
+	if err != nil {
+		if errors.Is(err, anystore.ErrDocNotFound) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	return int(doc.Value().GetFloat64(diffVersionKey)), nil
+}
+
+func (d *indexStorage) SetDiffMigrationVersion(ctx context.Context, version int) (err error) {
+	migrationColl, err := d.db.Collection(ctx, migrationStateCollName)
+	if err != nil {
+		return err
+	}
+
+	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		if v == nil {
+			v = a.NewObject()
+			v.Set("id", a.NewString(diffMigrationKey))
+		}
+		v.Set(diffVersionKey, a.NewNumberFloat64(float64(version)))
+		return v, true, nil
+	})
+
+	_, err = migrationColl.UpsertId(ctx, diffMigrationKey, mod)
+	return err
 }
 
 func (d *indexStorage) Close() (err error) {
