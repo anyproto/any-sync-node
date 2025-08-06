@@ -279,12 +279,9 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 }
 
 func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
-	if len(req.Ranges) == 1 && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
+	if len(req.Ranges) == 1 && !req.Ranges[0].Elements && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
 		switch req.DiffType {
-		case spacesyncproto.DiffType_V2:
-			if req.Ranges[0].Elements {
-				return nil
-			}
+		case spacesyncproto.DiffType_V3:
 			hash, err := r.s.nodeHead.GetHead(req.SpaceId)
 			if err != nil {
 				return
@@ -295,7 +292,7 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 			}
 			log.Debug("got head sync with nodehead", zap.String("spaceId", req.SpaceId))
 			return &spacesyncproto.HeadSyncResponse{
-				DiffType: spacesyncproto.DiffType_V2,
+				DiffType: spacesyncproto.DiffType_V3,
 				Results: []*spacesyncproto.HeadSyncResult{
 					{
 						Hash: hashB,
@@ -315,6 +312,7 @@ func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp 
 			}
 			log.Debug("got head sync with old nodehead", zap.String("spaceId", req.SpaceId))
 			return &spacesyncproto.HeadSyncResponse{
+				DiffType: spacesyncproto.DiffType_V2,
 				Results: []*spacesyncproto.HeadSyncResult{
 					{
 						Hash: hashB,
