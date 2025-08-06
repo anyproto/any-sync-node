@@ -279,12 +279,9 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 }
 
 func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
-	if len(req.Ranges) == 1 && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
+	if len(req.Ranges) == 1 && !req.Ranges[0].Elements && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
 		switch req.DiffType {
 		case spacesyncproto.DiffType_V3:
-			if req.Ranges[0].Elements {
-				return nil
-			}
 			hash, err := r.s.nodeHead.GetHead(req.SpaceId)
 			if err != nil {
 				return
