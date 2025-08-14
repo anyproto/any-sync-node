@@ -2,6 +2,7 @@ package peermanager
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -24,17 +25,15 @@ type responsiblePeer struct {
 }
 
 type nodePeerManager struct {
-	spaceId          string
-	responsiblePeers []responsiblePeer
-	p                *provider
-	streamPool       streampool.StreamPool
+	spaceId                 string
+	responsiblePeers        []responsiblePeer
+	responsiblePeersUpdated atomic.Time
+	responsiblePeersMu      sync.Mutex
+	p                       *provider
+	streamPool              streampool.StreamPool
 }
 
 func (n *nodePeerManager) Init(a *app.App) (err error) {
-	nodeIds := n.p.nodeconf.NodeIds(n.spaceId)
-	for _, peerId := range nodeIds {
-		n.responsiblePeers = append(n.responsiblePeers, responsiblePeer{peerId: peerId})
-	}
 	n.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	return nil
 }
@@ -86,7 +85,7 @@ func (n *nodePeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, 
 func (n *nodePeerManager) KeepAlive(ctx context.Context) {}
 
 func (n *nodePeerManager) getResponsiblePeers(ctx context.Context, netPool pool.Pool) (peers []peer.Peer, err error) {
-	for _, rp := range n.responsiblePeers {
+	for _, rp := range n.getResponsiblePeersObjects() {
 		if time.Since(rp.lastFail.Load()) > reconnectTimeout {
 			p, e := netPool.Get(ctx, rp.peerId)
 			if e != nil {
@@ -104,10 +103,25 @@ func (n *nodePeerManager) getResponsiblePeers(ctx context.Context, netPool pool.
 }
 
 func (n *nodePeerManager) isResponsible(peerId string) bool {
-	for _, rp := range n.responsiblePeers {
+	for _, rp := range n.getResponsiblePeersObjects() {
 		if rp.peerId == peerId {
 			return true
 		}
 	}
 	return false
+}
+
+func (n *nodePeerManager) getResponsiblePeersObjects() []responsiblePeer {
+	if len(n.responsiblePeers) != 0 && time.Since(n.responsiblePeersUpdated.Load()) < time.Minute {
+		return n.responsiblePeers
+	}
+
+	n.responsiblePeersMu.Lock()
+	defer n.responsiblePeersMu.Unlock()
+	nodeIds := n.p.nodeconf.NodeIds(n.spaceId)
+	for _, peerId := range nodeIds {
+		n.responsiblePeers = append(n.responsiblePeers, responsiblePeer{peerId: peerId})
+	}
+	n.responsiblePeersUpdated.Store(time.Now())
+	return n.responsiblePeers
 }
