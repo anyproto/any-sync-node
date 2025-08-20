@@ -60,22 +60,13 @@ type indexStorage struct {
 }
 
 func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err error) {
-	tx, err := d.hashesColl.WriteTx(ctx)
-	if err != nil {
-		return err
-	}
 	arena := d.arenaPool.Get()
 	defer d.arenaPool.Put(arena)
 	doc := arena.NewObject()
 	doc.Set("id", arena.NewString(update.SpaceId))
 	doc.Set(oldHashKey, arena.NewString(update.OldHash))
 	doc.Set(newHashKey, arena.NewString(update.NewHash))
-	err = d.hashesColl.UpsertOne(tx.Context(), doc)
-	if err != nil {
-		tx.Rollback()
-		return
-	}
-	return tx.Commit()
+	return d.hashesColl.UpsertOne(ctx, doc)
 }
 
 func (d *indexStorage) RemoveHash(ctx context.Context, spaceId string) (err error) {
