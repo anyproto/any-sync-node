@@ -203,7 +203,7 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		log.Error("failed to open index storage", zap.Error(err))
 		return err
 	}
-	
+
 	// Run migrations
 	if err := s.indexStorage.RunMigrations(ctx); err != nil {
 		log.Error("failed to run migrations", zap.Error(err))
@@ -270,10 +270,8 @@ func (s *storageService) Init(a *app.App) (err error) {
 		if s.indexStorage == nil {
 			return
 		}
-		for _, update := range updates {
-			if err := s.indexStorage.UpdateHash(context.Background(), update); err != nil {
-				log.Error("failed to update hash", zap.String("spaceId", update.SpaceId), zap.Error(err))
-			}
+		if err := s.indexStorage.UpdateHash(context.Background(), updates...); err != nil {
+			log.Error("failed to update hashes", zap.Error(err))
 		}
 		if s.onWriteHash != nil {
 			for _, update := range updates {

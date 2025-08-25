@@ -41,7 +41,7 @@ const (
 )
 
 type IndexStorage interface {
-	UpdateHash(ctx context.Context, update SpaceUpdate) (err error)
+	UpdateHash(ctx context.Context, updates ...SpaceUpdate) (err error)
 	RemoveHash(ctx context.Context, spaceId string) (err error)
 	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
 	UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error)
@@ -61,20 +61,35 @@ type indexStorage struct {
 	arenaPool  *anyenc.ArenaPool
 }
 
-func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err error) {
-	arena := d.arenaPool.Get()
-	defer d.arenaPool.Put(arena)
-	_, err = d.hashesColl.UpsertId(ctx, update.SpaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		if v == nil {
-			v = a.NewObject()
+func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (err error) {
+	tx, err := d.db.WriteTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+	ctx = tx.Context()
+
+	for _, update := range updates {
+		_, err = d.hashesColl.UpsertId(ctx, update.SpaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+			if v == nil {
+				v = a.NewObject()
+			}
+			if update.Updated.IsZero() {
+				update.Updated = time.Now()
+			}
+			v.Set("id", a.NewString(update.SpaceId))
+			v.Set(oldHashKey, a.NewString(update.OldHash))
+			v.Set(newHashKey, a.NewString(update.NewHash))
+			v.Set(lastAccessKey, a.NewNumberFloat64(float64(update.Updated.Unix())))
+			return v, true, nil
+		}))
+		if err != nil {
+			return err
 		}
-		v.Set("id", arena.NewString(update.SpaceId))
-		v.Set(oldHashKey, arena.NewString(update.OldHash))
-		v.Set(newHashKey, arena.NewString(update.NewHash))
-		v.Set(lastAccessKey, arena.NewNumberFloat64(float64(time.Now().Unix())))
-		return v, true, nil
-	}))
-	return err
+	}
+	return tx.Commit()
 }
 
 func (d *indexStorage) RemoveHash(ctx context.Context, spaceId string) (err error) {
