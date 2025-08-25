@@ -107,6 +107,9 @@ func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
 		return nil, err
 	}
 	space := v.(NodeSpace)
+	if e := s.spaceStorageProvider.IndexStorage().UpdateLastAccess(ctx, id); e != nil {
+		log.Error("failed to update last access", zap.String("spaceId", id), zap.Error(e))
+	}
 	return space, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -48,6 +49,7 @@ type IndexStorage interface {
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	LastRecordId(ctx context.Context) (id string, err error)
+	UpdateLastAccess(ctx context.Context, spaceId string) (err error)
 	GetDiffMigrationVersion(ctx context.Context) (version int, err error)
 	SetDiffMigrationVersion(ctx context.Context, version int) (err error)
 	RunMigrations(ctx context.Context) (err error)
@@ -55,10 +57,11 @@ type IndexStorage interface {
 }
 
 type indexStorage struct {
-	db         anystore.DB
-	statusColl anystore.Collection
-	hashesColl anystore.Collection
-	arenaPool  *anyenc.ArenaPool
+	db              anystore.DB
+	statusColl      anystore.Collection
+	hashesColl      anystore.Collection
+	arenaPool       *anyenc.ArenaPool
+	lastAccessCache *sync.Map
 }
 
 func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (err error) {
@@ -83,6 +86,7 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 			v.Set(oldHashKey, a.NewString(update.OldHash))
 			v.Set(newHashKey, a.NewString(update.NewHash))
 			v.Set(lastAccessKey, a.NewNumberFloat64(float64(update.Updated.Unix())))
+			d.lastAccessCache.Store(update.SpaceId, update.Updated)
 			return v, true, nil
 		}))
 		if err != nil {
@@ -119,6 +123,7 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 			SpaceId: doc.Value().GetString("id"),
 			OldHash: doc.Value().GetString(oldHashKey),
 			NewHash: doc.Value().GetString(newHashKey),
+			Updated: time.Unix(int64(doc.Value().GetInt(lastAccessKey)), 0),
 		})
 		if err != nil || !cont {
 			return err
@@ -181,6 +186,24 @@ func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) 
 		return doc.Value().GetString(recordIdKey), nil
 	}
 	return "", ErrNoLastRecordId
+}
+
+func (d *indexStorage) UpdateLastAccess(ctx context.Context, spaceId string) (err error) {
+	now := time.Now()
+	if val, ok := d.lastAccessCache.Load(spaceId); ok {
+		if val.(time.Time).Add(time.Minute * 5).After(now) {
+			return nil
+		}
+	}
+	_, err = d.hashesColl.UpsertId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		v.Set(lastAccessKey, a.NewNumberFloat64(float64(now.Unix())))
+		return v, true, nil
+	}))
+	if err != nil {
+		return err
+	}
+	d.lastAccessCache.Store(spaceId, now)
+	return nil
 }
 
 func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {
@@ -282,6 +305,12 @@ func OpenIndexStorage(ctx context.Context, rootPath string) (ds IndexStorage, er
 	if err != nil {
 		return
 	}
-	ds = &indexStorage{db: db, statusColl: statusColl, hashesColl: hashesColl, arenaPool: &anyenc.ArenaPool{}}
+	ds = &indexStorage{
+		db:              db,
+		statusColl:      statusColl,
+		hashesColl:      hashesColl,
+		arenaPool:       &anyenc.ArenaPool{},
+		lastAccessCache: &sync.Map{},
+	}
 	return
 }
