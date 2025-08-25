@@ -72,6 +72,7 @@ func (n *nodeHead) Init(a *app.App) (err error) {
 		if e := n.DeleteHeads(spaceId); e != nil {
 			log.Error("can't delete space from nodehead", zap.Error(e))
 		}
+		if e := n.spaceStore.IndexStorage().RemoveHash()
 	})
 	if m := a.Component(metric.CName); m != nil {
 		n.registerMetrics(m.(metric.Metric))

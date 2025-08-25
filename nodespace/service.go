@@ -3,7 +3,6 @@ package nodespace
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -139,9 +138,6 @@ func (s *service) checkDeletionStatus(ctx context.Context, spaceId string) (err 
 	delStorage := s.spaceStorageProvider.IndexStorage()
 	status, err := delStorage.SpaceStatus(ctx, spaceId)
 	if err != nil {
-		if errors.Is(err, nodestorage.ErrUnknownSpaceId) {
-			return nil
-		}
 		return err
 	}
 	if status == nodestorage.SpaceStatusRemove {

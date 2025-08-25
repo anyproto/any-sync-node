@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
@@ -34,6 +35,7 @@ const (
 	oldHashKey             = "oh"
 	statusKey              = "s"
 	recordIdKey            = "r"
+	lastAccessKey          = "la"
 	diffMigrationKey       = "diffState"
 	diffVersionKey         = "diffVersion"
 )
@@ -62,24 +64,21 @@ type indexStorage struct {
 func (d *indexStorage) UpdateHash(ctx context.Context, update SpaceUpdate) (err error) {
 	arena := d.arenaPool.Get()
 	defer d.arenaPool.Put(arena)
-	doc := arena.NewObject()
-	doc.Set("id", arena.NewString(update.SpaceId))
-	doc.Set(oldHashKey, arena.NewString(update.OldHash))
-	doc.Set(newHashKey, arena.NewString(update.NewHash))
-	return d.hashesColl.UpsertOne(ctx, doc)
+	_, err = d.hashesColl.UpsertId(ctx, update.SpaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		if v == nil {
+			v = a.NewObject()
+		}
+		v.Set("id", arena.NewString(update.SpaceId))
+		v.Set(oldHashKey, arena.NewString(update.OldHash))
+		v.Set(newHashKey, arena.NewString(update.NewHash))
+		v.Set(lastAccessKey, arena.NewNumberFloat64(float64(time.Now().Unix())))
+		return v, true, nil
+	}))
+	return err
 }
 
 func (d *indexStorage) RemoveHash(ctx context.Context, spaceId string) (err error) {
-	tx, err := d.hashesColl.WriteTx(ctx)
-	if err != nil {
-		return
-	}
-	err = d.removeHashTx(tx.Context(), spaceId)
-	if err != nil {
-		tx.Rollback()
-		return
-	}
-	return tx.Commit()
+	return d.removeHashTx(ctx, spaceId)
 }
 
 func (d *indexStorage) removeHashTx(ctx context.Context, spaceId string) (err error) {
@@ -116,8 +115,12 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error) {
 	doc, err := d.statusColl.FindId(ctx, spaceId)
 	if err != nil {
-		err = fmt.Errorf("find id: %w, %w", err, ErrUnknownSpaceId)
-		return
+		if errors.Is(err, anystore.ErrDocNotFound) {
+			return SpaceStatusOk, nil
+		} else {
+			err = fmt.Errorf("find id: %w", err)
+			return
+		}
 	}
 	return SpaceStatus(doc.Value().GetInt(statusKey)), nil
 }
@@ -127,6 +130,9 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 	if err != nil {
 		return
 	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
 	arena := d.arenaPool.Get()
 	defer d.arenaPool.Put(arena)
 	doc := arena.NewObject()
@@ -135,13 +141,11 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 	doc.Set(recordIdKey, arena.NewString(recId))
 	err = d.statusColl.UpsertOne(tx.Context(), doc)
 	if err != nil {
-		tx.Rollback()
 		return
 	}
 	if status == SpaceStatusRemove {
 		err = d.removeHashTx(tx.Context(), spaceId)
 		if err != nil {
-			tx.Rollback()
 			return
 		}
 	}
@@ -149,7 +153,7 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 }
 
 func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) {
-	iter, err := d.statusColl.Find(query.All{}).Sort("-" + recordIdKey).Iter(ctx)
+	iter, err := d.statusColl.Find(query.All{}).Sort("-" + recordIdKey).Limit(1).Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -178,48 +182,21 @@ func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {
 }
 
 func (d *indexStorage) UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error) {
-	iter, err := d.hashesColl.Find(query.All{}).Iter(ctx)
-	if err != nil {
-		return err
-	}
-	defer iter.Close()
-
-	tx, err := d.hashesColl.WriteTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	for iter.Next() {
-		doc, err := iter.Doc()
-		if err != nil {
-			return err
-		}
-
-		value := doc.Value()
-		spaceId := value.GetString("id")
-		newHash := value.GetString(newHashKey)
-		oldHash := value.GetString(oldHashKey)
+	_, err = d.hashesColl.Find(query.All{}).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		spaceId := v.GetString("id")
+		newHash := v.GetString(newHashKey)
+		oldHash := v.GetString(oldHashKey)
 
 		newNewHash, newOldHash, shouldUpdate := updateFunc(spaceId, newHash, oldHash)
 		if !shouldUpdate {
-			continue
+			return v, false, nil
 		}
 
-		arena := d.arenaPool.Get()
-		updatedDoc := arena.NewObject()
-		updatedDoc.Set("id", arena.NewString(spaceId))
-		updatedDoc.Set(newHashKey, arena.NewString(newNewHash))
-		updatedDoc.Set(oldHashKey, arena.NewString(newOldHash))
-
-		err = d.hashesColl.UpsertOne(tx.Context(), updatedDoc)
-		d.arenaPool.Put(arena)
-		if err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
+		v.Set(newHashKey, a.NewString(newNewHash))
+		v.Set(oldHashKey, a.NewString(newOldHash))
+		return v, true, nil
+	}))
+	return
 }
 
 func (d *indexStorage) GetDiffMigrationVersion(ctx context.Context) (version int, err error) {
