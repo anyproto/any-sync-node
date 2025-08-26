@@ -12,6 +12,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-store/query"
+	"go.uber.org/zap"
 )
 
 type SpaceStatus int
@@ -29,21 +30,22 @@ var (
 
 const (
 	IndexStorageName       = ".index"
-	delCollName            = "deletionIndex"
-	hashCollName           = "hashesIndex"
 	migrationStateCollName = "migrationState"
+	spaceCollName          = "space"
+	settingsCollName       = "settings"
 	newHashKey             = "nh"
 	oldHashKey             = "oh"
 	statusKey              = "s"
-	recordIdKey            = "r"
 	lastAccessKey          = "la"
+	valueKey               = "v"
 	diffMigrationKey       = "diffState"
 	diffVersionKey         = "diffVersion"
+
+	lastDeletionIdKey = "lastDeletionId"
 )
 
 type IndexStorage interface {
 	UpdateHash(ctx context.Context, updates ...SpaceUpdate) (err error)
-	RemoveHash(ctx context.Context, spaceId string) (err error)
 	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
 	UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
@@ -58,8 +60,8 @@ type IndexStorage interface {
 
 type indexStorage struct {
 	db              anystore.DB
-	statusColl      anystore.Collection
-	hashesColl      anystore.Collection
+	settingsColl    anystore.Collection
+	spaceColl       anystore.Collection
 	arenaPool       *anyenc.ArenaPool
 	lastAccessCache *sync.Map
 }
@@ -75,14 +77,10 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 	ctx = tx.Context()
 
 	for _, update := range updates {
-		_, err = d.hashesColl.UpsertId(ctx, update.SpaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-			if v == nil {
-				v = a.NewObject()
-			}
+		_, err = d.spaceColl.UpsertId(ctx, update.SpaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 			if update.Updated.IsZero() {
 				update.Updated = time.Now()
 			}
-			v.Set("id", a.NewString(update.SpaceId))
 			v.Set(oldHashKey, a.NewString(update.OldHash))
 			v.Set(newHashKey, a.NewString(update.NewHash))
 			v.Set(lastAccessKey, a.NewNumberFloat64(float64(update.Updated.Unix())))
@@ -96,20 +94,8 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 	return tx.Commit()
 }
 
-func (d *indexStorage) RemoveHash(ctx context.Context, spaceId string) (err error) {
-	return d.removeHashTx(ctx, spaceId)
-}
-
-func (d *indexStorage) removeHashTx(ctx context.Context, spaceId string) (err error) {
-	err = d.hashesColl.DeleteId(ctx, spaceId)
-	if errors.Is(err, anystore.ErrDocNotFound) {
-		return nil
-	}
-	return err
-}
-
 func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
-	iter, err := d.hashesColl.Find(query.Key{Path: []string{"id"}, Filter: query.All{}}).Sort("id").Iter(ctx)
+	iter, err := d.spaceColl.Find(query.Key{Path: []string{"id"}, Filter: query.All{}}).Sort("id").Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -133,7 +119,7 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 }
 
 func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error) {
-	doc, err := d.statusColl.FindId(ctx, spaceId)
+	doc, err := d.settingsColl.FindId(ctx, spaceId)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return SpaceStatusOk, nil
@@ -146,46 +132,49 @@ func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status 
 }
 
 func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error) {
-	tx, err := d.statusColl.WriteTx(ctx)
+	tx, err := d.db.WriteTx(ctx)
 	if err != nil {
 		return
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
-	arena := d.arenaPool.Get()
-	defer d.arenaPool.Put(arena)
-	doc := arena.NewObject()
-	doc.Set("id", arena.NewString(spaceId))
-	doc.Set(statusKey, arena.NewNumberFloat64(float64(status)))
-	doc.Set(recordIdKey, arena.NewString(recId))
-	err = d.statusColl.UpsertOne(tx.Context(), doc)
+	ctx = tx.Context()
+
+	_, err = d.spaceColl.UpsertId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		v.Set(statusKey, a.NewNumberInt(int(status)))
+		if status == SpaceStatusRemove {
+			v.Set(oldHashKey, a.NewNull())
+			v.Set(newHashKey, a.NewNull())
+		}
+		return v, true, nil
+	}))
 	if err != nil {
 		return
 	}
-	if status == SpaceStatusRemove {
-		err = d.removeHashTx(tx.Context(), spaceId)
-		if err != nil {
-			return
-		}
+	if recId == "" {
+		return tx.Commit()
 	}
+	_, err = d.settingsColl.UpsertId(ctx, lastDeletionIdKey, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		prevKey := v.GetString(valueKey)
+		if prevKey < recId {
+			v.Set(valueKey, a.NewString(recId))
+			return v, true, nil
+		}
+		return v, false, nil
+	}))
 	return tx.Commit()
 }
 
 func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) {
-	iter, err := d.statusColl.Find(query.All{}).Sort("-" + recordIdKey).Limit(1).Iter(ctx)
+	doc, err := d.settingsColl.FindId(ctx, lastDeletionIdKey)
 	if err != nil {
-		return
-	}
-	defer iter.Close()
-	if iter.Next() {
-		doc, err := iter.Doc()
-		if err != nil {
-			return "", err
+		if errors.Is(err, anystore.ErrDocNotFound) {
+			return "", ErrNoLastRecordId
 		}
-		return doc.Value().GetString(recordIdKey), nil
+		return "", err
 	}
-	return "", ErrNoLastRecordId
+	return doc.Value().GetString(valueKey), nil
 }
 
 func (d *indexStorage) UpdateLastAccess(ctx context.Context, spaceId string) (err error) {
@@ -195,7 +184,7 @@ func (d *indexStorage) UpdateLastAccess(ctx context.Context, spaceId string) (er
 			return nil
 		}
 	}
-	_, err = d.hashesColl.UpsertId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+	_, err = d.spaceColl.UpsertId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		v.Set(lastAccessKey, a.NewNumberFloat64(float64(now.Unix())))
 		return v, true, nil
 	}))
@@ -220,7 +209,7 @@ func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {
 }
 
 func (d *indexStorage) UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error) {
-	_, err = d.hashesColl.Find(query.All{}).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+	_, err = d.spaceColl.Find(query.All{}).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		spaceId := v.GetString("id")
 		newHash := v.GetString(newHashKey)
 		oldHash := v.GetString(oldHashKey)
@@ -289,28 +278,159 @@ func OpenIndexStorage(ctx context.Context, rootPath string) (ds IndexStorage, er
 	if err != nil {
 		return
 	}
-	statusColl, err := db.Collection(ctx, delCollName)
+
+	if err = migrateToSingleCollection(ctx, db); err != nil {
+		return
+	}
+
+	spaceColl, err := db.Collection(ctx, spaceCollName)
 	if err != nil {
+		return
+	}
+	settingsColl, err := db.Collection(ctx, settingsCollName)
+	if err != nil {
+		return
+	}
+
+	if err = spaceColl.EnsureIndex(ctx, anystore.IndexInfo{
+		Fields: []string{statusKey, lastAccessKey},
+	}); err != nil {
+		return
+	}
+
+	ds = &indexStorage{
+		db:              db,
+		settingsColl:    settingsColl,
+		spaceColl:       spaceColl,
+		arenaPool:       &anyenc.ArenaPool{},
+		lastAccessCache: &sync.Map{},
+	}
+	return
+}
+
+func migrateToSingleCollection(ctx context.Context, db anystore.DB) (err error) {
+	// old names
+	const (
+		delCollName  = "deletionIndex"
+		hashCollName = "hashesIndex"
+		recordIdKey  = "r"
+	)
+
+	statusColl, err := db.OpenCollection(ctx, delCollName)
+	if err != nil {
+		if errors.Is(err, anystore.ErrCollectionNotFound) {
+			// already migrated
+			return nil
+		}
 		return
 	}
 	hashesColl, err := db.Collection(ctx, hashCollName)
 	if err != nil {
 		return
 	}
-	info := anystore.IndexInfo{
-		Fields: []string{recordIdKey},
-		Unique: true,
-	}
-	err = statusColl.EnsureIndex(ctx, info)
+
+	settingsColl, err := db.Collection(ctx, settingsCollName)
 	if err != nil {
 		return
 	}
-	ds = &indexStorage{
-		db:              db,
-		statusColl:      statusColl,
-		hashesColl:      hashesColl,
-		arenaPool:       &anyenc.ArenaPool{},
-		lastAccessCache: &sync.Map{},
+
+	tx, err := db.WriteTx(ctx)
+	if err != nil {
+		return
 	}
-	return
+	defer func() { _ = tx.Rollback() }()
+	ctx = tx.Context()
+
+	statusCount, err := statusColl.Count(ctx)
+	if err != nil {
+		return
+	}
+
+	var (
+		maxDeletionLogId string
+		nowUnix          = time.Now().Unix()
+	)
+
+	log.Info("migrating index to single collection: set statuses...", zap.Int("count", statusCount))
+	err = func() (err error) {
+		st := time.Now()
+		iter, err := statusColl.Find(nil).Iter(ctx)
+		if err != nil {
+			return
+		}
+		defer func() { _ = iter.Close() }()
+
+		for iter.Next() {
+			doc, err := iter.Doc()
+			if err != nil {
+				return err
+			}
+
+			delLogId := doc.Value().GetString(recordIdKey)
+			if delLogId > maxDeletionLogId {
+				maxDeletionLogId = delLogId
+			}
+			status := SpaceStatus(doc.Value().GetInt(statusKey))
+			_, err = hashesColl.UpsertId(
+				ctx,
+				doc.Value().GetString("id"),
+				query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+					v.Set(statusKey, a.NewNumberInt(int(status)))
+					if status == SpaceStatusRemove {
+						v.Del(oldHashKey)
+						v.Del(newHashKey)
+					}
+					return v, true, nil
+				}))
+			if err != nil {
+				return err
+			}
+		}
+		log.Info("migrating index to single collection: set statuses done", zap.Duration("dur", time.Since(st)))
+		return
+	}()
+	if err != nil {
+		return
+	}
+
+	hashesCount, err := hashesColl.Count(ctx)
+	if err != nil {
+		return
+	}
+
+	log.Info("migrating index to single collection: set last access time...", zap.Int("count", hashesCount))
+	st := time.Now()
+	_, err = hashesColl.Find(nil).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		status := SpaceStatus(v.GetInt(statusKey))
+		v.Set(statusKey, a.NewNumberInt(int(status)))
+		v.Set(lastAccessKey, a.NewNumberInt(int(nowUnix)))
+		return v, true, nil
+	}))
+	if err != nil {
+		return
+	}
+	log.Info("migrating index to single collection: set last access time done", zap.Duration("dur", time.Since(st)))
+
+	a := &anyenc.Arena{}
+	lastIdObj := a.NewObject()
+	lastIdObj.Set("id", a.NewString(lastDeletionIdKey))
+	lastIdObj.Set(valueKey, a.NewString(maxDeletionLogId))
+	if err = settingsColl.UpsertOne(ctx, lastIdObj); err != nil {
+		return
+	}
+
+	st = time.Now()
+	log.Info("migrating index to single collection: rename, drop statuses and commit...")
+	defer func() {
+		log.Info("migrating index to single collection: rename, drop statuses and commit done", zap.Duration("dur", time.Since(st)), zap.Error(err))
+	}()
+	if err = hashesColl.Rename(ctx, spaceCollName); err != nil {
+		return
+	}
+
+	if err = statusColl.Drop(ctx); err != nil {
+		return
+	}
+
+	return tx.Commit()
 }

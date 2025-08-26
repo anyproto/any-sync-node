@@ -216,14 +216,13 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 	}
 	var (
 		toUpdate   []string
-		toRemove   []string
 		currentIds = make([]string, 0, len(allIds))
 	)
 	err = s.indexStorage.ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
 		currentIds = append(currentIds, update.SpaceId)
 		return true, nil
 	})
-	toRemove, toUpdate = slice.DifferenceRemovedAdded(currentIds, allIds)
+	_, toUpdate = slice.DifferenceRemovedAdded(currentIds, allIds)
 	if err != nil {
 		log.Error("failed to read hashes", zap.Error(err))
 		return err
@@ -237,12 +236,6 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		err = s.ForceRemove(id)
 		if err != nil {
 			log.Error("failed to remove space", zap.String("spaceId", id), zap.Error(err))
-		}
-	}
-	for _, id := range toRemove {
-		err := s.indexStorage.RemoveHash(ctx, id)
-		if err != nil {
-			log.Error("failed to remove hash", zap.String("spaceId", id), zap.Error(err))
 		}
 	}
 	return
