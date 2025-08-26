@@ -84,6 +84,9 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 			v.Set(oldHashKey, a.NewString(update.OldHash))
 			v.Set(newHashKey, a.NewString(update.NewHash))
 			v.Set(lastAccessKey, a.NewNumberFloat64(float64(update.Updated.Unix())))
+			if v.Get(statusKey) == nil {
+				v.Set(statusKey, a.NewNumberInt(int(SpaceStatusOk)))
+			}
 			d.lastAccessCache.Store(update.SpaceId, update.Updated)
 			return v, true, nil
 		}))
@@ -216,7 +219,7 @@ func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {
 }
 
 func (d *indexStorage) UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error) {
-	_, err = d.spaceColl.Find(query.All{}).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+	_, err = d.spaceColl.Find(filterStatusOk).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		spaceId := v.GetString("id")
 		newHash := v.GetString(newHashKey)
 		oldHash := v.GetString(oldHashKey)
@@ -228,6 +231,9 @@ func (d *indexStorage) UpdateHashes(ctx context.Context, updateFunc func(spaceId
 
 		v.Set(newHashKey, a.NewString(newNewHash))
 		v.Set(oldHashKey, a.NewString(newOldHash))
+		if v.Get(statusKey) == nil {
+			v.Set(statusKey, a.NewNumberInt(int(SpaceStatusOk)))
+		}
 		return v, true, nil
 	}))
 	return
