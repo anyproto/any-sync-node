@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/testutil/anymock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
@@ -57,7 +58,7 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 		allIds = append(allIds, update.SpaceId)
 		return true, nil
 	})
-	require.Empty(t, allIds)
+	assert.Equal(t, []string{"space1"}, allIds)
 }
 
 func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {

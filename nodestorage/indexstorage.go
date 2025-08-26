@@ -94,8 +94,15 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 	return tx.Commit()
 }
 
+var _a = &anyenc.Arena{}
+
+var filterStatusOk = query.Key{
+	Path:   []string{statusKey},
+	Filter: query.NewCompValue(query.CompOpEq, _a.NewNumberInt(int(SpaceStatusOk))),
+}
+
 func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
-	iter, err := d.spaceColl.Find(query.Key{Path: []string{"id"}, Filter: query.All{}}).Sort("id").Iter(ctx)
+	iter, err := d.spaceColl.Find(filterStatusOk).Sort("id").Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -119,7 +126,7 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 }
 
 func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error) {
-	doc, err := d.settingsColl.FindId(ctx, spaceId)
+	doc, err := d.spaceColl.FindId(ctx, spaceId)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return SpaceStatusOk, nil
