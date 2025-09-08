@@ -13,7 +13,7 @@ require (
 	github.com/cheggaaa/mb/v3 v3.0.2
 	github.com/planetscale/vtprotobuf v0.6.0
 	github.com/prometheus/client_golang v1.23.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	go.uber.org/atomic v1.11.0
 	go.uber.org/mock v0.5.2
 	go.uber.org/multierr v1.11.0
