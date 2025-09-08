@@ -1,3 +1,5 @@
+name: Release
+
 on:
   workflow_call:
     inputs:
@@ -9,8 +11,6 @@ on:
         type: boolean
         required: false
         default: false
-
-name: Release
 
 permissions: write-all
 
