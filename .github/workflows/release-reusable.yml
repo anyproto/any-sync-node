@@ -10,14 +10,14 @@ on:
         required: false
         default: false
 
-name: release
+name: Release
 
 permissions: write-all
 
 jobs:
   build:
-    name: build release
-    runs-on: ubuntu-22.04
+    name: Build and release
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         arch:
@@ -26,7 +26,7 @@ jobs:
         os:
           - linux
         go-version:
-          - '1.22'
+          - '1.24'
         include:
           - arch: amd64
             rpm_arch: x86_64
@@ -35,8 +35,8 @@ jobs:
     env:
       GOPRIVATE: github.com/anyproto
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '${{ matrix.go-version }}'
           check-latest: true
@@ -127,8 +127,8 @@ jobs:
           ls -al ./
 
       # upload-release-asset {{
-      - name: Create release and upload asset zip
-        uses: softprops/action-gh-release@v2.0.4
+      - name: Create release and upload asset zip | Windows
+        uses: softprops/action-gh-release@v2
         if: matrix.os == 'windows'
         with:
           name: Release ${{ github.ref_name }}
@@ -140,8 +140,8 @@ jobs:
           files: |
             ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.zip
 
-      - name: Create release and upload asset tgz
-        uses: softprops/action-gh-release@v2.0.4
+      - name: Create release and upload asset tgz | Unix
+        uses: softprops/action-gh-release@v2
         if: matrix.os != 'windows'
         with:
           name: Release ${{ github.ref_name }}
@@ -153,8 +153,8 @@ jobs:
           files: |
             ./${{ github.event.repository.name }}-${{ steps.release-version.outputs.RELEASE_VERSION }}.${{ matrix.os }}-${{ matrix.arch }}.tgz
 
-      - name: Create release and upload assets deb and rpm
-        uses: softprops/action-gh-release@v2.0.4
+      - name: Create release and upload assets deb and rpm | Linux
+        uses: softprops/action-gh-release@v2
         if: matrix.os == 'linux'
         with:
           name: Release ${{ github.ref_name }}
