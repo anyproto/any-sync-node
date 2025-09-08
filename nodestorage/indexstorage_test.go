@@ -39,6 +39,48 @@ func TestIndexStorage_UpdateLastAccess(t *testing.T) {
 	}))
 }
 
+func TestIndexStorage_FindOldestInactiveSpace(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns oldest Ok space before cutoff", func(t *testing.T) {
+		tempDir := t.TempDir()
+		fx, err := createTestIndexStorage(ctx, tempDir)
+		require.NoError(t, err)
+		defer fx.Close()
+
+		now := time.Now()
+
+		// candidates (all default to status=Ok)
+		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s_new", Updated: now.Add(-2 * time.Hour)}))    // too new
+		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s_old", Updated: now.Add(-48 * time.Hour)}))   // valid candidate
+		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s_older", Updated: now.Add(-72 * time.Hour)})) // oldest candidate
+
+		// this one is old but not Ok — should be ignored
+		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s_arch", Updated: now.Add(-96 * time.Hour)}))
+		require.NoError(t, fx.SetSpaceStatus(ctx, "s_arch", SpaceStatusArchived, ""))
+
+		spaceId, err := fx.FindOldestInactiveSpace(ctx, 24*time.Hour)
+		require.NoError(t, err)
+		assert.Equal(t, "s_older", spaceId)
+	})
+
+	t.Run("no matches -> ErrDocNotFound", func(t *testing.T) {
+		tempDir := t.TempDir()
+		fx, err := createTestIndexStorage(ctx, tempDir)
+		require.NoError(t, err)
+		defer fx.Close()
+
+		now := time.Now()
+		// all spaces are too recent
+		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s1", Updated: now.Add(-30 * time.Minute)}))
+		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s2", Updated: now.Add(-45 * time.Minute)}))
+
+		_, err = fx.FindOldestInactiveSpace(ctx, time.Hour)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, anystore.ErrDocNotFound)
+	})
+}
+
 func Test_migrateToSingleCollection(t *testing.T) {
 	tempDir := t.TempDir()
 	data, err := os.ReadFile("./testdata/index_store_v1.db")

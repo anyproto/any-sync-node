@@ -134,6 +134,7 @@ type NodeStorage interface {
 	OnWriteHash(onWrite func(ctx context.Context, spaceId, oldHash, newHash string))
 	StoreDir(spaceId string) (path string)
 	DeleteSpaceStorage(ctx context.Context, spaceId string) error
+	ForceRemove(id string) (err error)
 	GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error)
 }
 

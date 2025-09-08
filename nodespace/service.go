@@ -28,6 +28,8 @@ import (
 
 const CName = "node.nodespace"
 
+const nodeArchiveCName = "node.archive"
+
 var log = logger.NewNamed(CName)
 
 func New() Service {
@@ -43,6 +45,10 @@ type Service interface {
 	app.ComponentRunnable
 }
 
+type archiveRestorer interface {
+	Restore(ctx context.Context, spaceId string) (err error)
+}
+
 type service struct {
 	conf                 config.Config
 	spaceCache           ocache.OCache
@@ -54,6 +60,7 @@ type service struct {
 	nodeHead             nodehead.NodeHead
 	metric               metric.Metric
 	coordClient          coordinatorclient.CoordinatorClient
+	archive              archiveRestorer
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -73,6 +80,7 @@ func (s *service) Init(a *app.App) (err error) {
 	)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	s.coordClient = app.MustComponent[coordinatorclient.CoordinatorClient](a)
+	s.archive = a.MustComponent(nodeArchiveCName).(archiveRestorer)
 	return spacesyncproto.DRPCRegisterSpaceSync(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s})
 }
 
@@ -138,13 +146,20 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 }
 
 func (s *service) checkDeletionStatus(ctx context.Context, spaceId string) (err error) {
-	delStorage := s.spaceStorageProvider.IndexStorage()
-	status, err := delStorage.SpaceStatus(ctx, spaceId)
+	indexStore := s.spaceStorageProvider.IndexStorage()
+	status, err := indexStore.SpaceStatus(ctx, spaceId)
 	if err != nil {
 		return err
 	}
-	if status == nodestorage.SpaceStatusRemove {
+	switch status {
+	case nodestorage.SpaceStatusRemove, nodestorage.SpaceStatusRemovePrepare:
 		return spacesyncproto.ErrSpaceIsDeleted
+	case nodestorage.SpaceStatusArchived:
+		if err = s.archive.Restore(ctx, spaceId); err != nil {
+			return
+		}
+		return nil
+	case nodestorage.SpaceStatusOk:
 	}
 	return nil
 }

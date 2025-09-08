@@ -21,6 +21,7 @@ const (
 	SpaceStatusOk SpaceStatus = iota
 	SpaceStatusRemove
 	SpaceStatusRemovePrepare
+	SpaceStatusArchived
 )
 
 var (
@@ -29,17 +30,19 @@ var (
 )
 
 const (
-	IndexStorageName       = ".index"
-	migrationStateCollName = "migrationState"
-	spaceCollName          = "space"
-	settingsCollName       = "settings"
-	newHashKey             = "nh"
-	oldHashKey             = "oh"
-	statusKey              = "s"
-	lastAccessKey          = "la"
-	valueKey               = "v"
-	diffMigrationKey       = "diffState"
-	diffVersionKey         = "diffVersion"
+	IndexStorageName           = ".index"
+	migrationStateCollName     = "migrationState"
+	spaceCollName              = "space"
+	settingsCollName           = "settings"
+	newHashKey                 = "nh"
+	oldHashKey                 = "oh"
+	statusKey                  = "s"
+	lastAccessKey              = "la"
+	valueKey                   = "v"
+	archiveSizeCompressedKey   = "asc"
+	archiveSizeUncompressedKey = "asu"
+	diffMigrationKey           = "diffState"
+	diffVersionKey             = "diffVersion"
 
 	lastDeletionIdKey = "lastDeletionId"
 )
@@ -50,7 +53,10 @@ type IndexStorage interface {
 	UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
+	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
 	LastRecordId(ctx context.Context) (id string, err error)
+	FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration) (spaceId string, err error)
+
 	UpdateLastAccess(ctx context.Context, spaceId string) (err error)
 	GetDiffMigrationVersion(ctx context.Context) (version int, err error)
 	SetDiffMigrationVersion(ctx context.Context, version int) (err error)
@@ -153,6 +159,7 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 
 	_, err = d.spaceColl.UpsertId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		v.Set(statusKey, a.NewNumberInt(int(status)))
+		v.Set(lastAccessKey, a.NewNumberInt(int(time.Now().Unix())))
 		if status == SpaceStatusRemove {
 			v.Set(oldHashKey, a.NewNull())
 			v.Set(newHashKey, a.NewNull())
@@ -174,6 +181,16 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 		return v, false, nil
 	}))
 	return tx.Commit()
+}
+
+func (d *indexStorage) MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error) {
+	_, err = d.spaceColl.UpdateId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		v.Set(archiveSizeCompressedKey, a.NewNumberInt(int(compressedSize)))
+		v.Set(archiveSizeUncompressedKey, a.NewNumberInt(int(uncompressedSize)))
+		v.Set(statusKey, a.NewNumberInt(int(SpaceStatusArchived)))
+		return v, true, nil
+	}))
+	return err
 }
 
 func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) {
@@ -203,6 +220,44 @@ func (d *indexStorage) UpdateLastAccess(ctx context.Context, spaceId string) (er
 	}
 	d.lastAccessCache.Store(spaceId, now)
 	return nil
+}
+
+func (d *indexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration) (spaceId string, err error) {
+	// cutoff: lastAccess must be strictly earlier than now - olderThan
+	cutoffUnix := time.Now().Add(-olderThan).Unix()
+
+	a := d.arenaPool.Get()
+	defer d.arenaPool.Put(a)
+
+	// status == Ok AND lastAccess < cutoff
+	filter := query.And{
+		filterStatusOk,
+		query.Key{
+			Path:   []string{lastAccessKey},
+			Filter: query.NewCompValue(query.CompOpLt, a.NewNumberFloat64(float64(cutoffUnix))),
+		},
+	}
+
+	iter, err := d.spaceColl.Find(filter).Sort(lastAccessKey).Iter(ctx) // ASC by lastAccess
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = iter.Close()
+	}()
+
+	if !iter.Next() {
+		return "", anystore.ErrDocNotFound
+	}
+
+	doc, err := iter.Doc()
+	if err != nil {
+		return "", err
+	}
+
+	spaceId = doc.Value().GetString("id")
+
+	return spaceId, nil
 }
 
 func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {

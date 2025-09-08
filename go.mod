@@ -10,6 +10,7 @@ require (
 	github.com/anyproto/any-store v0.3.3
 	github.com/anyproto/any-sync v0.9.5
 	github.com/anyproto/go-chash v0.1.0
+	github.com/aws/aws-sdk-go v1.55.8
 	github.com/cheggaaa/mb/v3 v3.0.2
 	github.com/planetscale/vtprotobuf v0.6.0
 	github.com/prometheus/client_golang v1.23.0
@@ -54,6 +55,7 @@ require (
 	github.com/ipfs/go-cid v0.5.0 // indirect
 	github.com/ipfs/go-log/v2 v2.6.0 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-libp2p v0.42.1 // indirect

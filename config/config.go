@@ -17,6 +17,8 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"gopkg.in/yaml.v3"
 
+	"github.com/anyproto/any-sync-node/archive"
+	"github.com/anyproto/any-sync-node/archive/archivestore"
 	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
@@ -51,6 +53,8 @@ type Config struct {
 	Yamux                    yamux.Config           `yaml:"yamux"`
 	Limiter                  limiter.Config         `yaml:"limiter"`
 	Quic                     quic.Config            `yaml:"quic"`
+	S3Store                  archivestore.Config    `yaml:"s3Store"`
+	Archive                  archive.Config         `yaml:"archive"`
 }
 
 func (c Config) Init(a *app.App) (err error) {
@@ -123,4 +127,12 @@ func (c Config) GetStreamConfig() streampool.StreamConfig {
 		DialQueueWorkers: 4,
 		DialQueueSize:    100,
 	}
+}
+
+func (c Config) GetS3Store() archivestore.Config {
+	return c.S3Store
+}
+
+func (c Config) GetArchive() archive.Config {
+	return c.Archive
 }
