@@ -35,9 +35,13 @@ type optKey int
 const (
 	createKeyVal optKey = 0
 	doKeyVal     optKey = 1
+	doAfterOpen  optKey = 2
 )
 
-type doFunc = func() error
+type (
+	doFunc          = func() error
+	doAfterOpenFunc = func(db anystore.DB) error
+)
 
 type storageContainer struct {
 	db        anystore.DB
@@ -127,7 +131,8 @@ type NodeStorage interface {
 	IndexStorage() IndexStorage
 	IndexSpace(ctx context.Context, spaceId string, setHead bool) (spacestorage.SpaceStorage, error)
 	SpaceStorage(ctx context.Context, spaceId string) (spacestorage.SpaceStorage, error)
-	TryLockAndDo(ctx context.Context, spaceId string, do func() error) (err error)
+	TryLockAndDo(ctx context.Context, spaceId string, do doFunc) (err error)
+	TryLockAndOpenDb(ctx context.Context, spaceId string, do doAfterOpenFunc) (err error)
 	DumpStorage(ctx context.Context, id string, do func(path string) error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnDeleteStorage(onDelete func(ctx context.Context, spaceId string))
@@ -365,10 +370,17 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 	}
 	collNames, err := db.GetCollectionNames(ctx)
 	if len(collNames) == 0 {
-		os.RemoveAll(s.StoreDir(id))
+		_ = os.RemoveAll(s.StoreDir(id))
 		return nil, spacestorage.ErrSpaceStorageMissing
 	}
 	cont = newStorageContainer(db, id)
+
+	if fn, ok := ctx.Value(doAfterOpen).(doAfterOpenFunc); ok {
+		if err = fn(db); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
+	}
 	return cont, nil
 }
 
@@ -513,10 +525,34 @@ func (s *storageService) ForceRemove(id string) (err error) {
 	return
 }
 
-func (s *storageService) TryLockAndDo(ctx context.Context, spaceId string, do func() error) (err error) {
-	ctx = context.WithValue(ctx, doKeyVal, do)
-	_, err = s.get(ctx, spaceId)
-	return err
+func (s *storageService) TryLockAndDo(ctx context.Context, spaceId string, do doFunc) (err error) {
+	var called bool
+	ctx = context.WithValue(ctx, doKeyVal, func() error {
+		called = true
+		return do()
+	})
+	if _, err = s.get(ctx, spaceId); err != nil {
+		return
+	}
+	if !called {
+		return ErrLocked
+	}
+	return nil
+}
+
+func (s *storageService) TryLockAndOpenDb(ctx context.Context, spaceId string, do doAfterOpenFunc) (err error) {
+	var called bool
+	ctx = context.WithValue(ctx, doAfterOpen, func(db anystore.DB) error {
+		called = true
+		return do(db)
+	})
+	if _, err = s.get(ctx, spaceId); err != nil {
+		return
+	}
+	if !called {
+		return ErrLocked
+	}
+	return nil
 }
 
 func (s *storageService) DumpStorage(ctx context.Context, id string, do func(path string) error) (err error) {

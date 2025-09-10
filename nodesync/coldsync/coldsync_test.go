@@ -61,7 +61,7 @@ func TestColdSync_Sync(t *testing.T) {
 		defer fxC.Finish(t)
 		defer fxS.Finish(t)
 		err := fxC.Sync(ctx, "id", peerId)
-		require.ErrorIs(t, spacesyncproto.ErrSpaceMissing, rpcerr.Unwrap(err))
+		require.ErrorIs(t, rpcerr.Unwrap(err), spacesyncproto.ErrSpaceMissing)
 	})
 	t.Run("unsupported storage request", func(t *testing.T) {
 		fxC, fxS, peerId := makeClientServer(t)
@@ -70,7 +70,7 @@ func TestColdSync_Sync(t *testing.T) {
 		store := nodestorage.GenStorage(t, fxS.store, 100, 100)
 		currentReqProtocol = nodesyncproto.ColdSyncProtocolType_Pogreb
 		err := fxC.Sync(ctx, store.Id(), peerId)
-		require.ErrorIs(t, nodesyncproto.ErrUnsupportedStorageType, rpcerr.Unwrap(err))
+		require.ErrorIs(t, rpcerr.Unwrap(err), nodesyncproto.ErrUnsupportedStorageType)
 	})
 	t.Run("unsupported storage response", func(t *testing.T) {
 		fxC, fxS, peerId := makeClientServer(t)

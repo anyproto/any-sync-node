@@ -14,6 +14,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
 	"golang.org/x/exp/slices"
@@ -271,6 +272,30 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		require.Equal(t, 999, int(stats.Storage.ChangeSize.Avg))
 		require.Equal(t, 1000285, stats.Storage.ChangeSize.Total)
 	})
+}
+
+func TestStorageService_TryLockAndOpenDb(t *testing.T) {
+	ss := newStorageService(t)
+	defer ss.Close(ctx)
+	payload := NewStorageCreatePayload(t)
+	store, err := ss.CreateSpaceStorage(ctx, payload)
+	require.NoError(t, err)
+	spaceId := store.Id()
+
+	err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error { return nil })
+	require.ErrorIs(t, err, ErrLocked)
+
+	_ = ss.ForceRemove(spaceId)
+
+	var called bool
+	err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+		called = true
+		names, _ := db.GetCollectionNames(ctx)
+		assert.NotEmpty(t, names)
+		return nil
+	})
+	require.NoError(t, err)
+	require.True(t, called)
 }
 
 func TestSpaceStorage_GetSpaceStats_CalcMedian(t *testing.T) {
