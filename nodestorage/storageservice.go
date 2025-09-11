@@ -25,10 +25,20 @@ import (
 	"go.uber.org/zap"
 )
 
+const CName = spacestorage.CName
+
 var (
-	ErrClosed  = errors.New("space storage closed")
-	ErrDeleted = errors.New("space storage deleted")
+	ErrClosed                  = errors.New("space storage closed")
+	ErrLocked                  = errors.New("space storage locked")
+	ErrArchived                = errors.New("space is archived")
+	ErrSpaceIdIsEmpty          = errors.New("space id is empty")
+	ErrDoesntSupportSpaceStats = errors.New("doesn't support nodestorage.ObjectSpaceStats")
+	ErrDeleted                 = errors.New("space storage deleted")
 )
+
+func New() NodeStorage {
+	return &storageService{}
+}
 
 type optKey int
 
@@ -37,81 +47,6 @@ const (
 	doKeyVal     optKey = 1
 	doAfterOpen  optKey = 2
 )
-
-type (
-	doFunc          = func() error
-	doAfterOpenFunc = func(db anystore.DB) error
-)
-
-type storageContainer struct {
-	db        anystore.DB
-	mx        sync.Mutex
-	id        string
-	debugInfo string
-	created   time.Time
-	handlers  int
-	isClosing bool
-	closeCh   chan struct{}
-}
-
-func newStorageContainer(db anystore.DB, id string) *storageContainer {
-	return &storageContainer{
-		db:      db,
-		id:      id,
-		created: time.Now(),
-	}
-}
-
-func (s *storageContainer) Close() (err error) {
-	return s.db.Close()
-}
-
-func (s *storageContainer) Acquire() (anystore.DB, error) {
-	s.mx.Lock()
-	if s.isClosing {
-		ch := s.closeCh
-		s.mx.Unlock()
-		<-ch
-		return nil, ErrClosed
-	}
-	s.handlers++
-	s.mx.Unlock()
-	return s.db, nil
-}
-
-func (s *storageContainer) Release() {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-	s.handlers--
-}
-
-func (s *storageContainer) TryClose(objectTTL time.Duration) (res bool, err error) {
-	s.mx.Lock()
-	if s.handlers > 0 {
-		s.mx.Unlock()
-		return false, nil
-	}
-	s.isClosing = true
-	s.closeCh = make(chan struct{})
-	ch := s.closeCh
-	db := s.db
-	s.mx.Unlock()
-	if db != nil {
-		if err := db.Close(); err != nil {
-			log.Warn("failed to close db", zap.Error(err))
-		}
-	}
-	close(ch)
-	return true, nil
-}
-
-var (
-	ErrLocked                  = errors.New("space storage locked")
-	ErrSpaceIdIsEmpty          = errors.New("space id is empty")
-	ErrDoesntSupportSpaceStats = errors.New("doesn't support nodestorage.ObjectSpaceStats")
-)
-
-const CName = spacestorage.CName
 
 func anyStoreConfig() *anystore.Config {
 	return &anystore.Config{
@@ -122,9 +57,10 @@ func anyStoreConfig() *anystore.Config {
 	}
 }
 
-func New() NodeStorage {
-	return &storageService{}
-}
+type (
+	doFunc          = func() error
+	doAfterOpenFunc = func(db anystore.DB) error
+)
 
 type NodeStorage interface {
 	spacestorage.SpaceStorageProvider
@@ -155,6 +91,12 @@ type SpaceStorageStat struct {
 	InStorageSecs int    `json:"inStorageSecs"`
 }
 
+type archiveService interface {
+	Restore(ctx context.Context, spaceId string) error
+}
+
+const archiveCName = "node.archive"
+
 type storageService struct {
 	rootPath        string
 	cache           ocache.OCache
@@ -165,41 +107,50 @@ type storageService struct {
 	currentSpaces   map[string]*storageContainer
 	mu              sync.Mutex
 	statService     debugstat.StatService
+	archive         archiveService
 }
 
-func (s *storageService) ProvideStat() any {
-	stat := &StorageStats{}
-	s.cache.ForEach(func(v ocache.Object) (isContinue bool) {
-		cont := v.(*storageContainer)
-		cont.mx.Lock()
-		defer cont.mx.Unlock()
-		stat.Total++
-		stat.Spaces = append(stat.Spaces, SpaceStorageStat{
-			Id:            cont.id,
-			Refs:          cont.handlers,
-			Info:          cont.debugInfo,
-			InStorageSecs: int(time.Since(cont.created).Seconds()),
-		})
-		return true
+func (s *storageService) Init(a *app.App) (err error) {
+	cfg := a.MustComponent("config").(configGetter).GetStorage()
+	s.archive = a.MustComponent(archiveCName).(archiveService)
+	s.updater = newSpaceUpdater(func(updates []SpaceUpdate) {
+		if s.indexStorage == nil {
+			return
+		}
+		if err := s.indexStorage.UpdateHash(context.Background(), updates...); err != nil {
+			log.Error("failed to update hashes", zap.Error(err))
+		}
+		if s.onWriteHash != nil {
+			for _, update := range updates {
+				s.onWriteHash(context.Background(), update.SpaceId, update.OldHash, update.NewHash)
+			}
+		}
 	})
-	return stat
+	s.rootPath = cfg.AnyStorePath
+	if _, err = os.Stat(s.rootPath); err != nil {
+		err = os.MkdirAll(s.rootPath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
+	if !ok {
+		comp = debugstat.NewNoOp()
+	}
+	s.statService = comp
+	s.statService.AddProvider(s)
+	s.cache = ocache.New(s.loadFunc,
+		ocache.WithLogger(log.Sugar()),
+		ocache.WithGCPeriod(time.Minute),
+		ocache.WithTTL(60*time.Second))
+	if m := a.Component(metric.CName); m != nil {
+		registerMetric(&StorageStat{cache: s.cache}, m.(metric.Metric).Registry())
+	}
+	return nil
 }
 
-func (s *storageService) StatId() string {
+func (s *storageService) Name() (name string) {
 	return CName
-}
-
-func (s *storageService) StatType() string {
-	return CName
-}
-
-func (s *storageService) onHashChange(spaceId, oldHash, newHash string) {
-	_ = s.updater.Add(SpaceUpdate{
-		SpaceId: spaceId,
-		OldHash: oldHash,
-		NewHash: newHash,
-		Updated: time.Now(),
-	})
 }
 
 func (s *storageService) Run(ctx context.Context) (err error) {
@@ -247,62 +198,43 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (s *storageService) Close(ctx context.Context) (err error) {
-	err = s.updater.Close()
-	if err != nil {
-		log.Error("failed to close updater", zap.Error(err))
-	}
-	if s.indexStorage != nil {
-		return s.indexStorage.Close()
-	}
-	s.statService.RemoveProvider(s)
-	return
+func (s *storageService) ProvideStat() any {
+	stat := &StorageStats{}
+	s.cache.ForEach(func(v ocache.Object) (isContinue bool) {
+		cont := v.(*storageContainer)
+		cont.mx.Lock()
+		defer cont.mx.Unlock()
+		stat.Total++
+		stat.Spaces = append(stat.Spaces, SpaceStorageStat{
+			Id:            cont.id,
+			Refs:          cont.handlers,
+			Info:          cont.debugInfo,
+			InStorageSecs: int(time.Since(cont.created).Seconds()),
+		})
+		return true
+	})
+	return stat
+}
+
+func (s *storageService) StatId() string {
+	return CName
+}
+
+func (s *storageService) StatType() string {
+	return CName
+}
+
+func (s *storageService) onHashChange(spaceId, oldHash, newHash string) {
+	_ = s.updater.Add(SpaceUpdate{
+		SpaceId: spaceId,
+		OldHash: oldHash,
+		NewHash: newHash,
+		Updated: time.Now(),
+	})
 }
 
 func (s *storageService) IndexStorage() IndexStorage {
 	return s.indexStorage
-}
-
-func (s *storageService) Init(a *app.App) (err error) {
-	cfg := a.MustComponent("config").(configGetter).GetStorage()
-	s.updater = newSpaceUpdater(func(updates []SpaceUpdate) {
-		if s.indexStorage == nil {
-			return
-		}
-		if err := s.indexStorage.UpdateHash(context.Background(), updates...); err != nil {
-			log.Error("failed to update hashes", zap.Error(err))
-		}
-		if s.onWriteHash != nil {
-			for _, update := range updates {
-				s.onWriteHash(context.Background(), update.SpaceId, update.OldHash, update.NewHash)
-			}
-		}
-	})
-	s.rootPath = cfg.AnyStorePath
-	if _, err = os.Stat(s.rootPath); err != nil {
-		err = os.MkdirAll(s.rootPath, 0755)
-		if err != nil {
-			return err
-		}
-	}
-	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
-	if !ok {
-		comp = debugstat.NewNoOp()
-	}
-	s.statService = comp
-	s.statService.AddProvider(s)
-	s.cache = ocache.New(s.loadFunc,
-		ocache.WithLogger(log.Sugar()),
-		ocache.WithGCPeriod(time.Minute),
-		ocache.WithTTL(60*time.Second))
-	if m := a.Component(metric.CName); m != nil {
-		registerMetric(&StorageStat{cache: s.cache}, m.(metric.Metric).Registry())
-	}
-	return nil
-}
-
-func (s *storageService) Name() (name string) {
-	return CName
 }
 
 func (s *storageService) openDb(ctx context.Context, id string) (db anystore.DB, err error) {
@@ -342,6 +274,18 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 			cont.debugInfo = info
 		}
 	}()
+
+	statusErr := s.checkStatus(ctx, id)
+	if statusErr != nil {
+		if errors.Is(statusErr, ErrArchived) {
+			if err = s.archive.Restore(ctx, id); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, statusErr
+		}
+	}
+
 	if fn, ok := ctx.Value(doKeyVal).(doFunc); ok {
 		err := fn()
 		if err != nil {
@@ -390,6 +334,23 @@ func (s *storageService) get(ctx context.Context, id string) (container *storage
 		return nil, err
 	}
 	return cont.(*storageContainer), nil
+}
+
+func (s *storageService) checkStatus(ctx context.Context, spaceId string) (err error) {
+	status, err := s.indexStorage.SpaceStatus(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	switch status {
+	case SpaceStatusOk:
+		return nil
+	case SpaceStatusRemove, SpaceStatusRemovePrepare:
+		return spacestorage.ErrSpaceStorageMissing
+	case SpaceStatusArchived:
+		return ErrArchived
+	default:
+		return fmt.Errorf("unknown status: %v", status)
+	}
 }
 
 func (s *storageService) SpaceStorage(ctx context.Context, spaceId string) (spacestorage.SpaceStorage, error) {
@@ -613,4 +574,78 @@ func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId s
 
 func (s *storageService) OnDeleteStorage(onDelete func(ctx context.Context, spaceId string)) {
 	s.onDeleteStorage = onDelete
+}
+
+func (s *storageService) Close(ctx context.Context) (err error) {
+	err = s.updater.Close()
+	if err != nil {
+		log.Error("failed to close updater", zap.Error(err))
+	}
+	if s.indexStorage != nil {
+		return s.indexStorage.Close()
+	}
+	s.statService.RemoveProvider(s)
+	return
+}
+
+type storageContainer struct {
+	db        anystore.DB
+	mx        sync.Mutex
+	id        string
+	debugInfo string
+	created   time.Time
+	handlers  int
+	isClosing bool
+	closeCh   chan struct{}
+}
+
+func newStorageContainer(db anystore.DB, id string) *storageContainer {
+	return &storageContainer{
+		db:      db,
+		id:      id,
+		created: time.Now(),
+	}
+}
+
+func (s *storageContainer) Close() (err error) {
+	return s.db.Close()
+}
+
+func (s *storageContainer) Acquire() (anystore.DB, error) {
+	s.mx.Lock()
+	if s.isClosing {
+		ch := s.closeCh
+		s.mx.Unlock()
+		<-ch
+		return nil, ErrClosed
+	}
+	s.handlers++
+	s.mx.Unlock()
+	return s.db, nil
+}
+
+func (s *storageContainer) Release() {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	s.handlers--
+}
+
+func (s *storageContainer) TryClose(objectTTL time.Duration) (res bool, err error) {
+	s.mx.Lock()
+	if s.handlers > 0 {
+		s.mx.Unlock()
+		return false, nil
+	}
+	s.isClosing = true
+	s.closeCh = make(chan struct{})
+	ch := s.closeCh
+	db := s.db
+	s.mx.Unlock()
+	if db != nil {
+		if err := db.Close(); err != nil {
+			log.Warn("failed to close db", zap.Error(err))
+		}
+	}
+	close(ch)
+	return true, nil
 }

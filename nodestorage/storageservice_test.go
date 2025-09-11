@@ -14,10 +14,14 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/exp/rand"
 	"golang.org/x/exp/slices"
+
+	"github.com/anyproto/any-sync-node/archive/mock_archive"
 )
 
 func TestStorageService_SpaceStorage(t *testing.T) {
@@ -272,6 +276,39 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		require.Equal(t, 999, int(stats.Storage.ChangeSize.Avg))
 		require.Equal(t, 1000285, stats.Storage.ChangeSize.Total)
 	})
+	t.Run("restore", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+
+		payload := NewStorageCreatePayload(t)
+		_, err := ss.CreateSpaceStorage(ctx, payload)
+		require.NoError(t, err)
+
+		spaceId := payload.SpaceHeaderWithId.Id
+		require.NoError(t, ss.ForceRemove(spaceId))
+
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		spacePath := ss.StoreDir(spaceId)
+
+		require.NoError(t, os.Rename(filepath.Join(spacePath, "store.db"), filepath.Join(tmpDir, "store.db")))
+		require.NoError(t, os.RemoveAll(spacePath))
+
+		require.NoError(t, ss.IndexStorage().SetSpaceStatus(ctx, spaceId, SpaceStatusOk, ""))
+		require.NoError(t, ss.IndexStorage().MarkArchived(ctx, spaceId, 1, 2))
+
+		ss.archive.(*mock_archive.MockArchive).EXPECT().Restore(gomock.Any(), spaceId).Do(func(_ context.Context, _ string) error {
+			require.NoError(t, os.MkdirAll(spacePath, 0755))
+			require.NoError(t, os.Rename(filepath.Join(tmpDir, "store.db"), filepath.Join(spacePath, "store.db")))
+			return nil
+		})
+
+		store, err := ss.WaitSpaceStorage(ctx, spaceId)
+		require.NoError(t, err)
+		require.NoError(t, store.Close(ctx))
+	})
 }
 
 func TestStorageService_TryLockAndOpenDb(t *testing.T) {
@@ -372,7 +409,13 @@ func newStorageServiceWithDir(t *testing.T, tempDir string) *storageService {
 	ss := New()
 	a := new(app.App)
 
-	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss)
+	ctrl := gomock.NewController(t)
+	archive := mock_archive.NewMockArchive(ctrl)
+	anymock.ExpectComp(archive.EXPECT(), archiveCName)
+
+	t.Cleanup(ctrl.Finish)
+
+	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss).Register(archive)
 	a.Start(ctx)
 	return ss.(*storageService)
 }

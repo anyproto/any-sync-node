@@ -3,6 +3,7 @@ package nodespace
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -45,10 +46,6 @@ type Service interface {
 	app.ComponentRunnable
 }
 
-type archiveRestorer interface {
-	Restore(ctx context.Context, spaceId string) (err error)
-}
-
 type service struct {
 	conf                 config.Config
 	spaceCache           ocache.OCache
@@ -60,7 +57,6 @@ type service struct {
 	nodeHead             nodehead.NodeHead
 	metric               metric.Metric
 	coordClient          coordinatorclient.CoordinatorClient
-	archive              archiveRestorer
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -80,7 +76,6 @@ func (s *service) Init(a *app.App) (err error) {
 	)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	s.coordClient = app.MustComponent[coordinatorclient.CoordinatorClient](a)
-	s.archive = a.MustComponent(nodeArchiveCName).(archiveRestorer)
 	return spacesyncproto.DRPCRegisterSpaceSync(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s})
 }
 
@@ -125,14 +120,14 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	defer func() {
 		log.InfoCtx(ctx, "space loaded", zap.String("id", id), zap.Error(err))
 	}()
-	if err = s.checkDeletionStatus(ctx, id); err != nil {
-		return nil, err
-	}
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
 		TreeSyncer: treesyncer.New(id),
 		SyncStatus: syncstatus.NewNoOpSyncStatus(),
 	})
 	if err != nil {
+		if errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
+			return nil, spacesyncproto.ErrSpaceIsDeleted
+		}
 		return
 	}
 	ns, err := newNodeSpace(cc, s.consClient, s.spaceStorageProvider)
@@ -143,25 +138,6 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 		return
 	}
 	return ns, nil
-}
-
-func (s *service) checkDeletionStatus(ctx context.Context, spaceId string) (err error) {
-	indexStore := s.spaceStorageProvider.IndexStorage()
-	status, err := indexStore.SpaceStatus(ctx, spaceId)
-	if err != nil {
-		return err
-	}
-	switch status {
-	case nodestorage.SpaceStatusRemove, nodestorage.SpaceStatusRemovePrepare:
-		return spacesyncproto.ErrSpaceIsDeleted
-	case nodestorage.SpaceStatusArchived:
-		if err = s.archive.Restore(ctx, spaceId); err != nil {
-			return
-		}
-		return nil
-	case nodestorage.SpaceStatusOk:
-	}
-	return nil
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

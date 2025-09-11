@@ -1,3 +1,5 @@
+//go:generate mockgen -destination mock_archive/mock_archive.go github.com/anyproto/any-sync-node/archive Archive
+
 package archive
 
 import (
@@ -70,11 +72,23 @@ func (a *archive) Run(_ context.Context) (err error) {
 	return
 }
 
+var errArchived = errors.New("archived")
+
 func (a *archive) Archive(ctx context.Context, spaceId string) (err error) {
 	var gzSize, dbSize int64
-
-	err = a.storageProvider.DumpStorage(ctx, spaceId, func(p string) (err error) {
-		gzPath, gzSz, dbSz, err := a.createGzipFromStore(p)
+	tmpDir, err := os.MkdirTemp("", spaceId)
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
+	err = a.storageProvider.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+		storePath := filepath.Join(tmpDir, "store.db")
+		if err = db.Backup(ctx, storePath); err != nil {
+			return err
+		}
+		gzPath, gzSz, dbSz, err := a.createGzipFromStore(tmpDir)
 		if err != nil {
 			return err
 		}
@@ -93,17 +107,21 @@ func (a *archive) Archive(ctx context.Context, spaceId string) (err error) {
 		if err = a.archiveStore.Put(ctx, spaceId, r); err != nil {
 			return err
 		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
 
-	if err = a.storageProvider.IndexStorage().MarkArchived(ctx, spaceId, gzSize, dbSize); err != nil {
-		return err
+		if err = a.storageProvider.IndexStorage().MarkArchived(ctx, spaceId, gzSize, dbSize); err != nil {
+			return err
+		}
+
+		_ = db.Close()
+		_ = os.RemoveAll(a.storageProvider.StoreDir(spaceId))
+
+		return errArchived
+	})
+
+	if errors.Is(err, errArchived) {
+		return nil
 	}
-	_ = a.storageProvider.ForceRemove(spaceId)
-	return os.RemoveAll(a.storageProvider.StoreDir(spaceId))
+	return
 }
 
 // createGzipFromStore creates store.gz from store.db inside spaceDir.

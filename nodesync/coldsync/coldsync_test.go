@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/anyproto/any-sync-node/archive/mock_archive"
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
 	"github.com/anyproto/any-sync-node/nodestorage"
@@ -97,12 +98,15 @@ func newFixture(t *testing.T) (fx *fixture) {
 	fx.store = nodestorage.New()
 	fx.space = mock_nodespace.NewMockService(fx.ctrl)
 	configGetter := mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}
+	archive := mock_archive.NewMockArchive(fx.ctrl)
+	anymock.ExpectComp(archive.EXPECT(), "node.archive")
 	anymock.ExpectComp(fx.space.EXPECT(), nodespace.CName)
 	fx.a.Register(configGetter).
 		Register(fx.store).
 		Register(fx.ColdSync).
 		Register(fx.tp).
 		Register(fx.ts).
+		Register(archive).
 		Register(fx.space)
 	require.NoError(t, nodesyncproto.DRPCRegisterNodeSync(ts, &testServer{cs: fx.ColdSync}))
 	require.NoError(t, fx.a.Start(ctx))
