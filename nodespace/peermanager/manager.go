@@ -119,6 +119,7 @@ func (n *nodePeerManager) getResponsiblePeersObjects() []responsiblePeer {
 	n.responsiblePeersMu.Lock()
 	defer n.responsiblePeersMu.Unlock()
 	nodeIds := n.p.nodeconf.NodeIds(n.spaceId)
+	n.responsiblePeers = n.responsiblePeers[:0]
 	for _, peerId := range nodeIds {
 		n.responsiblePeers = append(n.responsiblePeers, responsiblePeer{peerId: peerId})
 	}
