@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -42,6 +43,9 @@ type archive struct {
 	checker         periodicsync.PeriodicSync
 	accessDurCutoff time.Duration
 	syncWaiter      <-chan struct{}
+	runCtx          context.Context
+	runCtxCancel    context.CancelFunc
+	mu              sync.Mutex
 }
 
 func (a *archive) Init(ap *app.App) (err error) {
@@ -53,6 +57,7 @@ func (a *archive) Init(ap *app.App) (err error) {
 	}
 	a.accessDurCutoff = time.Duration(a.config.ArchiveAfterDays) * time.Hour * 24
 	a.syncWaiter = ap.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
+	a.runCtx, a.runCtxCancel = context.WithCancel(context.Background())
 	return
 }
 
@@ -68,7 +73,16 @@ func (a *archive) Run(_ context.Context) (err error) {
 		a.config.CheckPeriodMinutes = 2
 	}
 	period := time.Minute * time.Duration(a.config.CheckPeriodMinutes)
-	a.checker = periodicsync.NewPeriodicSync(int(period.Seconds()), time.Hour, a.Check, log)
+	go func() {
+		select {
+		case <-a.runCtx.Done():
+			return
+		case <-a.syncWaiter:
+		}
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		a.checker = periodicsync.NewPeriodicSync(int(period.Seconds()), time.Hour, a.Check, log)
+	}()
 	return
 }
 
@@ -249,8 +263,13 @@ func (a *archive) Check(ctx context.Context) error {
 }
 
 func (a *archive) Close(_ context.Context) (err error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	if a.checker != nil {
 		a.checker.Close()
+	}
+	if a.runCtxCancel != nil {
+		a.runCtxCancel()
 	}
 	return
 }

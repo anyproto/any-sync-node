@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_hotsync/mock_hotsync.go github.com/anyproto/any-sync-node/nodesync/hotsync HotSync
 //
+
 // Package mock_hotsync is a generated GoMock package.
 package mock_hotsync
 
@@ -21,6 +22,7 @@ import (
 type MockHotSync struct {
 	ctrl     *gomock.Controller
 	recorder *MockHotSyncMockRecorder
+	isgomock struct{}
 }
 
 // MockHotSyncMockRecorder is the mock recorder for MockHotSync.
@@ -41,31 +43,31 @@ func (m *MockHotSync) EXPECT() *MockHotSyncMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockHotSync) Close(arg0 context.Context) error {
+func (m *MockHotSync) Close(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", arg0)
+	ret := m.ctrl.Call(m, "Close", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockHotSyncMockRecorder) Close(arg0 any) *gomock.Call {
+func (mr *MockHotSyncMockRecorder) Close(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockHotSync)(nil).Close), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockHotSync)(nil).Close), ctx)
 }
 
 // Init mocks base method.
-func (m *MockHotSync) Init(arg0 *app.App) error {
+func (m *MockHotSync) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockHotSyncMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockHotSyncMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockHotSync)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockHotSync)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -83,39 +85,39 @@ func (mr *MockHotSyncMockRecorder) Name() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockHotSync) Run(arg0 context.Context) error {
+func (m *MockHotSync) Run(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0)
+	ret := m.ctrl.Call(m, "Run", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockHotSyncMockRecorder) Run(arg0 any) *gomock.Call {
+func (mr *MockHotSyncMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockHotSync)(nil).Run), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockHotSync)(nil).Run), ctx)
 }
 
 // SetMetric mocks base method.
-func (m *MockHotSync) SetMetric(arg0, arg1 *atomic.Uint32) {
+func (m *MockHotSync) SetMetric(hit, miss *atomic.Uint32) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetMetric", arg0, arg1)
+	m.ctrl.Call(m, "SetMetric", hit, miss)
 }
 
 // SetMetric indicates an expected call of SetMetric.
-func (mr *MockHotSyncMockRecorder) SetMetric(arg0, arg1 any) *gomock.Call {
+func (mr *MockHotSyncMockRecorder) SetMetric(hit, miss any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMetric", reflect.TypeOf((*MockHotSync)(nil).SetMetric), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMetric", reflect.TypeOf((*MockHotSync)(nil).SetMetric), hit, miss)
 }
 
 // UpdateQueue mocks base method.
-func (m *MockHotSync) UpdateQueue(arg0 []string) {
+func (m *MockHotSync) UpdateQueue(changedIds []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateQueue", arg0)
+	m.ctrl.Call(m, "UpdateQueue", changedIds)
 }
 
 // UpdateQueue indicates an expected call of UpdateQueue.
-func (mr *MockHotSyncMockRecorder) UpdateQueue(arg0 any) *gomock.Call {
+func (mr *MockHotSyncMockRecorder) UpdateQueue(changedIds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateQueue", reflect.TypeOf((*MockHotSync)(nil).UpdateQueue), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateQueue", reflect.TypeOf((*MockHotSync)(nil).UpdateQueue), changedIds)
 }

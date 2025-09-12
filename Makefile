@@ -1,7 +1,7 @@
 .PHONY: proto build test deps
 SHELL=/usr/bin/env bash
 export GOPRIVATE=github.com/anyproto
-export PATH:=deps:$(PATH)
+export PATH:=$(CURDIR)/deps:$(PATH)
 export CGO_ENABLED:=1
 BUILD_GOOS:=$(shell go env GOOS)
 BUILD_GOARCH:=$(shell go env GOARCH)
@@ -52,7 +52,11 @@ deps:
 	go build -o deps google.golang.org/protobuf/cmd/protoc-gen-go
 	go build -o deps github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto
 	go build -o deps github.com/ahmetb/govvv
+	go build -o deps go.uber.org/mock/mockgen
 
+mocks:
+	echo 'Generating mocks...'
+	go generate ./...
 
 proto:
 	$(call generate_drpc,,nodesync/nodesyncproto/protos)

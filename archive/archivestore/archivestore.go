@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_archivestore/mock_archivestore.go github.com/anyproto/any-sync-node/archive/archivestore ArchiveStore
 package archivestore
 
 import (

@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_nodestorage/mock_nodestorage.go github.com/anyproto/any-sync-node/nodestorage NodeStorage
+//go:generate mockgen -destination mock_nodestorage/mock_nodestorage.go github.com/anyproto/any-sync-node/nodestorage NodeStorage,IndexStorage
 package nodestorage
 
 import (
@@ -58,8 +58,8 @@ func anyStoreConfig() *anystore.Config {
 }
 
 type (
-	doFunc          = func() error
-	doAfterOpenFunc = func(db anystore.DB) error
+	DoFunc          = func() error
+	DoAfterOpenFunc = func(db anystore.DB) error
 )
 
 type NodeStorage interface {
@@ -67,8 +67,8 @@ type NodeStorage interface {
 	IndexStorage() IndexStorage
 	IndexSpace(ctx context.Context, spaceId string, setHead bool) (spacestorage.SpaceStorage, error)
 	SpaceStorage(ctx context.Context, spaceId string) (spacestorage.SpaceStorage, error)
-	TryLockAndDo(ctx context.Context, spaceId string, do doFunc) (err error)
-	TryLockAndOpenDb(ctx context.Context, spaceId string, do doAfterOpenFunc) (err error)
+	TryLockAndDo(ctx context.Context, spaceId string, do DoFunc) (err error)
+	TryLockAndOpenDb(ctx context.Context, spaceId string, do DoAfterOpenFunc) (err error)
 	DumpStorage(ctx context.Context, id string, do func(path string) error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnDeleteStorage(onDelete func(ctx context.Context, spaceId string))
@@ -286,7 +286,7 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 		}
 	}
 
-	if fn, ok := ctx.Value(doKeyVal).(doFunc); ok {
+	if fn, ok := ctx.Value(doKeyVal).(DoFunc); ok {
 		err := fn()
 		if err != nil {
 			return nil, err
@@ -319,7 +319,7 @@ func (s *storageService) loadFunc(ctx context.Context, id string) (value ocache.
 	}
 	cont = newStorageContainer(db, id)
 
-	if fn, ok := ctx.Value(doAfterOpen).(doAfterOpenFunc); ok {
+	if fn, ok := ctx.Value(doAfterOpen).(DoAfterOpenFunc); ok {
 		if err = fn(db); err != nil {
 			_ = db.Close()
 			return nil, err
@@ -486,7 +486,7 @@ func (s *storageService) ForceRemove(id string) (err error) {
 	return
 }
 
-func (s *storageService) TryLockAndDo(ctx context.Context, spaceId string, do doFunc) (err error) {
+func (s *storageService) TryLockAndDo(ctx context.Context, spaceId string, do DoFunc) (err error) {
 	var called bool
 	ctx = context.WithValue(ctx, doKeyVal, func() error {
 		called = true
@@ -501,7 +501,7 @@ func (s *storageService) TryLockAndDo(ctx context.Context, spaceId string, do do
 	return nil
 }
 
-func (s *storageService) TryLockAndOpenDb(ctx context.Context, spaceId string, do doAfterOpenFunc) (err error) {
+func (s *storageService) TryLockAndOpenDb(ctx context.Context, spaceId string, do DoAfterOpenFunc) (err error) {
 	var called bool
 	ctx = context.WithValue(ctx, doAfterOpen, func(db anystore.DB) error {
 		called = true

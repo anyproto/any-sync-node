@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_nodesync/mock_nodesync.go github.com/anyproto/any-sync-node/nodesync NodeSync
 //
+
 // Package mock_nodesync is a generated GoMock package.
 package mock_nodesync
 
@@ -20,6 +21,7 @@ import (
 type MockNodeSync struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeSyncMockRecorder
+	isgomock struct{}
 }
 
 // MockNodeSyncMockRecorder is the mock recorder for MockNodeSync.
@@ -40,31 +42,31 @@ func (m *MockNodeSync) EXPECT() *MockNodeSyncMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockNodeSync) Close(arg0 context.Context) error {
+func (m *MockNodeSync) Close(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", arg0)
+	ret := m.ctrl.Call(m, "Close", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockNodeSyncMockRecorder) Close(arg0 any) *gomock.Call {
+func (mr *MockNodeSyncMockRecorder) Close(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockNodeSync)(nil).Close), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockNodeSync)(nil).Close), ctx)
 }
 
 // Init mocks base method.
-func (m *MockNodeSync) Init(arg0 *app.App) error {
+func (m *MockNodeSync) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockNodeSyncMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockNodeSyncMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockNodeSync)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockNodeSync)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -82,17 +84,17 @@ func (mr *MockNodeSyncMockRecorder) Name() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockNodeSync) Run(arg0 context.Context) error {
+func (m *MockNodeSync) Run(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0)
+	ret := m.ctrl.Call(m, "Run", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockNodeSyncMockRecorder) Run(arg0 any) *gomock.Call {
+func (mr *MockNodeSyncMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockNodeSync)(nil).Run), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockNodeSync)(nil).Run), ctx)
 }
 
 // Sync mocks base method.

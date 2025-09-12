@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_coldsync/mock_coldsync.go github.com/anyproto/any-sync-node/nodesync/coldsync ColdSync
 //
+
 // Package mock_coldsync is a generated GoMock package.
 package mock_coldsync
 
@@ -21,6 +22,7 @@ import (
 type MockColdSync struct {
 	ctrl     *gomock.Controller
 	recorder *MockColdSyncMockRecorder
+	isgomock struct{}
 }
 
 // MockColdSyncMockRecorder is the mock recorder for MockColdSync.
@@ -41,31 +43,31 @@ func (m *MockColdSync) EXPECT() *MockColdSyncMockRecorder {
 }
 
 // ColdSyncHandle mocks base method.
-func (m *MockColdSync) ColdSyncHandle(arg0 *nodesyncproto.ColdSyncRequest, arg1 nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
+func (m *MockColdSync) ColdSyncHandle(req *nodesyncproto.ColdSyncRequest, stream nodesyncproto.DRPCNodeSync_ColdSyncStream) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ColdSyncHandle", arg0, arg1)
+	ret := m.ctrl.Call(m, "ColdSyncHandle", req, stream)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ColdSyncHandle indicates an expected call of ColdSyncHandle.
-func (mr *MockColdSyncMockRecorder) ColdSyncHandle(arg0, arg1 any) *gomock.Call {
+func (mr *MockColdSyncMockRecorder) ColdSyncHandle(req, stream any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ColdSyncHandle", reflect.TypeOf((*MockColdSync)(nil).ColdSyncHandle), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ColdSyncHandle", reflect.TypeOf((*MockColdSync)(nil).ColdSyncHandle), req, stream)
 }
 
 // Init mocks base method.
-func (m *MockColdSync) Init(arg0 *app.App) error {
+func (m *MockColdSync) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockColdSyncMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockColdSyncMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockColdSync)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockColdSync)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -83,15 +85,15 @@ func (mr *MockColdSyncMockRecorder) Name() *gomock.Call {
 }
 
 // Sync mocks base method.
-func (m *MockColdSync) Sync(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockColdSync) Sync(ctx context.Context, spaceId, peerId string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sync", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Sync", ctx, spaceId, peerId)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Sync indicates an expected call of Sync.
-func (mr *MockColdSyncMockRecorder) Sync(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockColdSyncMockRecorder) Sync(ctx, spaceId, peerId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockColdSync)(nil).Sync), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockColdSync)(nil).Sync), ctx, spaceId, peerId)
 }
