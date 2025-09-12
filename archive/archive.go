@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -45,7 +44,6 @@ type archive struct {
 	syncWaiter      <-chan struct{}
 	runCtx          context.Context
 	runCtxCancel    context.CancelFunc
-	mu              sync.Mutex
 }
 
 func (a *archive) Init(ap *app.App) (err error) {
@@ -58,6 +56,11 @@ func (a *archive) Init(ap *app.App) (err error) {
 	a.accessDurCutoff = time.Duration(a.config.ArchiveAfterDays) * time.Hour * 24
 	a.syncWaiter = ap.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
 	a.runCtx, a.runCtxCancel = context.WithCancel(context.Background())
+	if a.config.CheckPeriodMinutes <= 0 {
+		a.config.CheckPeriodMinutes = 2
+	}
+	period := time.Minute * time.Duration(a.config.CheckPeriodMinutes)
+	a.checker = periodicsync.NewPeriodicSyncDuration(period, time.Hour, a.Check, log)
 	return
 }
 
@@ -69,19 +72,13 @@ func (a *archive) Run(_ context.Context) (err error) {
 	if !a.config.Enabled {
 		return
 	}
-	if a.config.CheckPeriodMinutes <= 0 {
-		a.config.CheckPeriodMinutes = 2
-	}
-	period := time.Minute * time.Duration(a.config.CheckPeriodMinutes)
 	go func() {
 		select {
 		case <-a.runCtx.Done():
 			return
 		case <-a.syncWaiter:
 		}
-		a.mu.Lock()
-		defer a.mu.Unlock()
-		a.checker = periodicsync.NewPeriodicSync(int(period.Seconds()), time.Hour, a.Check, log)
+		a.checker.Run()
 	}()
 	return
 }
@@ -243,6 +240,7 @@ func (a *archive) Check(ctx context.Context) error {
 	indexStore := a.storageProvider.IndexStorage()
 	deadline, _ := ctx.Deadline()
 	for {
+		log.Info("check spaces", zap.Time("lastAccessTime", time.Now().Add(-a.accessDurCutoff)))
 		spaceId, err := indexStore.FindOldestInactiveSpace(ctx, a.accessDurCutoff)
 		if err != nil {
 			if errors.Is(err, anystore.ErrDocNotFound) {
@@ -253,6 +251,9 @@ func (a *archive) Check(ctx context.Context) error {
 		st := time.Now()
 		if err = a.Archive(ctx, spaceId); err != nil {
 			log.Error("space archive failed", zap.String("spaceId", spaceId), zap.Error(err))
+			if errors.Is(err, nodestorage.ErrLocked) {
+				continue
+			}
 			return err
 		}
 		log.Info("space is archived", zap.String("spaceId", spaceId), zap.Duration("dur", time.Since(st)))
@@ -263,8 +264,6 @@ func (a *archive) Check(ctx context.Context) error {
 }
 
 func (a *archive) Close(_ context.Context) (err error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
 	if a.checker != nil {
 		a.checker.Close()
 	}
