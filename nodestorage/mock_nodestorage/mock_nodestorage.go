@@ -337,18 +337,18 @@ func (mr *MockIndexStorageMockRecorder) Close() *gomock.Call {
 }
 
 // FindOldestInactiveSpace mocks base method.
-func (m *MockIndexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration) (string, error) {
+func (m *MockIndexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration, skip int) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindOldestInactiveSpace", ctx, olderThan)
+	ret := m.ctrl.Call(m, "FindOldestInactiveSpace", ctx, olderThan, skip)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FindOldestInactiveSpace indicates an expected call of FindOldestInactiveSpace.
-func (mr *MockIndexStorageMockRecorder) FindOldestInactiveSpace(ctx, olderThan any) *gomock.Call {
+func (mr *MockIndexStorageMockRecorder) FindOldestInactiveSpace(ctx, olderThan, skip any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOldestInactiveSpace", reflect.TypeOf((*MockIndexStorage)(nil).FindOldestInactiveSpace), ctx, olderThan)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOldestInactiveSpace", reflect.TypeOf((*MockIndexStorage)(nil).FindOldestInactiveSpace), ctx, olderThan, skip)
 }
 
 // GetDiffMigrationVersion mocks base method.

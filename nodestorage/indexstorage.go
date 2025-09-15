@@ -55,7 +55,7 @@ type IndexStorage interface {
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
 	LastRecordId(ctx context.Context) (id string, err error)
-	FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration) (spaceId string, err error)
+	FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration, skip int) (spaceId string, err error)
 
 	UpdateLastAccess(ctx context.Context, spaceId string) (err error)
 	GetDiffMigrationVersion(ctx context.Context) (version int, err error)
@@ -222,7 +222,7 @@ func (d *indexStorage) UpdateLastAccess(ctx context.Context, spaceId string) (er
 	return nil
 }
 
-func (d *indexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration) (spaceId string, err error) {
+func (d *indexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration, skip int) (spaceId string, err error) {
 	// cutoff: lastAccess must be strictly earlier than now - olderThan
 	cutoffUnix := time.Now().Add(-olderThan).Unix()
 
@@ -238,7 +238,7 @@ func (d *indexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan ti
 		},
 	}
 
-	iter, err := d.spaceColl.Find(filter).Sort(lastAccessKey).Iter(ctx) // ASC by lastAccess
+	iter, err := d.spaceColl.Find(filter).Sort(lastAccessKey).Offset(uint(skip)).Iter(ctx) // ASC by lastAccess
 	if err != nil {
 		return "", err
 	}

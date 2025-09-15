@@ -1,0 +1,74 @@
+account:
+  peerId: 12D3KooWKgVN2kW8xw5Uvm2sLUnkeUNQYAvcWvF58maTzev7FjPi
+  peerKey: ckI1ThxMQmAWH48so5jT614HNg4VppB/3jTfh1cdrzSSkFuVPiGzSDJcsgFLsRGW2WT0a8ymqtc4hog5Z4mdfQ==
+  signingKey: ckI1ThxMQmAWH48so5jT614HNg4VppB/3jTfh1cdrzSSkFuVPiGzSDJcsgFLsRGW2WT0a8ymqtc4hog5Z4mdfQ==
+apiServer:
+  listenAddr: 127.0.0.1:8181
+drpc:
+  stream:
+    timeoutMilliseconds: 1000
+    maxMsgSizeMb: 256
+yamux:
+  listenAddrs:
+    - 127.0.0.1:4431
+  writeTimeoutSec: 10
+  dialTimeoutSec: 10
+quic:
+  listenAddrs:
+    - 127.0.0.1:5431
+  writeTimeoutSec: 10
+  dialTimeoutSec: 10
+network:
+  id: 64384a038e697b7fce2f447e
+  networkId: N4N1wDHFpFpovXBqdbq2TDXE9tXdXbtV1eTJFpKJW4YeaJqR
+  nodes:
+    - peerId: 12D3KooWKLCajM89S8unbt3tgGbRLgmiWnFZT3adn9A5pQciBSLa
+      addresses:
+        - "127.0.0.1:4830"
+      types:
+        - coordinator
+    - peerId: 12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu
+      addresses:
+        - 127.0.0.1:4430
+      types:
+        - tree
+    - peerId: 12D3KooWKgVN2kW8xw5Uvm2sLUnkeUNQYAvcWvF58maTzev7FjPi
+      addresses:
+        - 127.0.0.1:4431
+      types:
+        - tree
+    - peerId: 12D3KooWCUPYuMnQhu9yREJgQyjcz8zWY83rZGmDLwb9YR6QkbZX
+      addresses:
+        - 127.0.0.1:4432
+      types:
+        - tree
+    - peerId: 12D3KooWQxiZ5a7vcy4DTJa8Gy1eVUmwb5ojN4SrJC9Rjxzigw6C
+      addresses:
+        - 127.0.0.1:4730
+      types:
+        - file
+    - peerId: 12D3KooWNT4hbNKXeFuDtdQ13ZbhQ1oJJ2AVWgAQVRrCj6Zb5wxk
+      addresses:
+        - 127.0.0.1:4530
+      types:
+        - consensus
+  creationTime: 2023-04-13T20:29:23.453806629+02:00
+networkStorePath: .
+networkUpdateIntervalSec: 600
+space:
+  gcTTL: 60
+  syncPeriod: 20
+storage:
+  path: db/node2
+  anyStorePath: anyDb/node2
+metric:
+  addr: ":7002"
+nodeSync:
+  hotSync:
+    simultaneousRequests: 400
+  syncOnStart: true
+  periodicSyncHours: 2
+log:
+  production: false
+  defaultLevel: ""
+  namedLevels: { }

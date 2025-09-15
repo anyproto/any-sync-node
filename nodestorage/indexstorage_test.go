@@ -59,7 +59,7 @@ func TestIndexStorage_FindOldestInactiveSpace(t *testing.T) {
 		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s_arch", Updated: now.Add(-96 * time.Hour)}))
 		require.NoError(t, fx.SetSpaceStatus(ctx, "s_arch", SpaceStatusArchived, ""))
 
-		spaceId, err := fx.FindOldestInactiveSpace(ctx, 24*time.Hour)
+		spaceId, err := fx.FindOldestInactiveSpace(ctx, 24*time.Hour, 0)
 		require.NoError(t, err)
 		assert.Equal(t, "s_older", spaceId)
 	})
@@ -75,7 +75,7 @@ func TestIndexStorage_FindOldestInactiveSpace(t *testing.T) {
 		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s1", Updated: now.Add(-30 * time.Minute)}))
 		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "s2", Updated: now.Add(-45 * time.Minute)}))
 
-		_, err = fx.FindOldestInactiveSpace(ctx, time.Hour)
+		_, err = fx.FindOldestInactiveSpace(ctx, time.Hour, 0)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, anystore.ErrDocNotFound)
 	})

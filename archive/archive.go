@@ -239,9 +239,10 @@ func (a *archive) restoreFile(ctx context.Context, spaceId string) (err error) {
 func (a *archive) Check(ctx context.Context) error {
 	indexStore := a.storageProvider.IndexStorage()
 	deadline, _ := ctx.Deadline()
+	var skip int
 	for {
 		log.Info("check spaces", zap.Time("lastAccessTime", time.Now().Add(-a.accessDurCutoff)))
-		spaceId, err := indexStore.FindOldestInactiveSpace(ctx, a.accessDurCutoff)
+		spaceId, err := indexStore.FindOldestInactiveSpace(ctx, a.accessDurCutoff, skip)
 		if err != nil {
 			if errors.Is(err, anystore.ErrDocNotFound) {
 				return nil
@@ -252,6 +253,7 @@ func (a *archive) Check(ctx context.Context) error {
 		if err = a.Archive(ctx, spaceId); err != nil {
 			log.Error("space archive failed", zap.String("spaceId", spaceId), zap.Error(err))
 			if errors.Is(err, nodestorage.ErrLocked) {
+				skip++
 				continue
 			}
 			return err
