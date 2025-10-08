@@ -72,3 +72,15 @@ log:
   production: false
   defaultLevel: ""
   namedLevels: { }
+
+s3Store:
+  enabled: true
+  region: us-east-1
+  endpoint: "https://storage.googleapis.com"
+  bucket: anytype-cheggaaa-test
+  keyPrefix: "n1"
+
+archive:
+  enabled: true
+  archiveAfterDays: 1
+  checkPeriodMinutes: 2
