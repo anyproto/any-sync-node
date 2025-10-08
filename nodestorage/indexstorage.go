@@ -105,13 +105,13 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 
 var _a = &anyenc.Arena{}
 
-var filterStatusOk = query.Key{
+var filterStatusHashOk = query.Key{
 	Path:   []string{statusKey},
-	Filter: query.NewCompValue(query.CompOpEq, _a.NewNumberInt(int(SpaceStatusOk))),
+	Filter: query.NewInValue(_a.NewNumberInt(int(SpaceStatusOk)), _a.NewNumberInt(int(SpaceStatusArchived))),
 }
 
 func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error) {
-	iter, err := d.spaceColl.Find(filterStatusOk).Sort("id").Iter(ctx)
+	iter, err := d.spaceColl.Find(filterStatusHashOk).Sort("id").Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -231,7 +231,10 @@ func (d *indexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan ti
 
 	// status == Ok AND lastAccess < cutoff
 	filter := query.And{
-		filterStatusOk,
+		query.Key{
+			Path:   []string{statusKey},
+			Filter: query.NewCompValue(query.CompOpEq, a.NewNumberInt(int(SpaceStatusOk))),
+		},
 		query.Key{
 			Path:   []string{lastAccessKey},
 			Filter: query.NewCompValue(query.CompOpLt, a.NewNumberFloat64(float64(cutoffUnix))),
@@ -274,7 +277,7 @@ func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {
 }
 
 func (d *indexStorage) UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error) {
-	_, err = d.spaceColl.Find(filterStatusOk).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+	_, err = d.spaceColl.Find(filterStatusHashOk).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		spaceId := v.GetString("id")
 		newHash := v.GetString(newHashKey)
 		oldHash := v.GetString(oldHashKey)
