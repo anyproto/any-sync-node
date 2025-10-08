@@ -208,7 +208,7 @@ func (m *migrator) setAllMigrated(ctx context.Context, anyStore anystore.DB) err
 	if err != nil {
 		return nil
 	}
-	return anyStore.Checkpoint(ctx, true)
+	return anyStore.Flush(ctx, 0, anystore.FlushModeCheckpointPassive)
 }
 
 func CheckMigrated(ctx context.Context, anyStore anystore.DB) bool {
