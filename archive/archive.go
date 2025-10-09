@@ -226,11 +226,15 @@ func (a *archive) restoreFile(ctx context.Context, spaceId string) (err error) {
 		return
 	}
 	defer func() {
-		_ = storeFile.Close()
+		if cErr := storeFile.Close(); cErr != nil {
+			err = errors.Join(err, cErr)
+		}
+		if err != nil {
+			cleanup()
+		}
 	}()
 
 	if _, err = io.Copy(storeFile, gzipReader); err != nil {
-		cleanup()
 		return
 	}
 	return
