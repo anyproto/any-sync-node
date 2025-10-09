@@ -60,7 +60,7 @@ func (a *archive) Init(ap *app.App) (err error) {
 		a.config.CheckPeriodMinutes = 2
 	}
 	period := time.Minute * time.Duration(a.config.CheckPeriodMinutes)
-	a.checker = periodicsync.NewPeriodicSyncDuration(period, time.Hour, a.Check, log)
+	a.checker = periodicsync.NewPeriodicSyncDuration(period, time.Hour, a.check, log)
 	return
 }
 
@@ -236,7 +236,7 @@ func (a *archive) restoreFile(ctx context.Context, spaceId string) (err error) {
 	return
 }
 
-func (a *archive) Check(ctx context.Context) error {
+func (a *archive) check(ctx context.Context) error {
 	indexStore := a.storageProvider.IndexStorage()
 	deadline, _ := ctx.Deadline()
 	var skip int
@@ -259,7 +259,7 @@ func (a *archive) Check(ctx context.Context) error {
 			return err
 		}
 		log.Info("space is archived", zap.String("spaceId", spaceId), zap.Duration("dur", time.Since(st)))
-		if deadline.Sub(time.Now()) < time.Minute*10 {
+		if !deadline.IsZero() && deadline.Sub(time.Now()) < time.Minute*10 {
 			return nil
 		}
 	}
