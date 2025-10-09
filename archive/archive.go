@@ -14,6 +14,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"go.uber.org/zap"
 
@@ -41,6 +42,7 @@ type archive struct {
 	config          Config
 	checker         periodicsync.PeriodicSync
 	accessDurCutoff time.Duration
+	stat            *archiveStat
 	syncWaiter      <-chan struct{}
 	runCtx          context.Context
 	runCtxCancel    context.CancelFunc
@@ -61,6 +63,10 @@ func (a *archive) Init(ap *app.App) (err error) {
 	}
 	period := time.Minute * time.Duration(a.config.CheckPeriodMinutes)
 	a.checker = periodicsync.NewPeriodicSyncDuration(period, time.Hour, a.check, log)
+	a.stat = new(archiveStat)
+	if m := ap.Component(metric.CName); m != nil {
+		registerMetric(a.stat, m.(metric.Metric).Registry())
+	}
 	return
 }
 
@@ -125,7 +131,7 @@ func (a *archive) Archive(ctx context.Context, spaceId string) (err error) {
 
 		_ = db.Close()
 		_ = os.RemoveAll(a.storageProvider.StoreDir(spaceId))
-
+		a.stat.archived.Add(1)
 		return errArchived
 	})
 
@@ -189,6 +195,7 @@ func (a *archive) Restore(ctx context.Context, spaceId string) (err error) {
 	if err = a.storageProvider.IndexStorage().SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusOk, ""); err != nil {
 		return
 	}
+	a.stat.restored.Add(1)
 	return a.archiveStore.Delete(ctx, spaceId)
 }
 
