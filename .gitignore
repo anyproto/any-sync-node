@@ -24,6 +24,10 @@ vendor
 
 # database
 db
+anyDb
+
+#network config
+N*.yml
 
 # artefacts for Intelli-J fleet
 .fleet

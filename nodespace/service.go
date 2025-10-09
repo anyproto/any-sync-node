@@ -29,6 +29,8 @@ import (
 
 const CName = "node.nodespace"
 
+const nodeArchiveCName = "node.archive"
+
 var log = logger.NewNamed(CName)
 
 func New() Service {
@@ -108,6 +110,9 @@ func (s *service) GetSpace(ctx context.Context, id string) (NodeSpace, error) {
 		return nil, err
 	}
 	space := v.(NodeSpace)
+	if e := s.spaceStorageProvider.IndexStorage().UpdateLastAccess(ctx, id); e != nil {
+		log.Error("failed to update last access", zap.String("spaceId", id), zap.Error(e))
+	}
 	return space, nil
 }
 
@@ -115,14 +120,14 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	defer func() {
 		log.InfoCtx(ctx, "space loaded", zap.String("id", id), zap.Error(err))
 	}()
-	if err = s.checkDeletionStatus(ctx, id); err != nil {
-		return nil, err
-	}
 	cc, err := s.commonSpace.NewSpace(ctx, id, commonspace.Deps{
 		TreeSyncer: treesyncer.New(id),
 		SyncStatus: syncstatus.NewNoOpSyncStatus(),
 	})
 	if err != nil {
+		if errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
+			return nil, spacesyncproto.ErrSpaceIsDeleted
+		}
 		return
 	}
 	ns, err := newNodeSpace(cc, s.consClient, s.spaceStorageProvider)
@@ -133,21 +138,6 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 		return
 	}
 	return ns, nil
-}
-
-func (s *service) checkDeletionStatus(ctx context.Context, spaceId string) (err error) {
-	delStorage := s.spaceStorageProvider.IndexStorage()
-	status, err := delStorage.SpaceStatus(ctx, spaceId)
-	if err != nil {
-		if errors.Is(err, nodestorage.ErrUnknownSpaceId) {
-			return nil
-		}
-		return err
-	}
-	if status == nodestorage.SpaceStatusRemove {
-		return spacesyncproto.ErrSpaceIsDeleted
-	}
-	return nil
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

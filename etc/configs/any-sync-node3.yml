@@ -1,21 +1,15 @@
 account:
-  peerId: 12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu
-  peerKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
-  signingKey: /Ou28/uU/z3BbGmkHMV5ev0mwl6lJI/NNniFlMm2gOeUHDfed/zbwYZLbPt1B0sujNx0DGKUgUTUXy/SE7biwg==
+  peerId: 12D3KooWCUPYuMnQhu9yREJgQyjcz8zWY83rZGmDLwb9YR6QkbZX
+  peerKey: EqD0bdvO2E9+i29hfJTMtae8Zw8Dgnb/KanLSg59K7YndQHdxxvtVUljy3htlXd7dGKfEuJ7EglVHdNxzg5q7g==
+  signingKey: EqD0bdvO2E9+i29hfJTMtae8Zw8Dgnb/KanLSg59K7YndQHdxxvtVUljy3htlXd7dGKfEuJ7EglVHdNxzg5q7g==
 apiServer:
-  listenAddr: 127.0.0.1:8180
+  listenAddr: 127.0.0.1:8082
 drpc:
   stream:
-    timeoutMilliseconds: 1000
     maxMsgSizeMb: 256
 yamux:
   listenAddrs:
-    - 127.0.0.1:4430
-  writeTimeoutSec: 10
-  dialTimeoutSec: 10
-quic:
-  listenAddrs:
-    - 127.0.0.1:5430
+    - 127.0.0.1:4432
   writeTimeoutSec: 10
   dialTimeoutSec: 10
 network:
@@ -47,22 +41,17 @@ network:
         - 127.0.0.1:4730
       types:
         - file
-    - peerId: 12D3KooWNT4hbNKXeFuDtdQ13ZbhQ1oJJ2AVWgAQVRrCj6Zb5wxk
-      addresses:
-        - 127.0.0.1:4530
-      types:
-        - consensus
   creationTime: 2023-04-13T20:29:23.453806629+02:00
 networkStorePath: .
 networkUpdateIntervalSec: 600
 space:
   gcTTL: 60
-  syncPeriod: 20
+  syncPeriod: 240
 storage:
-  path: db/node1
-  anyStorePath: anyDb/node1
+  path: db/3
+  anyStorePath: anyDb/node3
 metric:
-  addr: ":7001"
+  addr: ":7003"
 nodeSync:
   hotSync:
     simultaneousRequests: 400
@@ -73,12 +62,13 @@ log:
   defaultLevel: ""
   namedLevels: { }
 
+
 s3Store:
   enabled: true
   region: us-east-1
   endpoint: "https://storage.googleapis.com"
   bucket: anytype-cheggaaa-test
-  keyPrefix: "n1"
+  keyPrefix: "n3"
 
 archive:
   enabled: true

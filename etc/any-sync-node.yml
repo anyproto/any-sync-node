@@ -77,3 +77,15 @@ limiter:
   default:
     rps: 10
     burst: 20
+
+s3Store:
+  enabled: false
+  region: us-east-1
+  endpoint: "https://storage.googleapis.com"
+  bucket: bucket
+  keyPrefix: "n1"
+
+archive:
+  enabled: false
+  archiveAfterDays: 7
+  checkPeriodMinutes: 2

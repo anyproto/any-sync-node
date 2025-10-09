@@ -11,7 +11,9 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/testutil/anymock"
+	"github.com/stretchr/testify/assert"
 
+	"github.com/anyproto/any-sync-node/archive/mock_archive"
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
 	"github.com/anyproto/any-sync-node/nodestorage"
@@ -57,7 +59,7 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 		allIds = append(allIds, update.SpaceId)
 		return true, nil
 	})
-	require.Empty(t, allIds)
+	assert.Equal(t, []string{"space1"}, allIds)
 }
 
 func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
@@ -243,11 +245,13 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 	spaceService := mock_nodespace.NewMockService(ctrl)
 	nodeSync := mock_nodesync.NewMockNodeSync(ctrl)
 	consClient := mock_consensusclient.NewMockService(ctrl)
+	archive := mock_archive.NewMockArchive(ctrl)
 	storage := nodestorage.New()
 	anymock.ExpectComp(coordClient.EXPECT(), coordinatorclient.CName)
 	anymock.ExpectComp(spaceService.EXPECT(), nodespace.CName)
 	anymock.ExpectComp(consClient.EXPECT(), consensusclient.CName)
 	anymock.ExpectComp(nodeSync.EXPECT(), nodesync.CName)
+	anymock.ExpectComp(archive.EXPECT(), "node.archive")
 	nodeSync.EXPECT().WaitSyncOnStart().Return(waiterChan).AnyTimes()
 	deleter := New().(*spaceDeleter)
 	a.Register(storeConfig(dir)).
@@ -255,6 +259,7 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 		Register(consClient).
 		Register(storage).
 		Register(spaceService).
+		Register(archive).
 		Register(nodeSync).
 		Register(deleter)
 	err = a.Start(context.Background())

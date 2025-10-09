@@ -210,7 +210,7 @@ func createTestIndexStorage(ctx context.Context, tempDir string) (IndexStorage, 
 }
 
 func addTestHashEntry(ctx context.Context, is *indexStorage, spaceId, newHash, oldHash string) error {
-	tx, err := is.hashesColl.WriteTx(ctx)
+	tx, err := is.spaceColl.WriteTx(ctx)
 	if err != nil {
 		return err
 	}
@@ -225,8 +225,9 @@ func addTestHashEntry(ctx context.Context, is *indexStorage, spaceId, newHash, o
 	if oldHash != "" {
 		doc.Set(oldHashKey, arena.NewString(oldHash))
 	}
+	doc.Set(statusKey, arena.NewNumberInt(int(SpaceStatusOk)))
 
-	err = is.hashesColl.UpsertOne(tx.Context(), doc)
+	err = is.spaceColl.UpsertOne(tx.Context(), doc)
 	if err != nil {
 		return err
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/anyproto/any-sync-node/archive/mock_archive"
 	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
@@ -155,10 +156,12 @@ func newFixture(t *testing.T, dataPath string) *fixture {
 		dataPath:      tmpDir,
 		forceDataPath: dataPath != "",
 		nodeConf:      mock_nodeconf.NewMockService(ctrl),
+		archive:       mock_archive.NewMockArchive(ctrl),
 		ctrl:          ctrl,
 	}
 	confServ := testnodeconf.GenNodeConfig(3)
 	anymock.ExpectComp(fx.nodeConf.EXPECT(), nodeconf.CName)
+	anymock.ExpectComp(fx.archive.EXPECT(), "node.archive")
 	ch, _ := chash.New(chash.Config{
 		PartitionCount:    3000,
 		ReplicationFactor: 3,
@@ -173,6 +176,7 @@ func newFixture(t *testing.T, dataPath string) *fixture {
 	fx.a.Register(&config{Config: confServ, dataPath: tmpDir}).
 		Register(fx.nodeConf).
 		Register(confServ.GetAccountService(0)).
+		Register(fx.archive).
 		Register(nodestorage.New()).
 		Register(fx.NodeHead)
 
@@ -187,6 +191,7 @@ type fixture struct {
 	forceDataPath bool
 	ctrl          *gomock.Controller
 	nodeConf      *mock_nodeconf.MockService
+	archive       *mock_archive.MockArchive
 }
 
 func (fx *fixture) Finish(t *testing.T) {

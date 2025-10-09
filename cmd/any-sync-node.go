@@ -29,6 +29,8 @@ import (
 	"github.com/anyproto/any-sync/nodeconf/nodeconfstore"
 	"github.com/anyproto/any-sync/util/syncqueues"
 
+	"github.com/anyproto/any-sync-node/archive"
+	"github.com/anyproto/any-sync-node/archive/archivestore"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/migrator"
 	"github.com/anyproto/any-sync-node/nodespace/peermanager"
@@ -151,6 +153,8 @@ func Bootstrap(a *app.App) {
 		Register(peermanager.New()).
 		Register(debugserver.New()).
 		Register(nodedebugrpc.New()).
+		Register(archivestore.New()).
+		Register(archive.New()).
 		Register(quic.New()).
 		Register(yamux.New())
 }

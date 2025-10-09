@@ -2,21 +2,29 @@ package nodestorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/testutil/anymock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/exp/rand"
 	"golang.org/x/exp/slices"
+
+	"github.com/anyproto/any-sync-node/archive/mock_archive"
 )
 
 func TestStorageService_SpaceStorage(t *testing.T) {
@@ -68,7 +76,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
 			require.NoError(t, err)
 		}
-		err := ss.indexStorage.(*indexStorage).hashesColl.Drop(ctx)
+		err := ss.indexStorage.(*indexStorage).spaceColl.Drop(ctx)
 		require.NoError(t, err)
 		err = ss.Close(ctx)
 		require.NoError(t, err)
@@ -93,93 +101,13 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
 			require.NoError(t, err)
 		}
-		err := ss.indexStorage.(*indexStorage).hashesColl.Drop(ctx)
+		err := ss.indexStorage.(*indexStorage).spaceColl.Drop(ctx)
 		require.NoError(t, err)
 		err = ss.Close(ctx)
 		require.NoError(t, err)
 		newDir := filepath.Join(dir, "new")
 		entries, err := os.ReadDir(newDir)
 		require.NoError(t, err)
-		removed := 0
-		i := 0
-		for removed < total/2 {
-			if strings.HasPrefix(entries[i].Name(), ".") {
-				i++
-				continue
-			}
-			removed++
-			err = os.RemoveAll(filepath.Join(newDir, entries[i].Name()))
-			require.NoError(t, err)
-			i++
-		}
-		ss = newStorageServiceWithDir(t, dir)
-		defer ss.Close(ctx)
-		var allIds []string
-		err = ss.IndexStorage().ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
-			allIds = append(allIds, update.SpaceId)
-			return true, nil
-		})
-		require.NoError(t, err)
-		l, err := ss.AllSpaceIds()
-		require.NoError(t, err)
-		require.Len(t, allIds, total/2)
-		require.Equal(t, len(allIds), len(l))
-	})
-	t.Run("add storages, add hashes, remove storages with highest hash, check hashes", func(t *testing.T) {
-		dir := t.TempDir()
-		ss := newStorageServiceWithDir(t, dir)
-		total := 100
-		for i := 0; i < total; i++ {
-			payload := NewStorageCreatePayload(t)
-			storage, err := ss.CreateSpaceStorage(ctx, payload)
-			require.NoError(t, err)
-			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
-			require.NoError(t, err)
-		}
-		err := ss.Close(ctx)
-		require.NoError(t, err)
-		newDir := filepath.Join(dir, "new")
-		entries, err := os.ReadDir(newDir)
-		require.NoError(t, err)
-		slices.SortFunc(entries, func(a, b os.DirEntry) int {
-			return -strings.Compare(a.Name(), b.Name())
-		})
-		for i := 0; i < total/2; i++ {
-			err = os.RemoveAll(filepath.Join(newDir, entries[i].Name()))
-			require.NoError(t, err)
-		}
-		ss = newStorageServiceWithDir(t, dir)
-		defer ss.Close(ctx)
-		var allIds []string
-		err = ss.IndexStorage().ReadHashes(ctx, func(update SpaceUpdate) (bool, error) {
-			allIds = append(allIds, update.SpaceId)
-			return true, nil
-		})
-		require.NoError(t, err)
-		l, err := ss.AllSpaceIds()
-		require.NoError(t, err)
-		require.Len(t, allIds, total/2)
-		require.Equal(t, len(allIds), len(l))
-	})
-	t.Run("add storages, add hashes, remove storages with random hash, check hashes", func(t *testing.T) {
-		dir := t.TempDir()
-		ss := newStorageServiceWithDir(t, dir)
-		total := 100
-		for i := 0; i < total; i++ {
-			payload := NewStorageCreatePayload(t)
-			storage, err := ss.CreateSpaceStorage(ctx, payload)
-			require.NoError(t, err)
-			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
-			require.NoError(t, err)
-		}
-		err := ss.Close(ctx)
-		require.NoError(t, err)
-		newDir := filepath.Join(dir, "new")
-		entries, err := os.ReadDir(newDir)
-		require.NoError(t, err)
-		rand.Shuffle(len(entries), func(i, j int) {
-			entries[i], entries[j] = entries[j], entries[i]
-		})
 		removed := 0
 		i := 0
 		for removed < total/2 {
@@ -230,7 +158,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 				continue
 			}
 			removed++
-			err = ss.indexStorage.(*indexStorage).hashesColl.DeleteId(ctx, entries[i].Name())
+			err = ss.indexStorage.(*indexStorage).spaceColl.DeleteId(ctx, entries[i].Name())
 			require.NoError(t, err)
 			i++
 		}
@@ -351,6 +279,108 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 		require.Equal(t, 999, int(stats.Storage.ChangeSize.Avg))
 		require.Equal(t, 1000285, stats.Storage.ChangeSize.Total)
 	})
+	t.Run("restore", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+
+		payload := NewStorageCreatePayload(t)
+		_, err := ss.CreateSpaceStorage(ctx, payload)
+		require.NoError(t, err)
+
+		spaceId := payload.SpaceHeaderWithId.Id
+		require.NoError(t, ss.ForceRemove(spaceId))
+
+		tmpDir, err := os.MkdirTemp("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(tmpDir)
+
+		spacePath := ss.StoreDir(spaceId)
+
+		require.NoError(t, os.Rename(filepath.Join(spacePath, "store.db"), filepath.Join(tmpDir, "store.db")))
+		require.NoError(t, os.RemoveAll(spacePath))
+
+		require.NoError(t, ss.IndexStorage().SetSpaceStatus(ctx, spaceId, SpaceStatusOk, ""))
+		require.NoError(t, ss.IndexStorage().MarkArchived(ctx, spaceId, 1, 2))
+
+		ss.archive.(*mock_archive.MockArchive).EXPECT().Restore(gomock.Any(), spaceId).Do(func(_ context.Context, _ string) error {
+			require.NoError(t, os.MkdirAll(spacePath, 0755))
+			require.NoError(t, os.Rename(filepath.Join(tmpDir, "store.db"), filepath.Join(spacePath, "store.db")))
+			return nil
+		})
+
+		store, err := ss.WaitSpaceStorage(ctx, spaceId)
+		require.NoError(t, err)
+		require.NoError(t, store.Close(ctx))
+	})
+}
+
+func TestStorageService_TryLockAndOpenDb(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		payload := NewStorageCreatePayload(t)
+		store, err := ss.CreateSpaceStorage(ctx, payload)
+		require.NoError(t, err)
+		spaceId := store.Id()
+
+		err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error { return nil })
+		require.ErrorIs(t, err, ErrLocked)
+
+		_ = ss.ForceRemove(spaceId)
+
+		var called bool
+		err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+			called = true
+			names, _ := db.GetCollectionNames(ctx)
+			assert.NotEmpty(t, names)
+			return nil
+		})
+		require.NoError(t, err)
+		require.True(t, called)
+	})
+	t.Run("parallel", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		payload := NewStorageCreatePayload(t)
+		store, err := ss.CreateSpaceStorage(ctx, payload)
+		require.NoError(t, err)
+		spaceId := store.Id()
+		_ = ss.ForceRemove(spaceId)
+
+		var loadStarted = make(chan struct{})
+		var release = make(chan struct{})
+		var wg = sync.WaitGroup{}
+		wg.Add(2)
+		var testErr = errors.New("test error")
+		// start loading
+		go func() {
+			defer wg.Done()
+			var called bool
+			err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+				close(loadStarted)
+				called = true
+				<-release
+				time.Sleep(time.Millisecond)
+				return testErr
+			})
+			require.ErrorIs(t, err, testErr)
+			require.True(t, called)
+		}()
+
+		go func() {
+			defer wg.Done()
+			// wait for loading to start
+			<-loadStarted
+			_, getErr := ss.SpaceStorage(ctx, spaceId)
+			// expect testErr for other waiters
+			assert.ErrorIs(t, getErr, testErr)
+		}()
+
+		<-loadStarted
+		runtime.Gosched()
+		close(release)
+		wg.Wait()
+	})
 }
 
 func TestSpaceStorage_GetSpaceStats_CalcMedian(t *testing.T) {
@@ -427,7 +457,13 @@ func newStorageServiceWithDir(t *testing.T, tempDir string) *storageService {
 	ss := New()
 	a := new(app.App)
 
-	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss)
+	ctrl := gomock.NewController(t)
+	archive := mock_archive.NewMockArchive(ctrl)
+	anymock.ExpectComp(archive.EXPECT(), archiveCName)
+
+	t.Cleanup(ctrl.Finish)
+
+	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss).Register(archive)
 	a.Start(ctx)
 	return ss.(*storageService)
 }
