@@ -2,12 +2,15 @@ package nodestorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -312,27 +315,72 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 }
 
 func TestStorageService_TryLockAndOpenDb(t *testing.T) {
-	ss := newStorageService(t)
-	defer ss.Close(ctx)
-	payload := NewStorageCreatePayload(t)
-	store, err := ss.CreateSpaceStorage(ctx, payload)
-	require.NoError(t, err)
-	spaceId := store.Id()
+	t.Run("success", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		payload := NewStorageCreatePayload(t)
+		store, err := ss.CreateSpaceStorage(ctx, payload)
+		require.NoError(t, err)
+		spaceId := store.Id()
 
-	err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error { return nil })
-	require.ErrorIs(t, err, ErrLocked)
+		err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error { return nil })
+		require.ErrorIs(t, err, ErrLocked)
 
-	_ = ss.ForceRemove(spaceId)
+		_ = ss.ForceRemove(spaceId)
 
-	var called bool
-	err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
-		called = true
-		names, _ := db.GetCollectionNames(ctx)
-		assert.NotEmpty(t, names)
-		return nil
+		var called bool
+		err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+			called = true
+			names, _ := db.GetCollectionNames(ctx)
+			assert.NotEmpty(t, names)
+			return nil
+		})
+		require.NoError(t, err)
+		require.True(t, called)
 	})
-	require.NoError(t, err)
-	require.True(t, called)
+	t.Run("parallel", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		payload := NewStorageCreatePayload(t)
+		store, err := ss.CreateSpaceStorage(ctx, payload)
+		require.NoError(t, err)
+		spaceId := store.Id()
+		_ = ss.ForceRemove(spaceId)
+
+		var loadStarted = make(chan struct{})
+		var release = make(chan struct{})
+		var wg = sync.WaitGroup{}
+		wg.Add(2)
+		var testErr = errors.New("test error")
+		// start loading
+		go func() {
+			defer wg.Done()
+			var called bool
+			err = ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+				close(loadStarted)
+				called = true
+				<-release
+				time.Sleep(time.Millisecond)
+				return testErr
+			})
+			require.ErrorIs(t, err, testErr)
+			require.True(t, called)
+		}()
+
+		go func() {
+			defer wg.Done()
+			// wait for loading to start
+			<-loadStarted
+			_, getErr := ss.SpaceStorage(ctx, spaceId)
+			// expect testErr for other waiters
+			assert.ErrorIs(t, getErr, testErr)
+		}()
+
+		<-loadStarted
+		runtime.Gosched()
+		close(release)
+		wg.Wait()
+	})
 }
 
 func TestSpaceStorage_GetSpaceStats_CalcMedian(t *testing.T) {
