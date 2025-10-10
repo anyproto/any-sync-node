@@ -100,3 +100,29 @@ func Test_migrateToSingleCollection(t *testing.T) {
 	assert.Contains(t, collNames, spaceCollName)
 	assert.Contains(t, collNames, settingsCollName)
 }
+
+func TestIndexStorage_MarkArchived(t *testing.T) {
+	tempDir := t.TempDir()
+	fx, err := createTestIndexStorage(ctx, tempDir)
+	require.NoError(t, err)
+	defer fx.Close()
+
+	require.NoError(t, fx.SetSpaceStatus(ctx, "space1", SpaceStatusOk, ""))
+	require.NoError(t, fx.MarkArchived(ctx, "space1", 1, 2))
+	status, err := fx.SpaceStatus(ctx, "space1")
+	require.NoError(t, err)
+	assert.Equal(t, SpaceStatusArchived, status)
+}
+
+func TestIndexStorage_MarkError(t *testing.T) {
+	tempDir := t.TempDir()
+	fx, err := createTestIndexStorage(ctx, tempDir)
+	require.NoError(t, err)
+	defer fx.Close()
+
+	require.NoError(t, fx.SetSpaceStatus(ctx, "space1", SpaceStatusOk, ""))
+	require.NoError(t, fx.MarkError(ctx, "space1", "error"))
+	status, err := fx.SpaceStatus(ctx, "space1")
+	require.NoError(t, err)
+	assert.Equal(t, SpaceStatusError, status)
+}
