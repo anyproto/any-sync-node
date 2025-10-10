@@ -267,6 +267,7 @@ func (a *archive) check(ctx context.Context) error {
 				skip++
 				continue
 			}
+			a.stat.archiveError.Add(1)
 			return indexStore.MarkError(ctx, spaceId, err.Error())
 		}
 		log.Info("space is archived", zap.String("spaceId", spaceId), zap.Duration("dur", time.Since(st)))
