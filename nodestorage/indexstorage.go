@@ -22,6 +22,7 @@ const (
 	SpaceStatusRemove
 	SpaceStatusRemovePrepare
 	SpaceStatusArchived
+	SpaceStatusError
 )
 
 var (
@@ -41,6 +42,7 @@ const (
 	valueKey                   = "v"
 	archiveSizeCompressedKey   = "asc"
 	archiveSizeUncompressedKey = "asu"
+	errorKey                   = "err"
 	diffMigrationKey           = "diffState"
 	diffVersionKey             = "diffVersion"
 
@@ -54,6 +56,7 @@ type IndexStorage interface {
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
+	MarkError(ctx context.Context, spaceId string, errString string) (err error)
 	LastRecordId(ctx context.Context) (id string, err error)
 	FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration, skip int) (spaceId string, err error)
 
@@ -181,6 +184,15 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 		return v, false, nil
 	}))
 	return tx.Commit()
+}
+
+func (d *indexStorage) MarkError(ctx context.Context, spaceId string, errString string) (err error) {
+	_, err = d.spaceColl.UpdateId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		v.Set(statusKey, a.NewNumberInt(int(SpaceStatusError)))
+		v.Set(errorKey, a.NewString(errString))
+		return v, true, nil
+	}))
+	return err
 }
 
 func (d *indexStorage) MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error) {

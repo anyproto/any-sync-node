@@ -395,6 +395,20 @@ func (mr *MockIndexStorageMockRecorder) MarkArchived(ctx, spaceId, compressedSiz
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkArchived", reflect.TypeOf((*MockIndexStorage)(nil).MarkArchived), ctx, spaceId, compressedSize, uncompressedSize)
 }
 
+// MarkError mocks base method.
+func (m *MockIndexStorage) MarkError(ctx context.Context, spaceId, errString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkError", ctx, spaceId, errString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkError indicates an expected call of MarkError.
+func (mr *MockIndexStorageMockRecorder) MarkError(ctx, spaceId, errString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkError", reflect.TypeOf((*MockIndexStorage)(nil).MarkError), ctx, spaceId, errString)
+}
+
 // ReadHashes mocks base method.
 func (m *MockIndexStorage) ReadHashes(ctx context.Context, iterFunc func(nodestorage.SpaceUpdate) (bool, error)) error {
 	m.ctrl.T.Helper()
