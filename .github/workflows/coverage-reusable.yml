@@ -1,3 +1,5 @@
+name: reusable coverage
+
 on:
   workflow_call:
     inputs:

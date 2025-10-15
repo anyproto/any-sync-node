@@ -1,3 +1,5 @@
+name: reusable push-docker-image
+
 on:
   workflow_call:
     inputs:
