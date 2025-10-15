@@ -9,7 +9,7 @@ permissions: write-all
 
 jobs:
   release-reusable:
-    uses: anyproto/shared-actions/.github/workflows/release-go-daemons-reusable.yml@OPS-835
+    uses: anyproto/shared-actions/.github/workflows/release-go-daemons-reusable.yml@v1
     secrets: inherit # pass all secrets
     with:
       dockerfile-cmd: '["/bin/any-sync-node", "-c", "/etc/any-sync-node/config.yml"]'
