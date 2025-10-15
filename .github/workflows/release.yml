@@ -11,3 +11,5 @@ jobs:
   release-reusable:
     uses: anyproto/shared-actions/.github/workflows/release-go-daemons-reusable.yml@OPS-835
     secrets: inherit # pass all secrets
+    with:
+      dockerfile-cmd: '["/bin/any-sync-node", "-c", "/etc/any-sync-node/config.yml"]'
