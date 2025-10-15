@@ -1,14 +1,13 @@
+name: release
+
 on:
   push:
-    # Sequence of patterns matched against refs/tags
     tags:
-    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-
-name: release
+      - 'v*.*.*'
 
 permissions: write-all
 
 jobs:
   release-reusable:
-    uses: anyproto/any-sync-node/.github/workflows/release-reusable.yml@main
+    uses: anyproto/shared-actions/.github/workflows/release-go-daemons-reusable.yml@OPS-835
     secrets: inherit # pass all secrets
