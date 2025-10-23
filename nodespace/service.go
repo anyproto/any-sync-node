@@ -4,6 +4,7 @@ package nodespace
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -100,7 +101,27 @@ func (s *service) PickSpace(ctx context.Context, id string) (NodeSpace, error) {
 	return v.(NodeSpace), nil
 }
 
+var ErrSpaceStatus = errors.New("space status error")
+
 func (s *service) GetStats(ctx context.Context, id string, treeTop int) (spaceStats nodestorage.SpaceStats, err error) {
+	status, err := s.spaceStorageProvider.IndexStorage().SpaceStatus(ctx, id)
+	if err != nil {
+		return
+	}
+	switch status {
+	case nodestorage.SpaceStatusError:
+		err = fmt.Errorf("%w: error state", ErrSpaceStatus)
+	case nodestorage.SpaceStatusRemove:
+		err = fmt.Errorf("%w: remove state", ErrSpaceStatus)
+	case nodestorage.SpaceStatusRemovePrepare:
+		err = fmt.Errorf("%w: remove prepare state", ErrSpaceStatus)
+	case nodestorage.SpaceStatusArchived:
+		err = fmt.Errorf("%w: archived state", ErrSpaceStatus)
+	case nodestorage.SpaceStatusOk:
+	}
+	if err != nil {
+		return
+	}
 	return s.spaceStorageProvider.GetStats(ctx, id, treeTop)
 }
 

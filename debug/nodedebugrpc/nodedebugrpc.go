@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -121,17 +120,17 @@ func (s *nodeDebugRpc) handleSpaceStats(rw http.ResponseWriter, req *http.Reques
 			errStatus = http.StatusNotImplemented
 		}
 
-		errorStr := fmt.Sprintf("failed to get space stats: %s", err)
-		errReply := statsError{
-			Error: errorStr,
+		if errors.Is(err, nodespace.ErrSpaceStatus) {
+			errStatus = http.StatusBadRequest
 		}
 
-		log.Error(errorStr, zap.Error(err))
-		rw.WriteHeader(errStatus)
+		errReply := statsError{
+			Error: err.Error(),
+		}
 
+		rw.WriteHeader(errStatus)
 		marshalledErr, _ := json.MarshalIndent(errReply, "", "  ")
 		rw.Write(marshalledErr)
-
 		return
 	}
 
