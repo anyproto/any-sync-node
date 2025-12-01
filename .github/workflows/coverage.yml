@@ -11,5 +11,5 @@ permissions:
 
 jobs:
   release-reusable:
-    uses: anyproto/any-sync-node/.github/workflows/coverage-reusable.yml@go-4493-goexperemental-test
+    uses: anyproto/any-sync-node/.github/workflows/coverage-reusable.yml@main
     secrets: inherit # pass all secrets
