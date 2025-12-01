@@ -76,7 +76,7 @@ jobs:
         env:
           TESTCOVERAGE_THRESHOLD: 0
         run: |
-          go test ./... -coverprofile coverage.out -covermode count
+          GOEXPERIMENT=synctest go test ./... -coverprofile coverage.out -covermode count
 
           generated_pattern='^\/\/ Code generated .* DO NOT EDIT\.$'
           files_list=$(grep -rl "$generated_pattern" . | grep '\.go$' | sed 's/^\.\///')
