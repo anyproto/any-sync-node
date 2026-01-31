@@ -5,8 +5,8 @@ go 1.24.6
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
-	github.com/anyproto/any-store v0.4.4
-	github.com/anyproto/any-sync v0.11.9
+	github.com/anyproto/any-store v0.4.6
+	github.com/anyproto/any-sync v0.11.11
 	github.com/anyproto/go-chash v0.1.0
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/cheggaaa/mb/v3 v3.0.2
@@ -58,7 +58,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.46.0 // indirect
+	github.com/libp2p/go-libp2p v0.47.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
