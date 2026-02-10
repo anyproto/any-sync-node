@@ -336,6 +336,21 @@ func (mr *MockIndexStorageMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockIndexStorage)(nil).Close))
 }
 
+// DeletionLogId mocks base method.
+func (m *MockIndexStorage) DeletionLogId(ctx context.Context) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletionLogId", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeletionLogId indicates an expected call of DeletionLogId.
+func (mr *MockIndexStorageMockRecorder) DeletionLogId(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionLogId", reflect.TypeOf((*MockIndexStorage)(nil).DeletionLogId), ctx)
+}
+
 // FindOldestInactiveSpace mocks base method.
 func (m *MockIndexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration, skip int) (string, error) {
 	m.ctrl.T.Helper()
@@ -364,21 +379,6 @@ func (m *MockIndexStorage) GetDiffMigrationVersion(ctx context.Context) (int, er
 func (mr *MockIndexStorageMockRecorder) GetDiffMigrationVersion(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiffMigrationVersion", reflect.TypeOf((*MockIndexStorage)(nil).GetDiffMigrationVersion), ctx)
-}
-
-// LastRecordId mocks base method.
-func (m *MockIndexStorage) LastRecordId(ctx context.Context) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LastRecordId", ctx)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LastRecordId indicates an expected call of LastRecordId.
-func (mr *MockIndexStorageMockRecorder) LastRecordId(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastRecordId", reflect.TypeOf((*MockIndexStorage)(nil).LastRecordId), ctx)
 }
 
 // MarkArchived mocks base method.
@@ -435,6 +435,20 @@ func (m *MockIndexStorage) RunMigrations(ctx context.Context) error {
 func (mr *MockIndexStorageMockRecorder) RunMigrations(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunMigrations", reflect.TypeOf((*MockIndexStorage)(nil).RunMigrations), ctx)
+}
+
+// SetDeletionLogId mocks base method.
+func (m *MockIndexStorage) SetDeletionLogId(ctx context.Context, id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetDeletionLogId", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetDeletionLogId indicates an expected call of SetDeletionLogId.
+func (mr *MockIndexStorageMockRecorder) SetDeletionLogId(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeletionLogId", reflect.TypeOf((*MockIndexStorage)(nil).SetDeletionLogId), ctx, id)
 }
 
 // SetDiffMigrationVersion mocks base method.

@@ -42,7 +42,7 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	close(fx.waiterChan)
 	<-fx.deleter.testChan
 
-	id, err := fx.storage.IndexStorage().LastRecordId(ctx)
+	id, err := fx.storage.IndexStorage().DeletionLogId(ctx)
 	require.NoError(t, err)
 	require.Equal(t, lg[2].Id, id)
 	store, err = fx.storage.WaitSpaceStorage(ctx, payload.SpaceHeaderWithId.Id)
@@ -72,7 +72,7 @@ func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
 	close(fx.waiterChan)
 	<-fx.deleter.testChan
 
-	id, err := fx.storage.IndexStorage().LastRecordId(ctx)
+	id, err := fx.storage.IndexStorage().DeletionLogId(ctx)
 	require.NoError(t, err)
 	require.Equal(t, lg[3].Id, id)
 	status, err := fx.storage.IndexStorage().SpaceStatus(ctx, payload.SpaceHeaderWithId.Id)
@@ -90,7 +90,7 @@ func TestSpaceDeleter_Run_Ok_NoStorage(t *testing.T) {
 	close(fx.waiterChan)
 	<-fx.deleter.testChan
 
-	id, err := fx.storage.IndexStorage().LastRecordId(ctx)
+	id, err := fx.storage.IndexStorage().DeletionLogId(ctx)
 	require.NoError(t, err)
 	require.Equal(t, lg[2].Id, id)
 	status, err := fx.storage.IndexStorage().SpaceStatus(ctx, "space3")
@@ -130,7 +130,7 @@ func TestSpaceDeleter_Run_Ok_EmptyStorage(t *testing.T) {
 	close(fx.waiterChan)
 	<-fx.deleter.testChan
 
-	id, err := fx.storage.IndexStorage().LastRecordId(ctx)
+	id, err := fx.storage.IndexStorage().DeletionLogId(ctx)
 	require.NoError(t, err)
 	require.Equal(t, lg[2].Id, id)
 	store, err = fx.storage.WaitSpaceStorage(context.Background(), payload.SpaceHeaderWithId.Id)
