@@ -87,8 +87,8 @@ func (s *spaceDeleter) delete(ctx context.Context) (err error) {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-	lastRecordId, err := s.deletionStorage.LastRecordId(ctx)
-	if err != nil && !errors.Is(err, nodestorage.ErrNoLastRecordId) {
+	lastRecordId, err := s.deletionStorage.DeletionLogId(ctx)
+	if err != nil && !errors.Is(err, nodestorage.ErrNoDeletionLogId) {
 		return err
 	}
 	log.Debug("getting deletion log", zap.Int("limit", logLimit), zap.String("lastRecordId", lastRecordId))
@@ -132,6 +132,12 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 	case coordinatorproto.DeletionLogRecordStatus_Remove:
 		log.Debug("received deletion record")
 		err := deleteSpace()
+		if err != nil {
+			return err
+		}
+	case coordinatorproto.DeletionLogRecordStatus_OwnershipChange:
+		log.Debug("received ownership change record")
+		err := s.deletionStorage.SetDeletionLogId(ctx, rec.Id)
 		if err != nil {
 			return err
 		}

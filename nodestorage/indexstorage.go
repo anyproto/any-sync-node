@@ -26,8 +26,8 @@ const (
 )
 
 var (
-	ErrUnknownSpaceId = errors.New("unknown space id")
-	ErrNoLastRecordId = errors.New("no last record id")
+	ErrUnknownSpaceId  = errors.New("unknown space id")
+	ErrNoDeletionLogId = errors.New("no last record id")
 )
 
 const (
@@ -57,7 +57,8 @@ type IndexStorage interface {
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
 	MarkError(ctx context.Context, spaceId string, errString string) (err error)
-	LastRecordId(ctx context.Context) (id string, err error)
+	DeletionLogId(ctx context.Context) (id string, err error)
+	SetDeletionLogId(ctx context.Context, id string) (err error)
 	FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration, skip int) (spaceId string, err error)
 
 	UpdateLastAccess(ctx context.Context, spaceId string) (err error)
@@ -205,15 +206,27 @@ func (d *indexStorage) MarkArchived(ctx context.Context, spaceId string, compres
 	return err
 }
 
-func (d *indexStorage) LastRecordId(ctx context.Context) (id string, err error) {
+func (d *indexStorage) DeletionLogId(ctx context.Context) (id string, err error) {
 	doc, err := d.settingsColl.FindId(ctx, lastDeletionIdKey)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
-			return "", ErrNoLastRecordId
+			return "", ErrNoDeletionLogId
 		}
 		return "", err
 	}
 	return doc.Value().GetString(valueKey), nil
+}
+
+func (d *indexStorage) SetDeletionLogId(ctx context.Context, id string) (err error) {
+	_, err = d.settingsColl.UpsertId(ctx, lastDeletionIdKey, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		prevKey := v.GetString(valueKey)
+		if prevKey < id {
+			v.Set(valueKey, a.NewString(id))
+			return v, true, nil
+		}
+		return v, false, nil
+	}))
+	return
 }
 
 func (d *indexStorage) UpdateLastAccess(ctx context.Context, spaceId string) (err error) {
