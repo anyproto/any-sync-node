@@ -23,6 +23,7 @@ const (
 	SpaceStatusRemovePrepare
 	SpaceStatusArchived
 	SpaceStatusError
+	SpaceStatusNotResponsible
 )
 
 var (

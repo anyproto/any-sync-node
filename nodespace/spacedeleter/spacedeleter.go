@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
+	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"go.uber.org/zap"
 
@@ -39,6 +40,7 @@ type spaceDeleter struct {
 	deletionStorage nodestorage.IndexStorage
 	spaceService    nodespace.Service
 	storageProvider nodestorage.NodeStorage
+	nodeConf        nodeconf.Service
 	syncWaiter      <-chan struct{}
 
 	testOnce sync.Once
@@ -51,6 +53,7 @@ func (s *spaceDeleter) Init(a *app.App) (err error) {
 	s.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	s.storageProvider = a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
 	s.syncWaiter = a.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
+	s.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	return
 }
 
@@ -119,7 +122,11 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 	switch rec.Status {
 	case coordinatorproto.DeletionLogRecordStatus_Ok:
 		log.Debug("received deletion cancel record")
-		err := s.deletionStorage.SetSpaceStatus(ctx, rec.SpaceId, nodestorage.SpaceStatusOk, rec.Id)
+		status := nodestorage.SpaceStatusOk
+		if !s.nodeConf.IsResponsible(rec.SpaceId) {
+			status = nodestorage.SpaceStatusNotResponsible
+		}
+		err := s.deletionStorage.SetSpaceStatus(ctx, rec.SpaceId, status, rec.Id)
 		if err != nil {
 			return err
 		}
