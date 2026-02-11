@@ -17,6 +17,17 @@ import (
 
 type SpaceStatus int
 
+type SpaceStatusEntry struct {
+	SpaceId                 string
+	Status                  SpaceStatus
+	Error                   string
+	NewHash                 string
+	OldHash                 string
+	LastAccess              time.Time
+	ArchiveSizeCompressed   int64
+	ArchiveSizeUncompressed int64
+}
+
 const (
 	SpaceStatusOk SpaceStatus = iota
 	SpaceStatusRemove
@@ -150,6 +161,25 @@ func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status 
 		}
 	}
 	return SpaceStatus(doc.Value().GetInt(statusKey)), nil
+}
+
+func (d *indexStorage) SpaceStatusEntry(ctx context.Context, spaceId string) (entry SpaceStatusEntry, err error) {
+	doc, err := d.spaceColl.FindId(ctx, spaceId)
+	if err != nil {
+		return entry, err
+	}
+	v := doc.Value()
+	entry = SpaceStatusEntry{
+		SpaceId:                 spaceId,
+		Status:                  SpaceStatus(v.GetInt(statusKey)),
+		Error:                   v.GetString(errorKey),
+		NewHash:                 v.GetString(newHashKey),
+		OldHash:                 v.GetString(oldHashKey),
+		LastAccess:              time.Unix(int64(v.GetInt(lastAccessKey)), 0),
+		ArchiveSizeCompressed:   int64(v.GetInt(archiveSizeCompressedKey)),
+		ArchiveSizeUncompressed: int64(v.GetInt(archiveSizeUncompressedKey)),
+	}
+	return entry, nil
 }
 
 func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error) {
