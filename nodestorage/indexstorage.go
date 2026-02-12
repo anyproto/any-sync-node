@@ -67,6 +67,7 @@ type IndexStorage interface {
 	UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
+	SpaceStatusEntry(ctx context.Context, spaceId string) (entry SpaceStatusEntry, err error)
 	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
 	MarkError(ctx context.Context, spaceId string, errString string) (err error)
 	DeletionLogId(ctx context.Context) (id string, err error)

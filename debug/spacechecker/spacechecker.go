@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -65,7 +66,7 @@ func (s *spaceChecker) Check(ctx context.Context, spaceId string) (res Result, e
 
 	// 1. Get local status from index storage
 	localStatusStr, localErr := s.getLocalStatus(ctx, spaceId, &res)
-	if localErr != nil {
+	if localErr != nil && !errors.Is(localErr, anystore.ErrDocNotFound) {
 		return res, fmt.Errorf("get local status: %w", localErr)
 	}
 
@@ -108,6 +109,7 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 
 	switch {
 	// coordStatus: removed, localStatus: not removed or storageExists: true - remove space and switch local status
+	// also handles case when local entry doesn't exist (localStatus: unknown)
 	case coordStatus == "removed" && (localStatus != "removed" || storageExists):
 		if storageExists {
 			err = s.storageService.DeleteSpaceStorage(ctx, spaceId)
@@ -162,14 +164,14 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 }
 
 func (s *spaceChecker) getLocalStatus(ctx context.Context, spaceId string, res *Result) (statusStr string, err error) {
-	status, err := s.storageService.IndexStorage().SpaceStatus(ctx, spaceId)
+	entry, err := s.storageService.IndexStorage().SpaceStatusEntry(ctx, spaceId)
 	if err != nil {
 		res.LocalStatus = "unknown"
 		res.LocalStatusError = err.Error()
 		res.Log = append(res.Log, fmt.Sprintf("localStatus: error getting status: %s", err))
 		return "unknown", err
 	}
-	statusStr = localStatusString(status)
+	statusStr = localStatusString(entry.Status)
 	res.LocalStatus = statusStr
 	res.Log = append(res.Log, fmt.Sprintf("localStatus: %s", statusStr))
 	return statusStr, nil
