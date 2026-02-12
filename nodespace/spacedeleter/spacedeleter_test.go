@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/stretchr/testify/assert"
 
@@ -29,6 +31,7 @@ var ctx = context.Background()
 func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
+	fx.nodeConf.EXPECT().IsResponsible(gomock.Any()).Return(true).AnyTimes()
 	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
@@ -61,6 +64,7 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
+	fx.nodeConf.EXPECT().IsResponsible(gomock.Any()).Return(true).AnyTimes()
 	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
@@ -80,9 +84,33 @@ func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
 	require.Equal(t, nodestorage.SpaceStatusOk, status)
 }
 
+func TestSpaceDeleter_Run_Ok_NotResponsible(t *testing.T) {
+	fx := newSpaceDeleterFixture(t)
+	defer fx.stop(t)
+	fx.nodeConf.EXPECT().IsResponsible(gomock.Any()).Return(false).AnyTimes()
+	payload := nodestorage.NewStorageCreatePayload(t)
+	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
+	require.NoError(t, err)
+	lg := mockDeletionLogNotResponsible(store.Id())
+
+	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
+	store.Close(context.Background())
+
+	close(fx.waiterChan)
+	<-fx.deleter.testChan
+
+	id, err := fx.storage.IndexStorage().DeletionLogId(ctx)
+	require.NoError(t, err)
+	require.Equal(t, lg[0].Id, id)
+	status, err := fx.storage.IndexStorage().SpaceStatus(ctx, payload.SpaceHeaderWithId.Id)
+	require.NoError(t, err)
+	require.Equal(t, nodestorage.SpaceStatusNotResponsible, status)
+}
+
 func TestSpaceDeleter_Run_Ok_NoStorage(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
+	fx.nodeConf.EXPECT().IsResponsible(gomock.Any()).Return(true).AnyTimes()
 	lg := mockDeletionLog("space3")
 
 	fx.coordClient.EXPECT().DeletionLog(gomock.Any(), "", logLimit).Return(lg, nil).AnyTimes()
@@ -106,6 +134,7 @@ type forceRemover interface {
 func TestSpaceDeleter_Run_Ok_EmptyStorage(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
+	fx.nodeConf.EXPECT().IsResponsible(gomock.Any()).Return(true).AnyTimes()
 	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
@@ -148,6 +177,12 @@ func mockDeletionLog(realId string) []*coordinatorproto.DeletionLogRecord {
 	}
 }
 
+func mockDeletionLogNotResponsible(realId string) []*coordinatorproto.DeletionLogRecord {
+	return []*coordinatorproto.DeletionLogRecord{
+		{Id: "1", SpaceId: realId, Status: coordinatorproto.DeletionLogRecordStatus_Ok},
+	}
+}
+
 func mockDeletionLogNewPush(realId string) []*coordinatorproto.DeletionLogRecord {
 	return []*coordinatorproto.DeletionLogRecord{
 		{Id: "1", SpaceId: "space1", Status: coordinatorproto.DeletionLogRecordStatus_Ok},
@@ -162,6 +197,7 @@ type spaceDeleterFixture struct {
 	spaceService *mock_nodespace.MockService
 	storage      nodestorage.NodeStorage
 	nodesync     *mock_nodesync.MockNodeSync
+	nodeConf     *mock_nodeconf.MockService
 	deleter      *spaceDeleter
 	waiterChan   chan struct{}
 	ctrl         *gomock.Controller
@@ -188,11 +224,13 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 	spaceService := mock_nodespace.NewMockService(ctrl)
 	nodeSync := mock_nodesync.NewMockNodeSync(ctrl)
 	archive := mock_archive.NewMockArchive(ctrl)
+	nodeConfMock := mock_nodeconf.NewMockService(ctrl)
 	storage := nodestorage.New()
 	anymock.ExpectComp(coordClient.EXPECT(), coordinatorclient.CName)
 	anymock.ExpectComp(spaceService.EXPECT(), nodespace.CName)
 	anymock.ExpectComp(nodeSync.EXPECT(), nodesync.CName)
 	anymock.ExpectComp(archive.EXPECT(), "node.archive")
+	anymock.ExpectComp(nodeConfMock.EXPECT(), nodeconf.CName)
 	nodeSync.EXPECT().WaitSyncOnStart().Return(waiterChan).AnyTimes()
 	deleter := New().(*spaceDeleter)
 	a.Register(storeConfig(dir)).
@@ -201,6 +239,7 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 		Register(spaceService).
 		Register(archive).
 		Register(nodeSync).
+		Register(nodeConfMock).
 		Register(deleter)
 	err = a.Start(context.Background())
 	require.NoError(t, err)
@@ -209,6 +248,7 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 		spaceService: spaceService,
 		storage:      storage,
 		nodesync:     nodeSync,
+		nodeConf:     nodeConfMock,
 		deleter:      deleter,
 		waiterChan:   waiterChan,
 		ctrl:         ctrl,

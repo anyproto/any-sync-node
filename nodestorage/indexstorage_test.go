@@ -114,6 +114,58 @@ func TestIndexStorage_MarkArchived(t *testing.T) {
 	assert.Equal(t, SpaceStatusArchived, status)
 }
 
+func TestIndexStorage_SpaceStatusEntry(t *testing.T) {
+	t.Run("not found", func(t *testing.T) {
+		tempDir := t.TempDir()
+		fx, err := createTestIndexStorage(ctx, tempDir)
+		require.NoError(t, err)
+		defer fx.Close()
+
+		_, err = fx.(*indexStorage).SpaceStatusEntry(ctx, "nonexistent")
+		require.ErrorIs(t, err, anystore.ErrDocNotFound)
+	})
+
+	t.Run("existing entry", func(t *testing.T) {
+		tempDir := t.TempDir()
+		fx, err := createTestIndexStorage(ctx, tempDir)
+		require.NoError(t, err)
+		defer fx.Close()
+
+		require.NoError(t, fx.SetSpaceStatus(ctx, "space1", SpaceStatusOk, ""))
+		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{
+			SpaceId: "space1",
+			OldHash: "old",
+			NewHash: "new",
+		}))
+		require.NoError(t, fx.MarkArchived(ctx, "space1", 100, 200))
+
+		entry, err := fx.(*indexStorage).SpaceStatusEntry(ctx, "space1")
+		require.NoError(t, err)
+		assert.Equal(t, "space1", entry.SpaceId)
+		assert.Equal(t, SpaceStatusArchived, entry.Status)
+		assert.Equal(t, "new", entry.NewHash)
+		assert.Equal(t, "old", entry.OldHash)
+		assert.Equal(t, int64(100), entry.ArchiveSizeCompressed)
+		assert.Equal(t, int64(200), entry.ArchiveSizeUncompressed)
+		assert.False(t, entry.LastAccess.IsZero())
+	})
+
+	t.Run("error status", func(t *testing.T) {
+		tempDir := t.TempDir()
+		fx, err := createTestIndexStorage(ctx, tempDir)
+		require.NoError(t, err)
+		defer fx.Close()
+
+		require.NoError(t, fx.SetSpaceStatus(ctx, "space1", SpaceStatusOk, ""))
+		require.NoError(t, fx.MarkError(ctx, "space1", "some error"))
+
+		entry, err := fx.(*indexStorage).SpaceStatusEntry(ctx, "space1")
+		require.NoError(t, err)
+		assert.Equal(t, SpaceStatusError, entry.Status)
+		assert.Equal(t, "some error", entry.Error)
+	})
+}
+
 func TestIndexStorage_MarkError(t *testing.T) {
 	tempDir := t.TempDir()
 	fx, err := createTestIndexStorage(ctx, tempDir)
