@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync-node/debug/nodedebugrpc/nodedebugrpcproto"
+	"github.com/anyproto/any-sync-node/debug/spacechecker"
 	"github.com/anyproto/any-sync-node/nodespace"
 	nodestorage "github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync"
@@ -45,6 +46,7 @@ type nodeDebugRpc struct {
 	nodeConf         nodeconf.Service
 	server           debugserver.DebugServer
 	statService      debugstat.StatService
+	spaceChecker     spacechecker.SpaceChecker
 }
 
 type statsError struct {
@@ -61,8 +63,10 @@ func (s *nodeDebugRpc) Init(a *app.App) (err error) {
 	s.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.server = a.MustComponent(debugserver.CName).(debugserver.DebugServer)
 	s.statService = a.MustComponent(debugstat.CName).(debugstat.StatService)
+	s.spaceChecker = a.MustComponent(spacechecker.CName).(spacechecker.SpaceChecker)
 	http.HandleFunc("/stat/{spaceId}", s.handleSpaceStats)
 	http.HandleFunc("/stats", s.handleStats)
+	http.HandleFunc("/check/{spaceId}", s.handleCheck)
 	return nil
 }
 
@@ -94,6 +98,39 @@ func (s *nodeDebugRpc) handleStats(rw http.ResponseWriter, req *http.Request) {
 		log.Error(errorStr, zap.Error(err))
 		rw.WriteHeader(http.StatusInternalServerError)
 		rw.Write(marshalledErr)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
+	_, _ = rw.Write(marshalled)
+}
+
+func (s *nodeDebugRpc) handleCheck(rw http.ResponseWriter, req *http.Request) {
+	spaceId := req.PathValue("spaceId")
+	fix := req.URL.Query().Get("fix") == "1"
+
+	var (
+		result spacechecker.Result
+		err    error
+	)
+	if fix {
+		result, err = s.spaceChecker.Fix(req.Context(), spaceId)
+	} else {
+		result, err = s.spaceChecker.Check(req.Context(), spaceId)
+	}
+	if err != nil {
+		rw.Header().Set("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusInternalServerError)
+		marshalledErr, _ := json.MarshalIndent(statsError{Error: err.Error()}, "", "  ")
+		rw.Write(marshalledErr)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	marshalled, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		log.Error("failed to marshal check result", zap.Error(err))
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("{\"error\": \"failed to marshal check result\"}"))
 		return
 	}
 	rw.WriteHeader(http.StatusOK)
