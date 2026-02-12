@@ -100,23 +100,23 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 		return res, nil
 	}
 
-	C := res.CoordinatorStatus
-	L := res.LocalStatus
-	E := res.SpaceStorageExists
-	R := res.IsResponsible
+	coordStatus := res.CoordinatorStatus
+	localStatus := res.LocalStatus
+	storageExists := res.SpaceStorageExists
+	isResponsible := res.IsResponsible
 	indexStorage := s.storageService.IndexStorage()
 
 	switch {
 	// C:Removed, L: not removed or E:true - remove space and switch local status
-	case C == "removed" && (L != "removed" || E):
-		if E {
+	case coordStatus == "removed" && (localStatus != "removed" || storageExists):
+		if storageExists {
 			err = s.storageService.DeleteSpaceStorage(ctx, spaceId)
 			if err != nil && !errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
 				return res, fmt.Errorf("delete space storage: %w", err)
 			}
 			res.Log = append(res.Log, "fix: deleted space storage")
 		}
-		if L != "removed" {
+		if localStatus != "removed" {
 			err = indexStorage.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusRemove, "")
 			if err != nil {
 				return res, fmt.Errorf("set status removed: %w", err)
@@ -126,7 +126,7 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 		res.IsFixed = true
 
 	// C:prepRemove, L: not prep remove - switch local status
-	case C == "remPrepare" && L != "remPrepare":
+	case coordStatus == "remPrepare" && localStatus != "remPrepare":
 		err = indexStorage.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusRemovePrepare, "")
 		if err != nil {
 			return res, fmt.Errorf("set status remPrepare: %w", err)
@@ -135,13 +135,13 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 		res.IsFixed = true
 
 	// C:Ok, L:Ok, R:false - set notResponsible, move storage if exists
-	case C == "ok" && L == "ok" && !R:
+	case coordStatus == "ok" && localStatus == "ok" && !isResponsible:
 		err = indexStorage.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusNotResponsible, "")
 		if err != nil {
 			return res, fmt.Errorf("set status notResponsible: %w", err)
 		}
 		res.Log = append(res.Log, "fix: set local status to notResponsible")
-		if E {
+		if storageExists {
 			srcDir := s.storageService.StoreDir(spaceId)
 			dstDir := s.storageService.StoreDir(filepath.Join("notresponsible", spaceId))
 			if err = os.MkdirAll(filepath.Dir(dstDir), 0755); err != nil {
@@ -190,39 +190,39 @@ func (s *spaceChecker) getCoordinatorStatus(ctx context.Context, spaceId string,
 }
 
 func (s *spaceChecker) validate(res *Result, localStr string, coordStr string) {
-	C := coordStr
-	L := localStr
-	R := res.IsResponsible
-	E := res.SpaceStorageExists
+	coordStatus := coordStr
+	localStatus := localStr
+	isResponsible := res.IsResponsible
+	storageExists := res.SpaceStorageExists
 
 	valid := false
 	switch {
 	// C: ok, L: ok, R: true, E: true
-	case C == "ok" && L == "ok" && R && E:
+	case coordStatus == "ok" && localStatus == "ok" && isResponsible && storageExists:
 		valid = true
 	// C: ok, L: archived, R: true, E: false
-	case C == "ok" && L == "archived" && R && !E:
+	case coordStatus == "ok" && localStatus == "archived" && isResponsible && !storageExists:
 		valid = true
 	// C: remPrepare, L: remPrepare, R: true, E: true
-	case C == "remPrepare" && L == "remPrepare" && R && E:
+	case coordStatus == "remPrepare" && localStatus == "remPrepare" && isResponsible && storageExists:
 		valid = true
 	// C: remPrepare, L: remPrepare, R: false, E: false
-	case C == "remPrepare" && L == "remPrepare" && !R && !E:
+	case coordStatus == "remPrepare" && localStatus == "remPrepare" && !isResponsible && !storageExists:
 		valid = true
 	// C: removed, L: removed, E: false
-	case C == "removed" && L == "removed" && !E:
+	case coordStatus == "removed" && localStatus == "removed" && !storageExists:
 		valid = true
 	}
 
 	if !valid {
 		var problems []string
-		if C == "error" {
+		if coordStatus == "error" {
 			problems = append(problems, "coordinator_error")
 		}
-		if L == "unknown" {
+		if localStatus == "unknown" {
 			problems = append(problems, "local_status_unknown")
 		}
-		problems = append(problems, fmt.Sprintf("invalid_state(C:%s,L:%s,R:%v,E:%v)", C, L, R, E))
+		problems = append(problems, fmt.Sprintf("invalid_state(C:%s,L:%s,R:%v,E:%v)", coordStatus, localStatus, isResponsible, storageExists))
 		res.Problems = problems
 	}
 }
