@@ -107,7 +107,7 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 	indexStorage := s.storageService.IndexStorage()
 
 	switch {
-	// C:Removed, L: not removed or E:true - remove space and switch local status
+	// coordStatus: removed, localStatus: not removed or storageExists: true - remove space and switch local status
 	case coordStatus == "removed" && (localStatus != "removed" || storageExists):
 		if storageExists {
 			err = s.storageService.DeleteSpaceStorage(ctx, spaceId)
@@ -125,7 +125,7 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 		}
 		res.IsFixed = true
 
-	// C:prepRemove, L: not prep remove - switch local status
+	// coordStatus: remPrepare, localStatus: not remPrepare - switch local status
 	case coordStatus == "remPrepare" && localStatus != "remPrepare":
 		err = indexStorage.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusRemovePrepare, "")
 		if err != nil {
@@ -134,7 +134,7 @@ func (s *spaceChecker) Fix(ctx context.Context, spaceId string) (Result, error) 
 		res.Log = append(res.Log, "fix: set local status to remPrepare")
 		res.IsFixed = true
 
-	// C:Ok, L:Ok, R:false - set notResponsible, move storage if exists
+	// coordStatus: ok, localStatus: ok, isResponsible: false - set notResponsible, move storage if exists
 	case coordStatus == "ok" && localStatus == "ok" && !isResponsible:
 		err = indexStorage.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusNotResponsible, "")
 		if err != nil {
@@ -197,19 +197,19 @@ func (s *spaceChecker) validate(res *Result, localStr string, coordStr string) {
 
 	valid := false
 	switch {
-	// C: ok, L: ok, R: true, E: true
+	// coordStatus: ok, localStatus: ok, isResponsible: true, storageExists: true
 	case coordStatus == "ok" && localStatus == "ok" && isResponsible && storageExists:
 		valid = true
-	// C: ok, L: archived, R: true, E: false
+	// coordStatus: ok, localStatus: archived, isResponsible: true, storageExists: false
 	case coordStatus == "ok" && localStatus == "archived" && isResponsible && !storageExists:
 		valid = true
-	// C: remPrepare, L: remPrepare, R: true, E: true
+	// coordStatus: remPrepare, localStatus: remPrepare, isResponsible: true, storageExists: true
 	case coordStatus == "remPrepare" && localStatus == "remPrepare" && isResponsible && storageExists:
 		valid = true
-	// C: remPrepare, L: remPrepare, R: false, E: false
+	// coordStatus: remPrepare, localStatus: remPrepare, isResponsible: false, storageExists: false
 	case coordStatus == "remPrepare" && localStatus == "remPrepare" && !isResponsible && !storageExists:
 		valid = true
-	// C: removed, L: removed, E: false
+	// coordStatus: removed, localStatus: removed, storageExists: false
 	case coordStatus == "removed" && localStatus == "removed" && !storageExists:
 		valid = true
 	}
