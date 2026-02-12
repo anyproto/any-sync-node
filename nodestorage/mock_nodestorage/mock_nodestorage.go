@@ -494,6 +494,21 @@ func (mr *MockIndexStorageMockRecorder) SpaceStatus(ctx, spaceId any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceStatus", reflect.TypeOf((*MockIndexStorage)(nil).SpaceStatus), ctx, spaceId)
 }
 
+// SpaceStatusEntry mocks base method.
+func (m *MockIndexStorage) SpaceStatusEntry(ctx context.Context, spaceId string) (nodestorage.SpaceStatusEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SpaceStatusEntry", ctx, spaceId)
+	ret0, _ := ret[0].(nodestorage.SpaceStatusEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SpaceStatusEntry indicates an expected call of SpaceStatusEntry.
+func (mr *MockIndexStorageMockRecorder) SpaceStatusEntry(ctx, spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceStatusEntry", reflect.TypeOf((*MockIndexStorage)(nil).SpaceStatusEntry), ctx, spaceId)
+}
+
 // UpdateHash mocks base method.
 func (m *MockIndexStorage) UpdateHash(ctx context.Context, updates ...nodestorage.SpaceUpdate) error {
 	m.ctrl.T.Helper()
