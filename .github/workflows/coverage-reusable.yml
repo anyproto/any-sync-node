@@ -43,7 +43,7 @@ jobs:
           mongodb-replica-set: test-rs
 
       - name: Start Redis
-        uses: supercharge/redis-github-action@1.8.0
+        uses: supercharge/redis-github-action@1.8.1
         if: ${{ inputs.start_redis }}
         with:
           redis-image: redis/redis-stack-server
