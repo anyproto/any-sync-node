@@ -61,7 +61,7 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	assert.Equal(t, []string{"space1"}, allIds)
 }
 
-func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
+func TestSpaceDeleter_Run_Remove_Ok(t *testing.T) {
 	fx := newSpaceDeleterFixture(t)
 	defer fx.stop(t)
 	fx.nodeConf.EXPECT().IsResponsible(gomock.Any()).Return(true).AnyTimes()
@@ -81,7 +81,7 @@ func TestSpaceDeleter_Run_Ok_NewPush(t *testing.T) {
 	require.Equal(t, lg[3].Id, id)
 	status, err := fx.storage.IndexStorage().SpaceStatus(ctx, payload.SpaceHeaderWithId.Id)
 	require.NoError(t, err)
-	require.Equal(t, nodestorage.SpaceStatusOk, status)
+	require.Equal(t, nodestorage.SpaceStatusRemove, status)
 }
 
 func TestSpaceDeleter_Run_Ok_NotResponsible(t *testing.T) {

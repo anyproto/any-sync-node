@@ -110,7 +110,7 @@ func (s *spaceDeleter) delete(ctx context.Context) (err error) {
 }
 
 func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinatorproto.DeletionLogRecord) (err error) {
-	log := log.With(zap.String("spaceId", rec.SpaceId))
+	log := log.With(zap.String("spaceId", rec.SpaceId), zap.String("deletionLogId", rec.Id), zap.String("status", rec.Status.String()))
 	deleteSpace := func() error {
 		// deleting space storage
 		err = s.storageProvider.DeleteSpaceStorage(ctx, rec.SpaceId)
@@ -119,6 +119,20 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 		}
 		return s.deletionStorage.SetSpaceStatus(ctx, rec.SpaceId, nodestorage.SpaceStatusRemove, rec.Id)
 	}
+
+	prevStatus, err := s.deletionStorage.SpaceStatus(ctx, rec.SpaceId)
+	if err != nil {
+		return err
+	}
+	if prevStatus == nodestorage.SpaceStatusRemove {
+		log.Debug("space is already removed")
+		err := s.deletionStorage.SetDeletionLogId(ctx, rec.Id)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	switch rec.Status {
 	case coordinatorproto.DeletionLogRecordStatus_Ok:
 		log.Debug("received deletion cancel record")
