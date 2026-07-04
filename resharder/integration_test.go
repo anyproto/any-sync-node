@@ -13,6 +13,7 @@ import (
 	"time"
 
 	anystore "github.com/anyproto/any-store"
+	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
@@ -56,6 +57,15 @@ func TestIntegration_DrainAdoptRestore(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.CreateCollection(ctx, "objects")
 	require.NoError(t, err)
+	// the snapshot heads are read from the space state (as spacestorage keeps it)
+	stateColl, err := db.Collection(ctx, "state")
+	require.NoError(t, err)
+	arena := &anyenc.Arena{}
+	stateDoc := arena.NewObject()
+	stateDoc.Set("id", arena.NewString(spaceId))
+	stateDoc.Set("oh", arena.NewString("h-old"))
+	stateDoc.Set("nh", arena.NewString("h-new"))
+	require.NoError(t, stateColl.Insert(ctx, stateDoc))
 	require.NoError(t, db.Close())
 	require.NoError(t, nodeA.storage.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
 		SpaceId: spaceId, OldHash: "h-old", NewHash: "h-new",
@@ -66,6 +76,7 @@ func TestIntegration_DrainAdoptRestore(t *testing.T) {
 	nodeA.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"nodeB"})
 	// node B accepts adoption from node A (a tree node) and registers heads
 	nodeB.nodeConf.EXPECT().NodeTypes("nodeA").Return([]nodeconf.NodeType{nodeconf.NodeTypeTree})
+	nodeB.nodeConf.EXPECT().IsResponsible(spaceId).Return(true)
 	nodeB.nodeHead.EXPECT().SetHead(spaceId, "h-old", "h-new").Return(0, nil)
 
 	// wire the drainer's adopt call straight into node B's adopter
@@ -110,7 +121,7 @@ func TestIntegration_DrainAdoptRestore(t *testing.T) {
 	defer restored.Close()
 	colls, err := restored.GetCollectionNames(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"objects"}, colls)
+	assert.ElementsMatch(t, []string{"objects", "state"}, colls)
 }
 
 type testNode struct {

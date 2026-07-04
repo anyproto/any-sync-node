@@ -11,6 +11,8 @@ enum ErrCodes {
     ArchiveUnavailable = 4;
     ArchiveObjectMissing = 5;
     PeerIsNotNode = 6;
+    NotResponsible = 7;
+    SpacePendingDeletion = 8;
     ErrorOffset = 1000;
 }
 

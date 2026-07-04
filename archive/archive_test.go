@@ -9,6 +9,7 @@ import (
 	"time"
 
 	anystore "github.com/anyproto/any-store"
+	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/stretchr/testify/assert"
@@ -142,14 +143,22 @@ func TestArchive_ForceArchive(t *testing.T) {
 	fx := newFixture(t)
 	tmpDir := t.TempDir()
 
-	// prepare a dump dir with a store.db like DumpStorage produces
+	spaceId := "force.id"
+	// prepare a dump dir with a store.db like DumpStorage produces,
+	// including the space state the snapshot heads are read from
 	db, err := anystore.Open(ctx, filepath.Join(tmpDir, "store.db"), nil)
 	require.NoError(t, err)
 	_, err = db.CreateCollection(ctx, "test")
 	require.NoError(t, err)
+	stateColl, err := db.Collection(ctx, "state")
+	require.NoError(t, err)
+	arena := &anyenc.Arena{}
+	stateDoc := arena.NewObject()
+	stateDoc.Set("id", arena.NewString(spaceId))
+	stateDoc.Set("oh", arena.NewString("snap-old"))
+	stateDoc.Set("nh", arena.NewString("snap-new"))
+	require.NoError(t, stateColl.Insert(ctx, stateDoc))
 	require.NoError(t, db.Close())
-
-	spaceId := "force.id"
 	fx.storage.EXPECT().
 		DumpStorage(ctx, spaceId, gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ string, do func(path string) error) error {
@@ -164,8 +173,10 @@ func TestArchive_ForceArchive(t *testing.T) {
 	})
 
 	// no MarkArchived, no local deletion: the space stays live
-	compressedSize, uncompressedSize, err := fx.ForceArchive(ctx, spaceId)
+	oldHash, newHash, compressedSize, uncompressedSize, err := fx.ForceArchive(ctx, spaceId)
 	require.NoError(t, err)
+	assert.Equal(t, "snap-old", oldHash)
+	assert.Equal(t, "snap-new", newHash)
 	assert.Greater(t, compressedSize, int64(0))
 	assert.Greater(t, uncompressedSize, int64(0))
 	assert.Equal(t, int(compressedSize), uploaded)

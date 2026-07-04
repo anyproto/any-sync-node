@@ -129,6 +129,23 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		_, err := fx.AdoptArchive(ctx, req)
 		assert.ErrorIs(t, err, nodesyncproto.ErrSpaceDeleted)
 	})
+	t.Run("pending deletion parks the sender", func(t *testing.T) {
+		fx := newFixture(t)
+		req := adoptReq()
+		fx.expectNodePeer()
+		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusRemovePrepare}, nil)
+		_, err := fx.AdoptArchive(ctx, req)
+		assert.ErrorIs(t, err, nodesyncproto.ErrSpacePendingDeletion)
+	})
+	t.Run("not responsible rejected", func(t *testing.T) {
+		fx := newFixture(t)
+		req := adoptReq()
+		fx.archiveStore.EXPECT().Shared().Return(true)
+		fx.nodeConf.EXPECT().NodeTypes("peer1").Return([]nodeconf.NodeType{nodeconf.NodeTypeTree})
+		fx.nodeConf.EXPECT().IsResponsible(req.SpaceId).Return(false)
+		_, err := fx.AdoptArchive(ctx, req)
+		assert.ErrorIs(t, err, nodesyncproto.ErrNotResponsible)
+	})
 	t.Run("source object missing", func(t *testing.T) {
 		fx := newFixture(t)
 		req := adoptReq()
@@ -155,6 +172,7 @@ type fixture struct {
 func (fx *fixture) expectNodePeer() {
 	fx.archiveStore.EXPECT().Shared().Return(true)
 	fx.nodeConf.EXPECT().NodeTypes("peer1").Return([]nodeconf.NodeType{nodeconf.NodeTypeTree})
+	fx.nodeConf.EXPECT().IsResponsible("space.id").Return(true)
 }
 
 func newFixture(t *testing.T) *fixture {

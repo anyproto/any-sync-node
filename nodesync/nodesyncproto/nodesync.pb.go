@@ -31,6 +31,8 @@ const (
 	ErrCodes_ArchiveUnavailable   ErrCodes = 4
 	ErrCodes_ArchiveObjectMissing ErrCodes = 5
 	ErrCodes_PeerIsNotNode        ErrCodes = 6
+	ErrCodes_NotResponsible       ErrCodes = 7
+	ErrCodes_SpacePendingDeletion ErrCodes = 8
 	ErrCodes_ErrorOffset          ErrCodes = 1000
 )
 
@@ -44,6 +46,8 @@ var (
 		4:    "ArchiveUnavailable",
 		5:    "ArchiveObjectMissing",
 		6:    "PeerIsNotNode",
+		7:    "NotResponsible",
+		8:    "SpacePendingDeletion",
 		1000: "ErrorOffset",
 	}
 	ErrCodes_value = map[string]int32{
@@ -54,6 +58,8 @@ var (
 		"ArchiveUnavailable":   4,
 		"ArchiveObjectMissing": 5,
 		"PeerIsNotNode":        6,
+		"NotResponsible":       7,
+		"SpacePendingDeletion": 8,
 		"ErrorOffset":          1000,
 	}
 )
@@ -764,7 +770,7 @@ const file_nodesync_nodesyncproto_protos_nodesync_proto_rawDesc = "" +
 	"\x0ecompressedSize\x18\x06 \x01(\x03R\x0ecompressedSize\x12*\n" +
 	"\x10uncompressedSize\x18\a \x01(\x03R\x10uncompressedSize\"O\n" +
 	"\x14AdoptArchiveResponse\x127\n" +
-	"\x06result\x18\x01 \x01(\x0e2\x1f.anyNodeSync.AdoptArchiveResultR\x06result*\xb4\x01\n" +
+	"\x06result\x18\x01 \x01(\x0e2\x1f.anyNodeSync.AdoptArchiveResultR\x06result*\xe2\x01\n" +
 	"\bErrCodes\x12\x0e\n" +
 	"\n" +
 	"Unexpected\x10\x00\x12\x17\n" +
@@ -773,7 +779,9 @@ const file_nodesync_nodesyncproto_protos_nodesync_proto_rawDesc = "" +
 	"\fSpaceDeleted\x10\x03\x12\x16\n" +
 	"\x12ArchiveUnavailable\x10\x04\x12\x18\n" +
 	"\x14ArchiveObjectMissing\x10\x05\x12\x11\n" +
-	"\rPeerIsNotNode\x10\x06\x12\x10\n" +
+	"\rPeerIsNotNode\x10\x06\x12\x12\n" +
+	"\x0eNotResponsible\x10\a\x12\x18\n" +
+	"\x14SpacePendingDeletion\x10\b\x12\x10\n" +
 	"\vErrorOffset\x10\xe8\a*6\n" +
 	"\x14ColdSyncProtocolType\x12\n" +
 	"\n" +

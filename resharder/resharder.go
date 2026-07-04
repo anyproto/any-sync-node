@@ -238,9 +238,8 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 		return true, nil
 	}
 
-	eager := false
-	switch entry.Status {
-	case nodestorage.SpaceStatusArchived:
+	status := entry.Status
+	if status == nodestorage.SpaceStatusArchived {
 		exists, hErr := r.archiveStore.Exists(ctx, spaceId)
 		if hErr != nil {
 			return false, hErr
@@ -251,22 +250,38 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 				// for the operator, the owners sync from the other replicas
 				return false, index.MarkError(ctx, spaceId, "drain: archived but object and db are missing")
 			}
-			// the object is gone but the db is present: snapshot it again
-			if _, _, err = r.archive.ForceArchive(ctx, spaceId); err != nil {
+			// the object is gone but the db is present: repair the status first
+			// (opening a space whose index says Archived would trigger a restore
+			// of the very object that is missing) and hand it off as live
+			if err = index.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusOk, ""); err != nil {
 				return false, err
 			}
+			status = nodestorage.SpaceStatusOk
 		}
-	case nodestorage.SpaceStatusOk:
+	}
+
+	// heads advertised to the owners; for live spaces they are read from the
+	// snapshot itself so they exactly describe the uploaded object
+	oldHash, newHash := entry.OldHash, entry.NewHash
+	compressedSize, uncompressedSize := entry.ArchiveSizeCompressed, entry.ArchiveSizeUncompressed
+	eager := false
+	if status == nodestorage.SpaceStatusOk {
 		if !r.storage.SpaceExists(spaceId) {
 			// index entry without local data: nothing to hand off
 			return true, index.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusMoved, "")
 		}
-		if _, _, err = r.archive.ForceArchive(ctx, spaceId); err != nil {
+		if oldHash, newHash, compressedSize, uncompressedSize, err = r.archive.ForceArchive(ctx, spaceId); err != nil {
 			return false, err
 		}
-		// refresh heads: writes could have landed before the snapshot
-		if entry, err = index.SpaceStatusEntry(ctx, spaceId); err != nil {
-			return false, err
+		// writes may have landed while the snapshot was taken/uploaded: park
+		// and retry next cycle rather than hand off a stale object
+		cur, cErr := index.SpaceStatusEntry(ctx, spaceId)
+		if cErr != nil {
+			return false, cErr
+		}
+		if cur.NewHash != newHash {
+			log.Info("drain: space changed during snapshot, retrying next cycle", zap.String("spaceId", spaceId))
+			return false, nil
 		}
 		eager = true
 	}
@@ -274,14 +289,20 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 	req := &nodesyncproto.AdoptArchiveRequest{
 		SpaceId:          spaceId,
 		SrcKey:           r.archiveStore.Key(spaceId),
-		OldHash:          entry.OldHash,
-		NewHash:          entry.NewHash,
+		OldHash:          oldHash,
+		NewHash:          newHash,
 		Eager:            eager,
-		CompressedSize:   entry.ArchiveSizeCompressed,
-		UncompressedSize: entry.ArchiveSizeUncompressed,
+		CompressedSize:   compressedSize,
+		UncompressedSize: uncompressedSize,
 	}
 
 	owners := r.nodeConf.NodeIds(spaceId)
+	if len(owners) == 0 {
+		// no reachable owners in the current ring (e.g. a force-applied broken
+		// configuration): never delete without a real handoff
+		r.stat.parked.Add(1)
+		return false, nil
+	}
 	minAcks := 2
 	if len(owners) < minAcks {
 		minAcks = len(owners)
@@ -315,12 +336,13 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 		r.stat.parked.Add(1)
 		return false, nil
 	}
-	// deletion safety: the heads we got ACKed must still be the local heads
+	// deletion safety: the heads the owners ACKed must still be the local
+	// heads — a mismatch means writes landed during the handoff
 	cur, err := index.SpaceStatusEntry(ctx, spaceId)
 	if err != nil {
 		return false, err
 	}
-	if cur.NewHash != entry.NewHash || cur.OldHash != entry.OldHash {
+	if cur.NewHash != newHash || cur.OldHash != oldHash {
 		log.Info("drain: heads changed during handoff, retrying next cycle", zap.String("spaceId", spaceId))
 		return false, nil
 	}

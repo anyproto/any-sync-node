@@ -16,7 +16,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync-node/archive/archivestore"
-	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync"
@@ -44,7 +43,6 @@ type spaceDeleter struct {
 	storageProvider nodestorage.NodeStorage
 	nodeConf        nodeconf.Service
 	archiveStore    archivestore.ArchiveStore
-	nodeHead        nodehead.NodeHead
 	syncWaiter      <-chan struct{}
 
 	testOnce sync.Once
@@ -59,7 +57,6 @@ func (s *spaceDeleter) Init(a *app.App) (err error) {
 	s.syncWaiter = a.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
 	s.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.archiveStore = a.MustComponent(archivestore.CName).(archivestore.ArchiveStore)
-	s.nodeHead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	return
 }
 
@@ -125,19 +122,18 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 
 	deleteSpace := func() error {
 		if prevStatus == nodestorage.SpaceStatusArchived {
-			// the space lives in the archive store, not on disk: delete the
-			// object directly instead of restoring it just to delete the db
+			// the space lives in the archive store: delete the object directly
+			// instead of restoring it just to delete the db
 			if aErr := s.archiveStore.Delete(ctx, rec.SpaceId); aErr != nil && !errors.Is(aErr, archivestore.ErrNotFound) && !errors.Is(aErr, archivestore.ErrDisabled) {
 				return aErr
 			}
-			if hErr := s.nodeHead.DeleteHeads(rec.SpaceId); hErr != nil {
-				log.Warn("can't delete heads for archived space", zap.Error(hErr))
-			}
-			return s.deletionStorage.SetSpaceStatus(ctx, rec.SpaceId, nodestorage.SpaceStatusRemove, rec.Id)
 		}
-		// deleting space storage
+		// remove the local db too: even for archived spaces a directory may
+		// linger (e.g. a crash between restore and the status flip). With the
+		// object already gone the restore attempt inside fails fast and the
+		// directory is removed regardless.
 		err = s.storageProvider.DeleteSpaceStorage(ctx, rec.SpaceId)
-		if err != nil && !errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
+		if err != nil && !errors.Is(err, spacestorage.ErrSpaceStorageMissing) && !errors.Is(err, archivestore.ErrNotFound) {
 			return err
 		}
 		// remove a leftover archive object if any (restore keeps objects)
@@ -159,7 +155,12 @@ func (s *spaceDeleter) processDeletionRecord(ctx context.Context, rec *coordinat
 	case coordinatorproto.DeletionLogRecordStatus_Ok:
 		log.Debug("received deletion cancel record")
 		status := nodestorage.SpaceStatusOk
-		if !s.nodeConf.IsResponsible(rec.SpaceId) {
+		if prevStatus == nodestorage.SpaceStatusArchived {
+			// an archived space has no local db: reverting to Ok would present
+			// the archive object as a stale leftover (and the sweeper would
+			// eventually collect the only copy); stay archived
+			status = nodestorage.SpaceStatusArchived
+		} else if !s.nodeConf.IsResponsible(rec.SpaceId) {
 			status = nodestorage.SpaceStatusNotResponsible
 		}
 		err := s.deletionStorage.SetSpaceStatus(ctx, rec.SpaceId, status, rec.Id)

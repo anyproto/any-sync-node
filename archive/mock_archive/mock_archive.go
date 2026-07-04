@@ -56,13 +56,15 @@ func (mr *MockArchiveMockRecorder) Close(ctx any) *gomock.Call {
 }
 
 // ForceArchive mocks base method.
-func (m *MockArchive) ForceArchive(ctx context.Context, spaceId string) (int64, int64, error) {
+func (m *MockArchive) ForceArchive(ctx context.Context, spaceId string) (string, string, int64, int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ForceArchive", ctx, spaceId)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(int64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(int64)
+	ret3, _ := ret[3].(int64)
+	ret4, _ := ret[4].(error)
+	return ret0, ret1, ret2, ret3, ret4
 }
 
 // ForceArchive indicates an expected call of ForceArchive.

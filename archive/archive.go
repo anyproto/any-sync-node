@@ -47,8 +47,12 @@ type Archive interface {
 	// keeping the local DB and its status intact. Used to ship live spaces
 	// through the shared archive store during migration. The caller must ensure
 	// the space is not already archived: opening an archived space triggers a
-	// restore. Returns the sizes of the uploaded snapshot.
-	ForceArchive(ctx context.Context, spaceId string) (compressedSize, uncompressedSize int64, err error)
+	// restore. Returns the heads read from the snapshot itself (they exactly
+	// describe the uploaded object, unlike the asynchronously updated index)
+	// and the snapshot sizes.
+	// The return types are primitives on purpose: a struct would make the
+	// generated mock import this package and create test-only import cycles.
+	ForceArchive(ctx context.Context, spaceId string) (oldHash, newHash string, compressedSize, uncompressedSize int64, err error)
 	// QueueRestore schedules a background restore of an archived space
 	// (used for eager adoption of migrated spaces).
 	QueueRestore(spaceId string)
@@ -68,6 +72,9 @@ type archive struct {
 
 	restoreQueue  chan string
 	restoreQueued sync.Map
+	// archiveMu serializes the periodic archiver with the prefix sweeper so a
+	// sweep decision can't race a concurrent re-archive of the same object
+	archiveMu sync.Mutex
 }
 
 func (a *archive) Init(ap *app.App) (err error) {
@@ -155,6 +162,8 @@ func (a *archive) restoreWorker() {
 var errArchived = errors.New("archived")
 
 func (a *archive) Archive(ctx context.Context, spaceId string) (err error) {
+	a.archiveMu.Lock()
+	defer a.archiveMu.Unlock()
 	var gzSize, dbSize int64
 	tmpDir, err := os.MkdirTemp("", spaceId)
 	if err != nil {
@@ -204,9 +213,15 @@ func (a *archive) Archive(ctx context.Context, spaceId string) (err error) {
 	return
 }
 
-func (a *archive) ForceArchive(ctx context.Context, spaceId string) (compressedSize, uncompressedSize int64, err error) {
+func (a *archive) ForceArchive(ctx context.Context, spaceId string) (oldHash, newHash string, compressedSize, uncompressedSize int64, err error) {
 	// DumpStorage backups the db into a temp dir; it works for open spaces too
 	err = a.storageProvider.DumpStorage(ctx, spaceId, func(path string) error {
+		// read the heads from the snapshot: they describe exactly what the
+		// uploaded object contains
+		oldHash, newHash, err = readSnapshotHeads(ctx, spaceId, filepath.Join(path, "store.db"))
+		if err != nil {
+			return err
+		}
 		gzPath, gzSize, dbSize, err := a.createGzipFromStore(path)
 		if err != nil {
 			return err
@@ -226,6 +241,34 @@ func (a *archive) ForceArchive(ctx context.Context, spaceId string) (compressedS
 		a.stat.forceArchived.Add(1)
 	}
 	return
+}
+
+// readSnapshotHeads reads the space state directly from the snapshot db
+// (schema of commonspace/headsync/statestorage, including the legacy
+// single-hash fallback).
+func readSnapshotHeads(ctx context.Context, spaceId, dbPath string) (oldHash, newHash string, err error) {
+	db, err := anystore.Open(ctx, dbPath, nil)
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = db.Close()
+	}()
+	coll, err := db.OpenCollection(ctx, "state")
+	if err != nil {
+		return
+	}
+	doc, err := coll.FindId(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	oldHash = doc.Value().GetString("oh")
+	newHash = doc.Value().GetString("nh")
+	if oldHash == "" || newHash == "" {
+		oldHash = doc.Value().GetString("h")
+		newHash = oldHash
+	}
+	return oldHash, newHash, nil
 }
 
 // createGzipFromStore creates store.gz from store.db inside spaceDir.
@@ -276,7 +319,11 @@ func (a *archive) createGzipFromStore(spaceDir string) (gzPath string, gzSize, d
 
 func (a *archive) Restore(ctx context.Context, spaceId string) (err error) {
 	if err = a.restoreFile(ctx, spaceId); err != nil {
-		_ = os.RemoveAll(a.storageProvider.StoreDir(spaceId))
+		if !errors.Is(err, archivestore.ErrNotFound) {
+			// clean up a partially extracted db; a missing archive object wrote
+			// nothing, and the dir may hold a pre-existing db that must survive
+			_ = os.RemoveAll(a.storageProvider.StoreDir(spaceId))
+		}
 		return err
 	}
 	if err = a.storageProvider.IndexStorage().SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusOk, ""); err != nil {

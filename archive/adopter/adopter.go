@@ -64,12 +64,23 @@ func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArc
 	if err = ad.checkPeerIsNode(ctx); err != nil {
 		return nil, err
 	}
+	if !ad.nodeConf.IsResponsible(req.SpaceId) {
+		// the sender acts on a different (stale or newer) configuration:
+		// never adopt spaces we don't own — an ACK from a non-owner must not
+		// justify the sender's deletion
+		return nil, nodesyncproto.ErrNotResponsible
+	}
 	entry, entryErr := ad.storage.IndexStorage().SpaceStatusEntry(ctx, req.SpaceId)
 	switch {
 	case entryErr == nil:
 		switch entry.Status {
-		case nodestorage.SpaceStatusRemove, nodestorage.SpaceStatusRemovePrepare:
+		case nodestorage.SpaceStatusRemove:
 			return nil, nodesyncproto.ErrSpaceDeleted
+		case nodestorage.SpaceStatusRemovePrepare:
+			// pending deletion is cancellable: don't let the sender drop its
+			// copy, and don't adopt data into a deletion-flow status either;
+			// the sender parks the space until the deletion resolves
+			return nil, nodesyncproto.ErrSpacePendingDeletion
 		case nodestorage.SpaceStatusOk:
 			if ad.storage.SpaceExists(req.SpaceId) {
 				return alreadyHaveResponse(entry, req), nil
