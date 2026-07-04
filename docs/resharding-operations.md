@@ -55,13 +55,22 @@ emergencies only, it can produce partitions with no live source.
    owner(s) through the bucket (archived spaces: server-side copy; live
    spaces: snapshot + eager restore on the new node) and delete their local
    copies only after **two current owners confirm the same heads**.
-4. Watch progress per node:
+4. Watch progress per node (Prometheus):
+   - `node_resharder_state` — 0 disabled (bucket not shared), 1 idle,
+     2 draining; the whole fleet back at 1 = resharding complete
+   - `node_resharder_epoch` — configuration epoch the node acts on; shows
+     config propagation across the fleet after a publish
    - `node_resharder_draining` — spaces still to hand off (goal: 0)
    - `node_resharder_moved` — spaces handed off and deleted locally
-   - `node_resharder_parked` — handoffs postponed to the next cycle
-     (a persistently high value means an owner is unreachable or diverged)
-   - `node_archive_adopted` on the new node — spaces received
-5. Done when `node_resharder_draining` is 0 on all nodes. No client action is
+   - `node_resharder_parked` / `node_resharder_errors` — handoffs postponed
+     to the next cycle (persistently high = an owner is unreachable or
+     diverged) and failed drain attempts
+   - `node_resharder_last_cycle_unix` — when the last drain cycle finished
+   - `node_adopter_adopted` on the new node — spaces received;
+     `node_adopter_already_have_same` on surviving owners — head-verified
+     ACKs; `node_adopter_rejected` — refused/failed adopt requests
+5. Done when `node_resharder_state` is back to 1 (idle) and
+   `node_resharder_draining` is 0 on all nodes. No client action is
    needed at any point: clients are bounced to the new owners by the normal
    `ErrPeerIsNotResponsible` flow when they refresh the configuration.
 
@@ -76,7 +85,8 @@ emergencies only, it can produce partitions with no live source.
    owners. Receivers recognize it through the retained configuration history
    (last 100 epochs), so being absent from the current config does not block
    the handoff.
-3. Watch the removed node: `node_resharder_draining` → 0 and
+3. Watch the removed node: `node_resharder_state` → 1 (idle),
+   `node_resharder_draining` → 0 and
    `node_resharder_moved` settles. Spot-check with the debug API if desired:
    all its spaces end in status `Moved` and its bucket prefix empties.
 4. Shut the node down and decommission it. Leftover objects in its prefix

@@ -191,6 +191,7 @@ func newTestNode(t *testing.T, name string, bucket *memBucket) *testNode {
 	hotSync.EXPECT().SetMetric(gomock.Any(), gomock.Any()).AnyTimes()
 	hotSync.EXPECT().UpdateQueue(gomock.Any()).AnyTimes()
 	n.nodeConf.EXPECT().ObserveChanges(gomock.Any())
+	n.nodeConf.EXPECT().Configuration().AnyTimes().Return(nodeconf.Configuration{Epoch: 1})
 
 	n.a.Register(testNodeConfig{dir: t.TempDir(), s3: storeConf}).
 		Register(&syncWaiterStub{}).

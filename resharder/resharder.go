@@ -118,9 +118,11 @@ func (r *resharder) Name() (name string) {
 func (r *resharder) Run(_ context.Context) (err error) {
 	if !r.archiveStore.Shared() {
 		log.Info("archive store is not shared: resharding drain is disabled")
+		r.stat.state.Store(stateDisabled)
 		close(r.done)
 		return
 	}
+	r.stat.state.Store(stateIdle)
 	go r.loop()
 	return
 }
@@ -152,6 +154,10 @@ func (r *resharder) loop() {
 
 func (r *resharder) drainCycle() {
 	st := time.Now()
+	r.stat.epoch.Store(r.nodeConf.Configuration().Epoch)
+	defer func() {
+		r.stat.lastCycleUnix.Store(time.Now().Unix())
+	}()
 	r.reconcileUnindexed()
 	var candidates []string
 	err := r.storage.IndexStorage().ReadHashes(r.runCtx, func(update nodestorage.SpaceUpdate) (bool, error) {
@@ -166,8 +172,10 @@ func (r *resharder) drainCycle() {
 	}
 	r.stat.draining.Store(uint32(len(candidates)))
 	if len(candidates) == 0 {
+		r.stat.state.Store(stateIdle)
 		return
 	}
+	r.stat.state.Store(stateDraining)
 	log.Info("drain cycle started", zap.Int("spaces", len(candidates)))
 	var moved, parked int
 	for _, spaceId := range candidates {
@@ -176,6 +184,7 @@ func (r *resharder) drainCycle() {
 		}
 		ok, err := r.drainSpace(spaceId)
 		if err != nil {
+			r.stat.errors.Add(1)
 			log.Warn("drain space failed", zap.String("spaceId", spaceId), zap.Error(err))
 		}
 		if ok {
@@ -186,6 +195,9 @@ func (r *resharder) drainCycle() {
 		}
 	}
 	r.stat.draining.Store(uint32(parked))
+	if parked == 0 {
+		r.stat.state.Store(stateIdle)
+	}
 	log.Info("drain cycle finished", zap.Int("moved", moved), zap.Int("parked", parked), zap.Duration("dur", time.Since(st)))
 }
 

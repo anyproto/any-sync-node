@@ -8,6 +8,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
@@ -48,6 +49,7 @@ type adopter struct {
 	nodeHead     nodehead.NodeHead
 	nodeConf     nodeconf.Service
 	confHistory  nodeconf.HistoryStore
+	stat         *adopterStat
 }
 
 func (ad *adopter) Init(a *app.App) (err error) {
@@ -57,6 +59,10 @@ func (ad *adopter) Init(a *app.App) (err error) {
 	ad.nodeHead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	ad.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	ad.confHistory, _ = a.Component(nodeconf.CNameStore).(nodeconf.HistoryStore)
+	ad.stat = new(adopterStat)
+	if m := a.Component(metric.CName); m != nil {
+		registerMetric(ad.stat, m.(metric.Metric).Registry())
+	}
 	return
 }
 
@@ -65,6 +71,18 @@ func (ad *adopter) Name() (name string) {
 }
 
 func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArchiveRequest) (resp *nodesyncproto.AdoptArchiveResponse, err error) {
+	defer func() {
+		switch {
+		case err != nil:
+			ad.stat.rejected.Add(1)
+		case resp.Result == nodesyncproto.AdoptArchiveResult_AdoptArchiveOk:
+			ad.stat.adopted.Add(1)
+		case resp.Result == nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveSame:
+			ad.stat.alreadyHaveSame.Add(1)
+		case resp.Result == nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveDiverged:
+			ad.stat.alreadyHaveDiverged.Add(1)
+		}
+	}()
 	if !ad.archiveStore.Shared() {
 		return nil, nodesyncproto.ErrArchiveUnavailable
 	}

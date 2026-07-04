@@ -42,8 +42,8 @@ resharder:
 3. Publish an epoch-2 config adding tree node 4 (`confapply ... -e`).
 4. Within the nodeconf poll interval every node logs
    `net configuration changed` with `afterEpoch: 2` and drain cycles start.
-5. Watch metrics: `node_resharder_draining` falls to 0; `node_resharder_moved`
-   and `node_archive_adopted` grow. Spaces whose partitions moved to node 4
+5. Watch metrics: `node_resharder_draining` falls to 0 (`node_resharder_state`
+   back to idle); `node_resharder_moved` and `node_adopter_adopted` grow. Spaces whose partitions moved to node 4
    appear in its index as Archived (dormant) or restored (hot, eager).
 6. Verify a moved space: client reads it through node 4; the drainer answers
    `ErrPeerIsNotResponsible` for client requests and its copy is gone

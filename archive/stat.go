@@ -11,7 +11,6 @@ type archiveStat struct {
 	archiveError  atomic.Uint32
 	restored      atomic.Uint32
 	forceArchived atomic.Uint32
-	adopted       atomic.Uint32
 	swept         atomic.Uint32
 }
 
@@ -43,13 +42,6 @@ func registerMetric(s *archiveStat, registry *prometheus.Registry) {
 		Name:      "force_archived",
 	}, func() float64 {
 		return float64(s.forceArchived.Load())
-	}))
-	registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
-		Namespace: "node",
-		Subsystem: "archive",
-		Name:      "adopted",
-	}, func() float64 {
-		return float64(s.adopted.Load())
 	}))
 	registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 		Namespace: "node",

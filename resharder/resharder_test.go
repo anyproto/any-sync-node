@@ -252,6 +252,7 @@ func newFixture(t *testing.T) *fixture {
 	fx.hotSync.EXPECT().SetMetric(gomock.Any(), gomock.Any()).AnyTimes()
 	fx.storage.EXPECT().IndexStorage().AnyTimes().Return(fx.indexStorage)
 	fx.nodeConf.EXPECT().ObserveChanges(gomock.Any())
+	fx.nodeConf.EXPECT().Configuration().AnyTimes().Return(nodeconf.Configuration{Epoch: 1})
 	// Run gates on Shared; keep the background loop off in unit tests
 	fx.archiveStore.EXPECT().Shared().Return(false)
 
