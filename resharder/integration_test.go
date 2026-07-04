@@ -3,6 +3,7 @@ package resharder
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -82,13 +83,18 @@ func TestIntegration_DrainAdoptRestore(t *testing.T) {
 	statusA, err := nodeA.storage.IndexStorage().SpaceStatus(ctx, spaceId)
 	require.NoError(t, err)
 	assert.Equal(t, nodestorage.SpaceStatusMoved, statusA)
-	assert.False(t, bucket.has("nodeA/"+spaceId))
+	okA, err := nodeA.archiveStore.Exists(ctx, spaceId)
+	require.NoError(t, err)
+	assert.False(t, okA)
 
 	// node B: object in its prefix, index entry Archived with the same heads
-	assert.True(t, bucket.has("nodeB/"+spaceId))
+	okB, err := nodeB.archiveStore.Exists(ctx, spaceId)
+	require.NoError(t, err)
+	assert.True(t, okB)
 	entryB, err := nodeB.storage.IndexStorage().SpaceStatusEntry(ctx, spaceId)
 	require.NoError(t, err)
-	assert.Equal(t, nodestorage.SpaceStatusArchived, entryB.Status)
+	// the eager restore may already have flipped Archived -> Ok
+	assert.Contains(t, []nodestorage.SpaceStatus{nodestorage.SpaceStatusArchived, nodestorage.SpaceStatusOk}, entryB.Status)
 	assert.Equal(t, "h-new", entryB.NewHash)
 
 	// eager restore materializes the db on node B
@@ -108,27 +114,64 @@ func TestIntegration_DrainAdoptRestore(t *testing.T) {
 }
 
 type testNode struct {
-	name      string
-	a         *app.App
-	storage   nodestorage.NodeStorage
-	archive   archive.Archive
-	adopter   adopter.Adopter
-	resharder *resharder
-	nodeConf  *mock_nodeconf.MockService
-	nodeHead  *mock_nodehead.MockNodeHead
+	name         string
+	a            *app.App
+	storage      nodestorage.NodeStorage
+	archive      archive.Archive
+	archiveStore archivestore.ArchiveStore
+	adopter      adopter.Adopter
+	resharder    *resharder
+	nodeConf     *mock_nodeconf.MockService
+	nodeHead     *mock_nodehead.MockNodeHead
+}
+
+// realS3RunId makes all nodes of one test run share a prefix namespace when
+// the real-S3 backend is enabled.
+var realS3RunId = fmt.Sprintf("reshard-int-%d", time.Now().UnixNano())
+
+// newIntegrationStore returns the in-memory bucket store, or the real S3
+// store when ARCHIVE_TEST_S3_* env vars are configured (see realstore_test.go
+// in archivestore) — the latter runs the whole drain flow against a real
+// bucket, e.g. GCS interop.
+func newIntegrationStore(bucket *memBucket, nodeName string) (archivestore.ArchiveStore, archivestore.Config) {
+	accessKey := os.Getenv("ARCHIVE_TEST_S3_ACCESS_KEY")
+	secretKey := os.Getenv("ARCHIVE_TEST_S3_SECRET_KEY")
+	s3Bucket := os.Getenv("ARCHIVE_TEST_S3_BUCKET")
+	if accessKey == "" || secretKey == "" || s3Bucket == "" {
+		return newMemStore(bucket, nodeName), archivestore.Config{}
+	}
+	region := os.Getenv("ARCHIVE_TEST_S3_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+	return archivestore.New(), archivestore.Config{
+		Enabled:        true,
+		Region:         region,
+		Bucket:         s3Bucket,
+		Endpoint:       os.Getenv("ARCHIVE_TEST_S3_ENDPOINT"),
+		ForcePathStyle: true,
+		KeyPrefix:      realS3RunId + "/" + nodeName,
+		Shared:         true,
+		Credentials: archivestore.Credentials{
+			AccessKey: accessKey,
+			SecretKey: secretKey,
+		},
+	}
 }
 
 func newTestNode(t *testing.T, name string, bucket *memBucket) *testNode {
 	ctrl := gomock.NewController(t)
+	store, storeConf := newIntegrationStore(bucket, name)
 	n := &testNode{
-		name:      name,
-		a:         new(app.App),
-		storage:   nodestorage.New(),
-		archive:   archive.New(),
-		adopter:   adopter.New(),
-		resharder: New().(*resharder),
-		nodeConf:  mock_nodeconf.NewMockService(ctrl),
-		nodeHead:  mock_nodehead.NewMockNodeHead(ctrl),
+		name:         name,
+		a:            new(app.App),
+		storage:      nodestorage.New(),
+		archive:      archive.New(),
+		archiveStore: store,
+		adopter:      adopter.New(),
+		resharder:    New().(*resharder),
+		nodeConf:     mock_nodeconf.NewMockService(ctrl),
+		nodeHead:     mock_nodehead.NewMockNodeHead(ctrl),
 	}
 	hotSync := mock_hotsync.NewMockHotSync(ctrl)
 	anymock.ExpectComp(n.nodeConf.EXPECT(), nodeconf.CName)
@@ -138,9 +181,9 @@ func newTestNode(t *testing.T, name string, bucket *memBucket) *testNode {
 	hotSync.EXPECT().UpdateQueue(gomock.Any()).AnyTimes()
 	n.nodeConf.EXPECT().ObserveChanges(gomock.Any())
 
-	n.a.Register(testNodeConfig{dir: t.TempDir()}).
+	n.a.Register(testNodeConfig{dir: t.TempDir(), s3: storeConf}).
 		Register(&syncWaiterStub{}).
-		Register(newMemStore(bucket, name)).
+		Register(store).
 		Register(n.archive).
 		Register(n.storage).
 		Register(n.nodeHead).
@@ -159,6 +202,7 @@ func newTestNode(t *testing.T, name string, bucket *memBucket) *testNode {
 
 type testNodeConfig struct {
 	dir string
+	s3  archivestore.Config
 }
 
 func (c testNodeConfig) Init(_ *app.App) error { return nil }
@@ -171,6 +215,10 @@ func (c testNodeConfig) GetStorage() nodestorage.Config {
 func (c testNodeConfig) GetArchive() archive.Config {
 	// periodic archiving off; the restore worker runs regardless
 	return archive.Config{Enabled: false}
+}
+
+func (c testNodeConfig) GetS3Store() archivestore.Config {
+	return c.s3
 }
 
 type syncWaiterStub struct{}

@@ -159,22 +159,31 @@ func (as *archiveStore) Delete(ctx context.Context, name string) (err error) {
 	return
 }
 
+// Exists deliberately uses ListObjectsV2 instead of HeadObject: GCS's
+// S3-interop layer can serve stale HEAD responses for several seconds after a
+// mutation (observed: HEAD returns 200 for a just-deleted object when the same
+// key was HEAD'ed before), while listing is read-after-write consistent.
+// Exists backs the durable-ACK check of the resharding handoff, where a stale
+// positive could acknowledge an object that is already gone.
 func (as *archiveStore) Exists(ctx context.Context, name string) (ok bool, err error) {
 	if !as.enabled {
 		return false, ErrDisabled
 	}
-	name = as.keyPrefix + name
-	_, err = as.client.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
-		Bucket: as.bucket,
-		Key:    aws.String(name),
+	key := as.keyPrefix + name
+	out, err := as.client.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+		Bucket:  as.bucket,
+		Prefix:  aws.String(key),
+		MaxKeys: aws.Int64(1),
 	})
 	if err != nil {
-		if isNotFoundErr(err) {
-			return false, nil
-		}
 		return false, err
 	}
-	return true, nil
+	for _, obj := range out.Contents {
+		if obj.Key != nil && *obj.Key == key {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (as *archiveStore) Key(name string) string {
