@@ -77,6 +77,10 @@ type NodeStorage interface {
 	DeleteSpaceStorage(ctx context.Context, spaceId string) error
 	ForceRemove(id string) (err error)
 	GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error)
+	// DiskGen returns the storage-root generation marker; DiskGen().Fresh()
+	// reports that the storage root was initialized on this start (new node or
+	// replaced/wiped disk).
+	DiskGen() DiskGen
 }
 
 type StorageStats struct {
@@ -108,6 +112,7 @@ type storageService struct {
 	mu              sync.Mutex
 	statService     debugstat.StatService
 	archive         archiveService
+	diskGen         DiskGen
 }
 
 func (s *storageService) Init(a *app.App) (err error) {
@@ -132,6 +137,12 @@ func (s *storageService) Init(a *app.App) (err error) {
 		if err != nil {
 			return err
 		}
+	}
+	if s.diskGen, err = loadOrCreateDiskGen(s.rootPath); err != nil {
+		return err
+	}
+	if s.diskGen.Fresh() {
+		log.Warn("storage root initialized on this start: fresh disk or new node", zap.String("diskGenId", s.diskGen.GenId))
 	}
 	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
 	if !ok {
@@ -427,6 +438,10 @@ func (s *storageService) CreateSpaceStorage(ctx context.Context, payload spacest
 		return nil, err
 	}
 	return newNodeStorage(st, cont, s.onHashChange), nil
+}
+
+func (s *storageService) DiskGen() DiskGen {
+	return s.diskGen
 }
 
 func (s *storageService) GetStats(ctx context.Context, id string, treeTop int) (spaceStats SpaceStats, err error) {

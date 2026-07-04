@@ -88,6 +88,20 @@ func (mr *MockNodeStorageMockRecorder) DeleteSpaceStorage(ctx, spaceId any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).DeleteSpaceStorage), ctx, spaceId)
 }
 
+// DiskGen mocks base method.
+func (m *MockNodeStorage) DiskGen() nodestorage.DiskGen {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DiskGen")
+	ret0, _ := ret[0].(nodestorage.DiskGen)
+	return ret0
+}
+
+// DiskGen indicates an expected call of DiskGen.
+func (mr *MockNodeStorageMockRecorder) DiskGen() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiskGen", reflect.TypeOf((*MockNodeStorage)(nil).DiskGen))
+}
+
 // DumpStorage mocks base method.
 func (m *MockNodeStorage) DumpStorage(ctx context.Context, id string, do func(string) error) error {
 	m.ctrl.T.Helper()
