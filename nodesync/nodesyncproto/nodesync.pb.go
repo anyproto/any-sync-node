@@ -136,19 +136,25 @@ type AdoptArchiveResult int32
 const (
 	// the snapshot was copied and registered
 	AdoptArchiveResult_AdoptArchiveOk AdoptArchiveResult = 0
-	// the receiver already holds a live or archived copy of the space
-	AdoptArchiveResult_AdoptArchiveAlreadyHave AdoptArchiveResult = 1
+	// the receiver already holds a copy of the space with the same heads:
+	// counts as a durable ACK for the sender
+	AdoptArchiveResult_AdoptArchiveAlreadyHaveSame AdoptArchiveResult = 1
+	// the receiver already holds a copy with different heads; the sender must
+	// converge via tree sync before the handoff can be acknowledged
+	AdoptArchiveResult_AdoptArchiveAlreadyHaveDiverged AdoptArchiveResult = 2
 )
 
 // Enum value maps for AdoptArchiveResult.
 var (
 	AdoptArchiveResult_name = map[int32]string{
 		0: "AdoptArchiveOk",
-		1: "AdoptArchiveAlreadyHave",
+		1: "AdoptArchiveAlreadyHaveSame",
+		2: "AdoptArchiveAlreadyHaveDiverged",
 	}
 	AdoptArchiveResult_value = map[string]int32{
-		"AdoptArchiveOk":          0,
-		"AdoptArchiveAlreadyHave": 1,
+		"AdoptArchiveOk":                  0,
+		"AdoptArchiveAlreadyHaveSame":     1,
+		"AdoptArchiveAlreadyHaveDiverged": 2,
 	}
 )
 
@@ -772,10 +778,11 @@ const file_nodesync_nodesyncproto_protos_nodesync_proto_rawDesc = "" +
 	"\x14ColdSyncProtocolType\x12\n" +
 	"\n" +
 	"\x06Pogreb\x10\x00\x12\x12\n" +
-	"\x0eAnystoreSqlite\x10\x01*E\n" +
+	"\x0eAnystoreSqlite\x10\x01*n\n" +
 	"\x12AdoptArchiveResult\x12\x12\n" +
-	"\x0eAdoptArchiveOk\x10\x00\x12\x1b\n" +
-	"\x17AdoptArchiveAlreadyHave\x10\x012\x82\x02\n" +
+	"\x0eAdoptArchiveOk\x10\x00\x12\x1f\n" +
+	"\x1bAdoptArchiveAlreadyHaveSame\x10\x01\x12#\n" +
+	"\x1fAdoptArchiveAlreadyHaveDiverged\x10\x022\x82\x02\n" +
 	"\bNodeSync\x12V\n" +
 	"\rPartitionSync\x12!.anyNodeSync.PartitionSyncRequest\x1a\".anyNodeSync.PartitionSyncResponse\x12I\n" +
 	"\bColdSync\x12\x1c.anyNodeSync.ColdSyncRequest\x1a\x1d.anyNodeSync.ColdSyncResponse0\x01\x12S\n" +

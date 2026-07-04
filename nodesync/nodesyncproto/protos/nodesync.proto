@@ -94,6 +94,10 @@ message AdoptArchiveResponse {
 enum AdoptArchiveResult {
     // the snapshot was copied and registered
     AdoptArchiveOk = 0;
-    // the receiver already holds a live or archived copy of the space
-    AdoptArchiveAlreadyHave = 1;
+    // the receiver already holds a copy of the space with the same heads:
+    // counts as a durable ACK for the sender
+    AdoptArchiveAlreadyHaveSame = 1;
+    // the receiver already holds a copy with different heads; the sender must
+    // converge via tree sync before the handoff can be acknowledged
+    AdoptArchiveAlreadyHaveDiverged = 2;
 }

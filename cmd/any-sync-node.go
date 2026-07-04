@@ -40,6 +40,7 @@ import (
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
 	"github.com/anyproto/any-sync-node/oldstorage"
+	"github.com/anyproto/any-sync-node/resharder"
 
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
@@ -159,6 +160,7 @@ func Bootstrap(a *app.App) {
 		Register(archivestore.New()).
 		Register(archive.New()).
 		Register(adopter.New()).
+		Register(resharder.New()).
 		Register(quic.New()).
 		Register(yamux.New())
 }

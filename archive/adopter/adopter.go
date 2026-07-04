@@ -72,9 +72,7 @@ func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArc
 			return nil, nodesyncproto.ErrSpaceDeleted
 		case nodestorage.SpaceStatusOk:
 			if ad.storage.SpaceExists(req.SpaceId) {
-				return &nodesyncproto.AdoptArchiveResponse{
-					Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHave,
-				}, nil
+				return alreadyHaveResponse(entry, req), nil
 			}
 			// index entry says ok, but there is no local db: adopt to repair
 		case nodestorage.SpaceStatusArchived:
@@ -83,16 +81,15 @@ func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArc
 				return nil, hErr
 			}
 			if ok {
-				return &nodesyncproto.AdoptArchiveResponse{
-					Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHave,
-				}, nil
+				return alreadyHaveResponse(entry, req), nil
 			}
 			// index says archived, but our object is gone: adopt to repair
 		}
 	case errors.Is(entryErr, anystore.ErrDocNotFound):
 		if ad.storage.SpaceExists(req.SpaceId) {
+			// a local db without an index entry: heads unknown, force convergence
 			return &nodesyncproto.AdoptArchiveResponse{
-				Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHave,
+				Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveDiverged,
 			}, nil
 		}
 	default:
@@ -126,6 +123,21 @@ func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArc
 	return &nodesyncproto.AdoptArchiveResponse{
 		Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveOk,
 	}, nil
+}
+
+// alreadyHaveResponse reports whether our existing copy matches the offered
+// heads: only an exact match counts as a durable ACK for the sender — a
+// diverged copy could be older than the sender's and must not justify its
+// deletion.
+func alreadyHaveResponse(entry nodestorage.SpaceStatusEntry, req *nodesyncproto.AdoptArchiveRequest) *nodesyncproto.AdoptArchiveResponse {
+	if entry.NewHash == req.NewHash && entry.OldHash == req.OldHash {
+		return &nodesyncproto.AdoptArchiveResponse{
+			Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveSame,
+		}
+	}
+	return &nodesyncproto.AdoptArchiveResponse{
+		Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveDiverged,
+	}
 }
 
 func (ad *adopter) checkPeerIsNode(ctx context.Context) (err error) {

@@ -88,23 +88,23 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		fx := newFixture(t)
 		req := adoptReq()
 		fx.expectNodePeer()
-		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusOk}, nil)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusOk, OldHash: "oldHash", NewHash: "newHash"}, nil)
 		fx.storage.EXPECT().SpaceExists(req.SpaceId).Return(true)
 
 		resp, err := fx.AdoptArchive(ctx, req)
 		require.NoError(t, err)
-		assert.Equal(t, nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHave, resp.Result)
+		assert.Equal(t, nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveSame, resp.Result)
 	})
 	t.Run("already have archived with object", func(t *testing.T) {
 		fx := newFixture(t)
 		req := adoptReq()
 		fx.expectNodePeer()
-		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusArchived}, nil)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusArchived, OldHash: "oldHash", NewHash: "newHash"}, nil)
 		fx.archiveStore.EXPECT().Exists(ctx, req.SpaceId).Return(true, nil)
 
 		resp, err := fx.AdoptArchive(ctx, req)
 		require.NoError(t, err)
-		assert.Equal(t, nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHave, resp.Result)
+		assert.Equal(t, nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveSame, resp.Result)
 	})
 	t.Run("archived but object missing: re-adopt", func(t *testing.T) {
 		fx := newFixture(t)

@@ -35,6 +35,9 @@ const (
 	SpaceStatusArchived
 	SpaceStatusError
 	SpaceStatusNotResponsible
+	// SpaceStatusMoved: the space was handed off to the current owners during
+	// resharding and its local data (db and/or archive object) was deleted.
+	SpaceStatusMoved
 )
 
 var (
