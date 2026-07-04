@@ -13,6 +13,7 @@ import (
 	context "context"
 	io "io"
 	reflect "reflect"
+	time "time"
 
 	app "github.com/anyproto/any-sync/app"
 	gomock "go.uber.org/mock/gomock"
@@ -126,6 +127,20 @@ func (m *MockArchiveStore) Key(name string) string {
 func (mr *MockArchiveStoreMockRecorder) Key(name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Key", reflect.TypeOf((*MockArchiveStore)(nil).Key), name)
+}
+
+// List mocks base method.
+func (m *MockArchiveStore) List(ctx context.Context, iter func(string, time.Time) (bool, error)) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, iter)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// List indicates an expected call of List.
+func (mr *MockArchiveStoreMockRecorder) List(ctx, iter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockArchiveStore)(nil).List), ctx, iter)
 }
 
 // Name mocks base method.

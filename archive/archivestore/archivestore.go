@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -47,6 +48,10 @@ type ArchiveStore interface {
 	// Shared reports whether the bucket is shared across the network's tree nodes,
 	// enabling S3-mediated space migration.
 	Shared() bool
+	// List iterates all objects in this node's prefix; iter receives the object
+	// name (key without the prefix) and its last-modified time, returning false
+	// to stop the iteration.
+	List(ctx context.Context, iter func(name string, lastModified time.Time) (bool, error)) (err error)
 }
 
 type archiveStore struct {
@@ -193,6 +198,41 @@ func (as *archiveStore) CopyFrom(ctx context.Context, srcKey, name string) (err 
 
 func (as *archiveStore) Shared() bool {
 	return as.enabled && as.shared
+}
+
+func (as *archiveStore) List(ctx context.Context, iter func(name string, lastModified time.Time) (bool, error)) (err error) {
+	if !as.enabled {
+		return ErrDisabled
+	}
+	var iterErr error
+	err = as.client.ListObjectsV2PagesWithContext(ctx, &s3.ListObjectsV2Input{
+		Bucket: as.bucket,
+		Prefix: aws.String(as.keyPrefix),
+	}, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+		for _, obj := range page.Contents {
+			if obj.Key == nil {
+				continue
+			}
+			name := strings.TrimPrefix(*obj.Key, as.keyPrefix)
+			var lastModified time.Time
+			if obj.LastModified != nil {
+				lastModified = *obj.LastModified
+			}
+			cont, iErr := iter(name, lastModified)
+			if iErr != nil {
+				iterErr = iErr
+				return false
+			}
+			if !cont {
+				return false
+			}
+		}
+		return !lastPage
+	})
+	if err == nil {
+		err = iterErr
+	}
+	return
 }
 
 func isNotFoundErr(err error) bool {

@@ -152,6 +152,7 @@ func (r *resharder) loop() {
 
 func (r *resharder) drainCycle() {
 	st := time.Now()
+	r.reconcileUnindexed()
 	var candidates []string
 	err := r.storage.IndexStorage().ReadHashes(r.runCtx, func(update nodestorage.SpaceUpdate) (bool, error) {
 		if !r.nodeConf.IsResponsible(update.SpaceId) {
@@ -186,6 +187,32 @@ func (r *resharder) drainCycle() {
 	}
 	r.stat.draining.Store(uint32(parked))
 	log.Info("drain cycle finished", zap.Int("moved", moved), zap.Int("parked", parked), zap.Duration("dur", time.Since(st)))
+}
+
+// reconcileUnindexed indexes local space directories that have no index entry
+// (legacy leftovers), so they become visible to draining and anti-entropy.
+func (r *resharder) reconcileUnindexed() {
+	ids, err := r.storage.AllSpaceIds()
+	if err != nil {
+		log.Warn("drain cycle: can't list space dirs", zap.Error(err))
+		return
+	}
+	index := r.storage.IndexStorage()
+	for _, id := range ids {
+		if r.runCtx.Err() != nil {
+			return
+		}
+		if _, err = index.SpaceStatusEntry(r.runCtx, id); err == nil {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(r.runCtx, time.Minute)
+		if _, iErr := r.storage.IndexSpace(ctx, id, true); iErr != nil {
+			log.Warn("drain cycle: can't index unindexed space dir", zap.String("spaceId", id), zap.Error(iErr))
+		} else {
+			log.Info("drain cycle: indexed a space dir without an index entry", zap.String("spaceId", id))
+		}
+		cancel()
+	}
 }
 
 // drainSpace hands one space off to the current owners. It returns ok=true

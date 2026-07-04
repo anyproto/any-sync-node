@@ -182,6 +182,8 @@ func TestResharder_DrainSpace(t *testing.T) {
 
 func TestResharder_DrainCycle(t *testing.T) {
 	fx := newFixture(t)
+	// no unindexed dirs
+	fx.storage.EXPECT().AllSpaceIds().Return(nil, nil)
 	// two spaces in the index: one responsible, one not
 	fx.indexStorage.EXPECT().ReadHashes(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, iter func(nodestorage.SpaceUpdate) (bool, error)) error {

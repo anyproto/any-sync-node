@@ -59,6 +59,7 @@ type archive struct {
 	archiveStore    archivestore.ArchiveStore
 	config          Config
 	checker         periodicsync.PeriodicSync
+	sweeper         periodicsync.PeriodicSync
 	accessDurCutoff time.Duration
 	stat            *archiveStat
 	syncWaiter      <-chan struct{}
@@ -84,6 +85,11 @@ func (a *archive) Init(ap *app.App) (err error) {
 	}
 	period := time.Minute * time.Duration(a.config.CheckPeriodMinutes)
 	a.checker = periodicsync.NewPeriodicSyncDuration(period, time.Hour, a.check, log)
+	if a.config.SweepPeriodHours <= 0 {
+		a.config.SweepPeriodHours = 24
+	}
+	a.sweeper = periodicsync.NewPeriodicSyncDuration(
+		time.Duration(a.config.SweepPeriodHours)*time.Hour, time.Hour, a.sweep, log)
 	a.stat = new(archiveStat)
 	a.restoreQueue = make(chan string, 1000)
 	if m := ap.Component(metric.CName); m != nil {
@@ -108,6 +114,7 @@ func (a *archive) Run(_ context.Context) (err error) {
 		case <-a.syncWaiter:
 		}
 		a.checker.Run()
+		a.sweeper.Run()
 	}()
 	return
 }
@@ -363,6 +370,9 @@ func (a *archive) check(ctx context.Context) error {
 func (a *archive) Close(_ context.Context) (err error) {
 	if a.checker != nil {
 		a.checker.Close()
+	}
+	if a.sweeper != nil {
+		a.sweeper.Close()
 	}
 	if a.runCtxCancel != nil {
 		a.runCtxCancel()
