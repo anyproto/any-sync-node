@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -20,10 +21,18 @@ import (
 
 	"github.com/anyproto/any-sync-node/archive/archivestore"
 	"github.com/anyproto/any-sync-node/nodestorage"
-	"github.com/anyproto/any-sync-node/nodesync"
 )
 
 const CName = "node.archive"
+
+// nodeSyncCName is nodesync.CName; the nodesync package is referenced by name
+// to avoid an import cycle (nodesync -> nodehead -> ... -> archive).
+const nodeSyncCName = "node.nodesync"
+
+// syncWaiter is implemented by nodesync.NodeSync.
+type syncWaiter interface {
+	WaitSyncOnStart() <-chan struct{}
+}
 
 var log = logger.NewNamed(CName)
 
@@ -34,6 +43,15 @@ func New() Archive {
 type Archive interface {
 	app.ComponentRunnable
 	Restore(ctx context.Context, spaceId string) (err error)
+	// ForceArchive uploads a snapshot of the space to the archive store while
+	// keeping the local DB and its status intact. Used to ship live spaces
+	// through the shared archive store during migration. The caller must ensure
+	// the space is not already archived: opening an archived space triggers a
+	// restore. Returns the sizes of the uploaded snapshot.
+	ForceArchive(ctx context.Context, spaceId string) (compressedSize, uncompressedSize int64, err error)
+	// QueueRestore schedules a background restore of an archived space
+	// (used for eager adoption of migrated spaces).
+	QueueRestore(spaceId string)
 }
 
 type archive struct {
@@ -46,6 +64,9 @@ type archive struct {
 	syncWaiter      <-chan struct{}
 	runCtx          context.Context
 	runCtxCancel    context.CancelFunc
+
+	restoreQueue  chan string
+	restoreQueued sync.Map
 }
 
 func (a *archive) Init(ap *app.App) (err error) {
@@ -56,7 +77,7 @@ func (a *archive) Init(ap *app.App) (err error) {
 		a.config.ArchiveAfterDays = 7
 	}
 	a.accessDurCutoff = time.Duration(a.config.ArchiveAfterDays) * time.Hour * 24
-	a.syncWaiter = ap.MustComponent(nodesync.CName).(nodesync.NodeSync).WaitSyncOnStart()
+	a.syncWaiter = ap.MustComponent(nodeSyncCName).(syncWaiter).WaitSyncOnStart()
 	a.runCtx, a.runCtxCancel = context.WithCancel(context.Background())
 	if a.config.CheckPeriodMinutes <= 0 {
 		a.config.CheckPeriodMinutes = 2
@@ -64,6 +85,7 @@ func (a *archive) Init(ap *app.App) (err error) {
 	period := time.Minute * time.Duration(a.config.CheckPeriodMinutes)
 	a.checker = periodicsync.NewPeriodicSyncDuration(period, time.Hour, a.check, log)
 	a.stat = new(archiveStat)
+	a.restoreQueue = make(chan string, 1000)
 	if m := ap.Component(metric.CName); m != nil {
 		registerMetric(a.stat, m.(metric.Metric).Registry())
 	}
@@ -75,6 +97,7 @@ func (a *archive) Name() (name string) {
 }
 
 func (a *archive) Run(_ context.Context) (err error) {
+	go a.restoreWorker()
 	if !a.config.Enabled {
 		return
 	}
@@ -87,6 +110,39 @@ func (a *archive) Run(_ context.Context) (err error) {
 		a.checker.Run()
 	}()
 	return
+}
+
+func (a *archive) QueueRestore(spaceId string) {
+	if _, loaded := a.restoreQueued.LoadOrStore(spaceId, struct{}{}); loaded {
+		return
+	}
+	select {
+	case a.restoreQueue <- spaceId:
+	default:
+		// queue is full: drop, the space will be restored lazily on first access
+		a.restoreQueued.Delete(spaceId)
+	}
+}
+
+func (a *archive) restoreWorker() {
+	for {
+		select {
+		case <-a.runCtx.Done():
+			return
+		case spaceId := <-a.restoreQueue:
+			ctx, cancel := context.WithTimeout(a.runCtx, time.Minute*10)
+			// opening the space storage restores it if archived; reuses the
+			// storage cache's single-flight so concurrent lazy restores are safe
+			err := a.storageProvider.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+				return nil
+			})
+			cancel()
+			a.restoreQueued.Delete(spaceId)
+			if err != nil && !errors.Is(err, nodestorage.ErrLocked) && !errors.Is(err, context.Canceled) {
+				log.Warn("eager restore failed, will restore lazily on access", zap.String("spaceId", spaceId), zap.Error(err))
+			}
+		}
+	}
 }
 
 var errArchived = errors.New("archived")
@@ -137,6 +193,30 @@ func (a *archive) Archive(ctx context.Context, spaceId string) (err error) {
 
 	if errors.Is(err, errArchived) {
 		return nil
+	}
+	return
+}
+
+func (a *archive) ForceArchive(ctx context.Context, spaceId string) (compressedSize, uncompressedSize int64, err error) {
+	// DumpStorage backups the db into a temp dir; it works for open spaces too
+	err = a.storageProvider.DumpStorage(ctx, spaceId, func(path string) error {
+		gzPath, gzSize, dbSize, err := a.createGzipFromStore(path)
+		if err != nil {
+			return err
+		}
+		compressedSize, uncompressedSize = gzSize, dbSize
+
+		r, err := os.Open(gzPath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			_ = r.Close()
+		}()
+		return a.archiveStore.Put(ctx, spaceId, r)
+	})
+	if err == nil {
+		a.stat.forceArchived.Add(1)
 	}
 	return
 }
@@ -196,7 +276,10 @@ func (a *archive) Restore(ctx context.Context, spaceId string) (err error) {
 		return
 	}
 	a.stat.restored.Add(1)
-	return a.archiveStore.Delete(ctx, spaceId)
+	// the archive object is intentionally kept (restore is a copy, not a move):
+	// it is overwritten by the next archive cycle and makes restore idempotent;
+	// stale objects of live spaces are garbage-collected by the archive sweeper
+	return nil
 }
 
 func (a *archive) restoreFile(ctx context.Context, spaceId string) (err error) {

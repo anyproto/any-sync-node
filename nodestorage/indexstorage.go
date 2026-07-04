@@ -69,6 +69,7 @@ type IndexStorage interface {
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	SpaceStatusEntry(ctx context.Context, spaceId string) (entry SpaceStatusEntry, err error)
 	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
+	MarkArchivedRemote(ctx context.Context, spaceId, oldHash, newHash string, compressedSize, uncompressedSize int64) (err error)
 	MarkError(ctx context.Context, spaceId string, errString string) (err error)
 	DeletionLogId(ctx context.Context) (id string, err error)
 	SetDeletionLogId(ctx context.Context, id string) (err error)
@@ -236,6 +237,26 @@ func (d *indexStorage) MarkArchived(ctx context.Context, spaceId string, compres
 		return v, true, nil
 	}))
 	return err
+}
+
+// MarkArchivedRemote registers a space adopted from another node as archived:
+// unlike MarkArchived the space has never been opened locally, so the heads
+// hashes come from the sender and the index entry may not exist yet.
+func (d *indexStorage) MarkArchivedRemote(ctx context.Context, spaceId, oldHash, newHash string, compressedSize, uncompressedSize int64) (err error) {
+	_, err = d.spaceColl.UpsertId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		v.Set(oldHashKey, a.NewString(oldHash))
+		v.Set(newHashKey, a.NewString(newHash))
+		v.Set(lastAccessKey, a.NewNumberInt(int(time.Now().Unix())))
+		v.Set(archiveSizeCompressedKey, a.NewNumberInt(int(compressedSize)))
+		v.Set(archiveSizeUncompressedKey, a.NewNumberInt(int(uncompressedSize)))
+		v.Set(statusKey, a.NewNumberInt(int(SpaceStatusArchived)))
+		return v, true, nil
+	}))
+	if err != nil {
+		return err
+	}
+	d.lastAccessCache.Store(spaceId, time.Now())
+	return nil
 }
 
 func (d *indexStorage) DeletionLogId(ctx context.Context) (id string, err error) {

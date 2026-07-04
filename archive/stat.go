@@ -7,9 +7,11 @@ import (
 )
 
 type archiveStat struct {
-	archived     atomic.Uint32
-	archiveError atomic.Uint32
-	restored     atomic.Uint32
+	archived      atomic.Uint32
+	archiveError  atomic.Uint32
+	restored      atomic.Uint32
+	forceArchived atomic.Uint32
+	adopted       atomic.Uint32
 }
 
 func registerMetric(s *archiveStat, registry *prometheus.Registry) {
@@ -33,5 +35,19 @@ func registerMetric(s *archiveStat, registry *prometheus.Registry) {
 		Name:      "error",
 	}, func() float64 {
 		return float64(s.archiveError.Load())
+	}))
+	registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Namespace: "node",
+		Subsystem: "archive",
+		Name:      "force_archived",
+	}, func() float64 {
+		return float64(s.forceArchived.Load())
+	}))
+	registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Namespace: "node",
+		Subsystem: "archive",
+		Name:      "adopted",
+	}, func() float64 {
+		return float64(s.adopted.Load())
 	}))
 }

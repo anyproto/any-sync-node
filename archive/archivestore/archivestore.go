@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -34,6 +37,16 @@ type ArchiveStore interface {
 	Get(ctx context.Context, name string) (data io.ReadCloser, err error)
 	Put(ctx context.Context, name string, data io.ReadSeeker) (err error)
 	Delete(ctx context.Context, name string) (err error)
+	// Exists checks the object presence in this node's prefix without fetching it.
+	Exists(ctx context.Context, name string) (ok bool, err error)
+	// Key returns the full bucket key for the given name in this node's prefix.
+	Key(name string) string
+	// CopyFrom server-side copies an object from an absolute bucket key
+	// (typically another node's prefix in the shared bucket) into this node's prefix.
+	CopyFrom(ctx context.Context, srcKey, name string) (err error)
+	// Shared reports whether the bucket is shared across the network's tree nodes,
+	// enabling S3-mediated space migration.
+	Shared() bool
 }
 
 type archiveStore struct {
@@ -42,6 +55,7 @@ type archiveStore struct {
 	client    *s3.S3
 	keyPrefix string
 	enabled   bool
+	shared    bool
 }
 
 func (as *archiveStore) Init(a *app.App) (err error) {
@@ -89,6 +103,7 @@ func (as *archiveStore) Init(a *app.App) (err error) {
 	as.client = s3.New(as.sess)
 	as.keyPrefix = conf.KeyPrefix + "/"
 	as.enabled = true
+	as.shared = conf.Shared
 	return
 }
 
@@ -137,4 +152,53 @@ func (as *archiveStore) Delete(ctx context.Context, name string) (err error) {
 		Key:    aws.String(name),
 	})
 	return
+}
+
+func (as *archiveStore) Exists(ctx context.Context, name string) (ok bool, err error) {
+	if !as.enabled {
+		return false, ErrDisabled
+	}
+	name = as.keyPrefix + name
+	_, err = as.client.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: as.bucket,
+		Key:    aws.String(name),
+	})
+	if err != nil {
+		if isNotFoundErr(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (as *archiveStore) Key(name string) string {
+	return as.keyPrefix + name
+}
+
+func (as *archiveStore) CopyFrom(ctx context.Context, srcKey, name string) (err error) {
+	if !as.enabled {
+		return ErrDisabled
+	}
+	_, err = as.client.CopyObjectWithContext(ctx, &s3.CopyObjectInput{
+		Bucket:     as.bucket,
+		CopySource: aws.String(url.PathEscape(*as.bucket + "/" + srcKey)),
+		Key:        aws.String(as.keyPrefix + name),
+	})
+	if err != nil && isNotFoundErr(err) {
+		return ErrNotFound
+	}
+	return
+}
+
+func (as *archiveStore) Shared() bool {
+	return as.enabled && as.shared
+}
+
+func isNotFoundErr(err error) bool {
+	var awsErr awserr.RequestFailure
+	if errors.As(err, &awsErr) {
+		return awsErr.StatusCode() == http.StatusNotFound || awsErr.Code() == s3.ErrCodeNoSuchKey
+	}
+	return strings.HasPrefix(err.Error(), s3.ErrCodeNoSuchKey) || strings.HasPrefix(err.Error(), "NotFound")
 }

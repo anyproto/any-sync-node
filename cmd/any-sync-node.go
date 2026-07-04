@@ -30,6 +30,7 @@ import (
 	"github.com/anyproto/any-sync/util/syncqueues"
 
 	"github.com/anyproto/any-sync-node/archive"
+	"github.com/anyproto/any-sync-node/archive/adopter"
 	"github.com/anyproto/any-sync-node/archive/archivestore"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/migrator"
@@ -157,6 +158,7 @@ func Bootstrap(a *app.App) {
 		Register(nodedebugrpc.New()).
 		Register(archivestore.New()).
 		Register(archive.New()).
+		Register(adopter.New()).
 		Register(quic.New()).
 		Register(yamux.New())
 }
