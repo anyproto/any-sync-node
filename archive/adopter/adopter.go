@@ -36,12 +36,18 @@ type Adopter interface {
 	AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArchiveRequest) (resp *nodesyncproto.AdoptArchiveResponse, err error)
 }
 
+// historyPeerEpochs is how many retained configuration epochs back a sender
+// may be recognized as a network node: a node removed from the configuration
+// must still be able to hand its spaces off while it drains.
+const historyPeerEpochs = 5
+
 type adopter struct {
 	storage      nodestorage.NodeStorage
 	archiveStore archivestore.ArchiveStore
 	archive      archive.Archive
 	nodeHead     nodehead.NodeHead
 	nodeConf     nodeconf.Service
+	confHistory  nodeconf.HistoryStore
 }
 
 func (ad *adopter) Init(a *app.App) (err error) {
@@ -50,6 +56,7 @@ func (ad *adopter) Init(a *app.App) (err error) {
 	ad.archive = a.MustComponent(archive.CName).(archive.Archive)
 	ad.nodeHead = a.MustComponent(nodehead.CName).(nodehead.NodeHead)
 	ad.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
+	ad.confHistory, _ = a.Component(nodeconf.CNameStore).(nodeconf.HistoryStore)
 	return
 }
 
@@ -156,8 +163,39 @@ func (ad *adopter) checkPeerIsNode(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	if len(ad.nodeConf.NodeTypes(peerId)) == 0 {
-		return nodesyncproto.ErrPeerIsNotNode
+	if len(ad.nodeConf.NodeTypes(peerId)) > 0 {
+		return nil
 	}
-	return nil
+	// a node removed from the configuration keeps draining after the removal:
+	// recognize senders that were tree nodes in recently retained epochs
+	if ad.wasRecentTreeNode(ctx, peerId) {
+		return nil
+	}
+	return nodesyncproto.ErrPeerIsNotNode
+}
+
+func (ad *adopter) wasRecentTreeNode(ctx context.Context, peerId string) bool {
+	if ad.confHistory == nil {
+		return false
+	}
+	netId := ad.nodeConf.Configuration().NetworkId
+	epochs, err := ad.confHistory.Epochs(ctx, netId)
+	if err != nil || len(epochs) == 0 {
+		return false
+	}
+	if len(epochs) > historyPeerEpochs {
+		epochs = epochs[len(epochs)-historyPeerEpochs:]
+	}
+	for i := len(epochs) - 1; i >= 0; i-- {
+		conf, gErr := ad.confHistory.GetByEpoch(ctx, netId, epochs[i])
+		if gErr != nil {
+			continue
+		}
+		for _, n := range conf.Nodes {
+			if n.PeerId == peerId && n.HasType(nodeconf.NodeTypeTree) {
+				return true
+			}
+		}
+	}
+	return false
 }
