@@ -97,10 +97,10 @@ Failure semantics are the big win: a node dying mid-migration leaves data safely
 
 **MVP requires zero client protocol changes.** Existing behavior suffices:
 
-- Stale client → draining node: gets `ErrPeerIsNotResponsible` (existing), refetches config, routes to new owners.
-- Fresh client → bootstrapping node that lacks the space: node returns the existing transient error; client retries other replicas (2 of 3 are warm).
+- Stale client → drained node: gets `ErrPeerIsNotResponsible` (existing). Verified against the client code: there is **no reactive config refresh on this error** — the client converges via its periodic nodeconf poll (≤ `networkUpdateIntervalSec`, default 10 min; immediate on app start). This stays safe because the guardrail keeps ≥2 of any stale 3-owner list valid, clients resolve node ids from nodeconf **per call** (no per-space caching — verified in commonspace/diffsyncer and the sdk2 peer manager), and writes broadcast to all responsible peers, so one rejecting node never blocks the others.
+- Fresh client → new owner that lacks the space: `getSpaceStorageFromRemote` tries every responsible peer in turn, so pulls fall through to the warm replicas; adopted-but-archived spaces restore lazily on first access on the node itself.
 
-Accepted MVP risks: a ~10-min stale-client-to-stale-node write window (safe — the drain push hands those writes off; convergence merely delayed); +1 RTT for clients hitting a cold replica; the rare "cold replica + both warm replicas down" outage until background sync completes.
+Accepted MVP risks: up to one poll interval of degraded head-sync for affected spaces per epoch change (errors in logs, delayed convergence — not incorrectness); +1 RTT / one lazy restore for clients hitting a cold replica; the rare "cold replica + both warm replicas down" outage until adoption completes. Note the guardrail is therefore also a **client-correctness invariant**: `-force` must never be used while the stale-client window is open.
 
 Post-MVP client protocol (in priority order):
 1. **Pull-on-demand** on bootstrap nodes (node-side only, biggest UX win).
