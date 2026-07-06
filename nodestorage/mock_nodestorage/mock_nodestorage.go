@@ -226,6 +226,21 @@ func (mr *MockNodeStorageMockRecorder) OnWriteHash(onWrite any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnWriteHash", reflect.TypeOf((*MockNodeStorage)(nil).OnWriteHash), onWrite)
 }
 
+// QuarantineSpace mocks base method.
+func (m *MockNodeStorage) QuarantineSpace(ctx context.Context, spaceId string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QuarantineSpace", ctx, spaceId)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QuarantineSpace indicates an expected call of QuarantineSpace.
+func (mr *MockNodeStorageMockRecorder) QuarantineSpace(ctx, spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QuarantineSpace", reflect.TypeOf((*MockNodeStorage)(nil).QuarantineSpace), ctx, spaceId)
+}
+
 // SpaceExists mocks base method.
 func (m *MockNodeStorage) SpaceExists(id string) bool {
 	m.ctrl.T.Helper()
@@ -449,6 +464,20 @@ func (m *MockIndexStorage) ReadHashes(ctx context.Context, iterFunc func(nodesto
 func (mr *MockIndexStorageMockRecorder) ReadHashes(ctx, iterFunc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadHashes", reflect.TypeOf((*MockIndexStorage)(nil).ReadHashes), ctx, iterFunc)
+}
+
+// ReadSpacesByStatus mocks base method.
+func (m *MockIndexStorage) ReadSpacesByStatus(ctx context.Context, status nodestorage.SpaceStatus, iterFunc func(string) (bool, error)) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSpacesByStatus", ctx, status, iterFunc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReadSpacesByStatus indicates an expected call of ReadSpacesByStatus.
+func (mr *MockIndexStorageMockRecorder) ReadSpacesByStatus(ctx, status, iterFunc any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSpacesByStatus", reflect.TypeOf((*MockIndexStorage)(nil).ReadSpacesByStatus), ctx, status, iterFunc)
 }
 
 // RunMigrations mocks base method.

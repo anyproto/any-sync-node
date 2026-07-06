@@ -170,17 +170,31 @@ confirm the heads, so one broken owner never blocks a reshard (the two
 healthy ones ACK) and never enables a wrong deletion (it refuses to ACK).
 The space stays fully available through its healthy replicas throughout.
 
-Operator playbook for accumulating errors (`node_resharder_errors` growing,
-`parked` not shrinking):
+**Automatic self-healing (repairer).** A periodic loop (default hourly,
+`repairer.repairIntervalMinutes`) repairs `Error` spaces this node is
+responsible for:
 
-1. Find the space ids in the node logs (`drain space failed`, `space archive
-   failed`) or via the debug API.
-2. Per space, decide with `spacechecker`: if the healthy replicas hold the
-   space (they almost always do), delete the broken local copy / clear the
-   `Error` entry and let anti-entropy re-sync it; if the broken copy might be
-   the newest one, recover the db (sqlite tooling / restore from the archive
-   object if present) before clearing.
-3. Cleared spaces re-enter the normal drain flow on the next cycle.
+1. *Repair in place*: if the local db opens and indexes fine, the error was
+   transient (e.g. one failed archive upload) — the status is cleared without
+   touching data.
+2. *Quarantine + re-pull*: a genuinely broken db is moved to
+   `<storage-root>/.quarantine/<spaceId>-<timestamp>` (data preserved for the
+   operator, invisible to the node) and a valid copy is pulled from a
+   responsible neighbor with the regular coldsync — works on every network,
+   shared bucket or not. The pulled copy is validated before the status
+   clears; on failure the space stays `Error` and is retried next cycle.
+
+Metrics: `node_repairer_errored` (responsible Error spaces left after the
+last cycle — the alerting signal), `repaired`, `repaired_in_place`,
+`quarantined`.
+
+Operator involvement is only needed for what the repairer refuses to touch:
+`Error` spaces the node is *not* responsible for (drain territory — the
+healthy owners already serve them; inspect with `spacechecker`, then clear
+or delete), persistent `node_repairer_errored > 0` (all replicas
+unreachable/broken — investigate the peers), and the `.quarantine` dir,
+which is never cleaned automatically: delete old entries after confirming
+the repaired spaces are healthy.
 
 ## Safety properties (what the machinery guarantees)
 

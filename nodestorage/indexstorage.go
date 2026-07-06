@@ -67,6 +67,7 @@ const (
 type IndexStorage interface {
 	UpdateHash(ctx context.Context, updates ...SpaceUpdate) (err error)
 	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
+	ReadSpacesByStatus(ctx context.Context, status SpaceStatus, iterFunc func(spaceId string) (bool, error)) (err error)
 	UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
@@ -148,6 +149,29 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 			NewHash: doc.Value().GetString(newHashKey),
 			Updated: time.Unix(int64(doc.Value().GetInt(lastAccessKey)), 0),
 		})
+		if err != nil || !cont {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *indexStorage) ReadSpacesByStatus(ctx context.Context, status SpaceStatus, iterFunc func(spaceId string) (bool, error)) (err error) {
+	filter := query.Key{
+		Path:   []string{statusKey},
+		Filter: query.NewComp(query.CompOpEq, int(status)),
+	}
+	iter, err := d.spaceColl.Find(filter).Sort("id").Iter(ctx)
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return err
+		}
+		cont, err := iterFunc(doc.Value().GetString("id"))
 		if err != nil || !cont {
 			return err
 		}

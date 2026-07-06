@@ -81,6 +81,10 @@ type NodeStorage interface {
 	// reports that the storage root was initialized on this start (new node or
 	// replaced/wiped disk).
 	DiskGen() DiskGen
+	// QuarantineSpace closes the space db and moves its directory aside
+	// (preserved under <root>/.quarantine), e.g. before re-fetching a valid
+	// copy of a corrupted space from another node.
+	QuarantineSpace(ctx context.Context, spaceId string) (quarantinePath string, err error)
 }
 
 type StorageStats struct {
@@ -485,6 +489,28 @@ func (s *storageService) GetStats(ctx context.Context, id string, treeTop int) (
 				spaceStats.Acl.Readers++
 			}
 		}
+	}
+	return
+}
+
+// QuarantineSpace closes the space db and moves its directory into
+// <root>/.quarantine/<spaceId>-<unixnano> (dot-prefixed: invisible to
+// AllSpaceIds). Used by the repairer to park a corrupted db before pulling a
+// valid copy from another node; the data is preserved for the operator.
+func (s *storageService) QuarantineSpace(ctx context.Context, spaceId string) (quarantinePath string, err error) {
+	if err = s.ForceRemove(spaceId); err != nil {
+		return
+	}
+	quarantineDir := filepath.Join(s.rootPath, ".quarantine")
+	if err = os.MkdirAll(quarantineDir, 0o755); err != nil {
+		return
+	}
+	quarantinePath = filepath.Join(quarantineDir, fmt.Sprintf("%s-%d", spaceId, time.Now().UnixNano()))
+	if err = os.Rename(s.StoreDir(spaceId), quarantinePath); err != nil {
+		return
+	}
+	if s.onDeleteStorage != nil {
+		s.onDeleteStorage(ctx, spaceId)
 	}
 	return
 }
