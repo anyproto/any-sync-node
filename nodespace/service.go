@@ -168,6 +168,10 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 }
 
 func (s *service) SetAclObserver(observer func(spaceId string)) {
+	if observer == nil {
+		s.aclObserver.Store(nil)
+		return
+	}
 	s.aclObserver.Store(&observer)
 }
 

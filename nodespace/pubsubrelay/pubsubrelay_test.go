@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/anyproto/any-sync/net/pool/mock_pool"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
@@ -11,6 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"github.com/anyproto/any-sync-node/nodespace"
+	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
 )
 
 func newRelay(t *testing.T) (*relay, *mock_nodeconf.MockService, *mock_pool.MockService) {
@@ -44,7 +48,8 @@ func TestRelayIsResponsibleNode(t *testing.T) {
 
 func TestRelayOtherResponsiblePeersExcludesSelf(t *testing.T) {
 	r, nc, p := newRelay(t)
-	// NodeIds includes self ("self") plus two other responsible nodes
+	// nodeconf.NodeIds already excludes self, but the relay also self-skips
+	// defensively; this stub includes "self" to exercise that guard.
 	nc.EXPECT().NodeIds("space1").Return([]string{"self", "nodeA", "nodeB"})
 	pa := rpctest.MockPeer{}
 	pb := rpctest.MockPeer{}
@@ -76,4 +81,87 @@ func TestRelayOtherResponsiblePeersSingleNode(t *testing.T) {
 	peers, err := r.OtherResponsiblePeers(context.Background(), "space1")
 	require.NoError(t, err)
 	require.Empty(t, peers)
+}
+
+// TestOnAclUpdateNonBlocking is the regression test for the consensus-mutex
+// deadlock: onAclUpdate runs on the consensus stream reader while it holds the
+// consensusclient mutex, so it must only enqueue — never touch the space cache
+// synchronously (which would deadlock against Watch/UnWatch). With no worker
+// running, the space service must not be called at all.
+func TestOnAclUpdateNonBlocking(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ns := mock_nodespace.NewMockService(ctrl)
+	// no PickSpace/GetSpace expectations: any synchronous cache access fails the test
+	r := &relay{
+		nodeSpace:    ns,
+		revalPending: make(map[string]struct{}),
+		revalWake:    make(chan struct{}, 1),
+	}
+
+	done := make(chan struct{})
+	go func() {
+		r.onAclUpdate("space1")
+		r.onAclUpdate("space1") // dedup
+		r.onAclUpdate("space2")
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("onAclUpdate blocked — must be non-blocking on the consensus goroutine")
+	}
+
+	r.revalMu.Lock()
+	defer r.revalMu.Unlock()
+	require.Len(t, r.revalPending, 2)
+	require.Contains(t, r.revalPending, "space1")
+	require.Contains(t, r.revalPending, "space2")
+}
+
+// TestRevalidateSpaceMissIsNoop verifies a PickSpace miss (space not hosted /
+// closing) is a no-op that never resurrects the space or touches the engine.
+func TestRevalidateSpaceMissIsNoop(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ns := mock_nodespace.NewMockService(ctrl)
+	ns.EXPECT().PickSpace(gomock.Any(), "space1").Return(nil, errors.New("not found"))
+	r := &relay{
+		nodeSpace: ns,
+		// engine intentionally nil: a miss must return before touching it
+	}
+	r.ctx, r.ctxCancel = context.WithCancel(context.Background())
+	defer r.ctxCancel()
+	require.NotPanics(t, func() { r.revalidateSpace("space1") })
+}
+
+// TestRevalidateWorkerDrainsQueue verifies the worker drains enqueued spaceIds
+// and calls PickSpace off the enqueuing goroutine.
+func TestRevalidateWorkerDrainsQueue(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ns := mock_nodespace.NewMockService(ctrl)
+	picked := make(chan string, 1)
+	ns.EXPECT().PickSpace(gomock.Any(), "space1").DoAndReturn(
+		func(_ context.Context, id string) (nodespace.NodeSpace, error) {
+			picked <- id
+			return nil, errors.New("miss")
+		})
+	r := &relay{
+		nodeSpace:    ns,
+		revalPending: make(map[string]struct{}),
+		revalWake:    make(chan struct{}, 1),
+	}
+	r.ctx, r.ctxCancel = context.WithCancel(context.Background())
+	r.workerWG.Add(1)
+	go r.revalidateWorker()
+	defer func() { r.ctxCancel(); r.workerWG.Wait() }()
+
+	r.onAclUpdate("space1")
+	select {
+	case id := <-picked:
+		require.Equal(t, "space1", id)
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not drain the queue")
+	}
 }

@@ -47,10 +47,12 @@ func (s *nodeSpace) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) 
 	s.Acl().Unlock()
 	if err != nil {
 		log.Warn("failed to add consensus records", zap.Error(err))
-		return
+	} else {
+		log.Debug("added consensus records")
 	}
-	log.Debug("added consensus records")
-	// notify observers (pubsub relay) outside the acl lock so they can re-read it
+	// notify observers (pubsub relay) outside the acl lock so they can re-read it.
+	// fire even on error: AddRawRecords applies records one by one, so a partial
+	// batch may already have changed membership before failing.
 	if s.onAclUpdate != nil {
 		s.onAclUpdate(s.Id())
 	}

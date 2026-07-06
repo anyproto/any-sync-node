@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"sync"
+	"time"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -27,6 +29,10 @@ import (
 )
 
 const CName = "node.pubsubrelay"
+
+// revalidateTimeout bounds a single space's member re-check so the worker can't
+// wedge on a slow PickSpace/ACL read.
+const revalidateTimeout = 30 * time.Second
 
 var log = logger.NewNamed(CName)
 
@@ -48,6 +54,15 @@ type relay struct {
 	selfPeerId string
 	ctx        context.Context
 	ctxCancel  context.CancelFunc
+
+	// ACL-change revalidation is dispatched to a worker goroutine: the observer
+	// fires from the consensus stream reader while it holds the consensusclient
+	// mutex, so it must not touch the space cache (GetSpace/PickSpace) inline or
+	// it deadlocks against Watch/UnWatch. It only enqueues here.
+	revalMu      sync.Mutex
+	revalPending map[string]struct{}
+	revalWake    chan struct{}
+	workerWG     sync.WaitGroup
 }
 
 func (r *relay) Init(a *app.App) (err error) {
@@ -57,6 +72,8 @@ func (r *relay) Init(a *app.App) (err error) {
 	r.account = a.MustComponent(accountservice.CName).(accountservice.Service).Account()
 	r.selfPeerId = r.account.PeerId
 	r.ctx, r.ctxCancel = context.WithCancel(context.Background())
+	r.revalPending = make(map[string]struct{})
+	r.revalWake = make(chan struct{}, 1)
 
 	m, _ := a.Component(metric.CName).(metric.Metric)
 	r.engine = pubsub.New(pubsub.Deps{
@@ -75,13 +92,18 @@ func (r *relay) Init(a *app.App) (err error) {
 func (r *relay) Name() string { return CName }
 
 func (r *relay) Run(ctx context.Context) error {
+	r.workerWG.Add(1)
+	go r.revalidateWorker()
 	// re-check subscriber membership whenever a hosted space's ACL changes
 	r.nodeSpace.SetAclObserver(r.onAclUpdate)
 	return r.engine.Run(ctx)
 }
 
 func (r *relay) Close(ctx context.Context) error {
+	// stop new notifications before tearing down the worker and engine
+	r.nodeSpace.SetAclObserver(nil)
 	r.ctxCancel()
+	r.workerWG.Wait()
 	return r.engine.Close(ctx)
 }
 
@@ -143,10 +165,46 @@ func (r *relay) permissions(ctx context.Context, spaceId string, identity crypto
 // ACL-change eviction (DESIGN §6.4)
 //
 
+// onAclUpdate runs on the consensus stream-reader goroutine while it holds the
+// consensusclient mutex. It must be non-blocking and must not touch the space
+// cache (that would deadlock against Watch/UnWatch), so it only records the
+// spaceId; the worker does the actual revalidation.
 func (r *relay) onAclUpdate(spaceId string) {
-	sp, err := r.nodeSpace.GetSpace(r.ctx, spaceId)
+	r.revalMu.Lock()
+	r.revalPending[spaceId] = struct{}{}
+	r.revalMu.Unlock()
+	select {
+	case r.revalWake <- struct{}{}:
+	default:
+	}
+}
+
+func (r *relay) revalidateWorker() {
+	defer r.workerWG.Done()
+	for {
+		select {
+		case <-r.ctx.Done():
+			return
+		case <-r.revalWake:
+		}
+		r.revalMu.Lock()
+		pending := r.revalPending
+		r.revalPending = make(map[string]struct{})
+		r.revalMu.Unlock()
+		for spaceId := range pending {
+			r.revalidateSpace(spaceId)
+		}
+	}
+}
+
+func (r *relay) revalidateSpace(spaceId string) {
+	ctx, cancel := context.WithTimeout(r.ctx, revalidateTimeout)
+	defer cancel()
+	// PickSpace never loads: a miss means the space isn't hosted right now, so it
+	// has no consensus watcher and no interest to revalidate here — members are
+	// re-checked on the next subscribe/publish. Avoids resurrecting an evicted space.
+	sp, err := r.nodeSpace.PickSpace(ctx, spaceId)
 	if err != nil {
-		log.Warn("acl update: can't get space", zap.String("spaceId", spaceId), zap.Error(err))
 		return
 	}
 	acl := sp.Acl()
