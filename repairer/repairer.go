@@ -2,11 +2,14 @@ package repairer
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 
@@ -150,6 +153,10 @@ func (r *repairer) repairSpace(spaceId string) (err error) {
 	defer cancel()
 	index := r.storage.IndexStorage()
 
+	entry, err := index.SpaceStatusEntry(ctx, spaceId)
+	if err != nil {
+		return
+	}
 	// the space must be openable for validation, and Error status blocks
 	// opening; on any failure below the status flips back to Error
 	if err = index.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusOk, ""); err != nil {
@@ -181,16 +188,37 @@ func (r *repairer) repairSpace(spaceId string) (err error) {
 	}
 
 	// pull a valid copy from a responsible neighbor
-	var pulled bool
-	for _, peerId := range r.nodeConf.NodeIds(spaceId) {
-		if pErr := r.coldSync.Sync(ctx, spaceId, peerId); pErr != nil {
-			log.Debug("repair: cold pull failed", zap.String("spaceId", spaceId), zap.String("peerId", peerId), zap.Error(pErr))
-			continue
+	var (
+		pulled  bool
+		owners  = r.nodeConf.NodeIds(spaceId)
+		missing int
+	)
+	for _, peerId := range owners {
+		pErr := r.coldSync.Sync(ctx, spaceId, peerId)
+		if pErr == nil {
+			pulled = true
+			break
 		}
-		pulled = true
-		break
+		if errors.Is(rpcerr.Unwrap(pErr), spacesyncproto.ErrSpaceMissing) {
+			// the owner definitively does not hold the space (as opposed to
+			// being unreachable or holding a broken copy)
+			missing++
+		}
+		log.Debug("repair: cold pull failed", zap.String("spaceId", spaceId), zap.String("peerId", peerId), zap.Error(pErr))
 	}
 	if !pulled {
+		if len(owners) > 0 && missing == len(owners) && entry.NewHash == "" {
+			// nobody holds the space, we hold nothing, and no heads were ever
+			// recorded: the entry is a leftover of a space that never durably
+			// existed (e.g. an uncommitted space push) — garbage-collect it so
+			// the id is usable again and the error stops alerting
+			if dErr := index.DeleteSpaceEntry(ctx, spaceId); dErr != nil {
+				return dErr
+			}
+			log.Info("repair: dropped an entry of a space that never existed anywhere", zap.String("spaceId", spaceId))
+			r.stat.droppedEntries.Add(1)
+			return nil
+		}
 		return errNoValidCopy
 	}
 	// validate and register the pulled copy (index hashes + nodehead)

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
@@ -26,6 +28,7 @@ const spaceId = "err.space"
 func TestRepairer_RepairSpace(t *testing.T) {
 	t.Run("transient error repaired in place", func(t *testing.T) {
 		fx := newFixture(t)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(true)
 		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, nil)
@@ -35,6 +38,7 @@ func TestRepairer_RepairSpace(t *testing.T) {
 	})
 	t.Run("corrupted db quarantined and pulled from a neighbor", func(t *testing.T) {
 		fx := newFixture(t)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(true)
 		// in-place validation fails: db is corrupted
@@ -52,6 +56,7 @@ func TestRepairer_RepairSpace(t *testing.T) {
 	})
 	t.Run("missing data pulled without quarantine", func(t *testing.T) {
 		fx := newFixture(t)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(false)
 		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1"})
@@ -63,6 +68,7 @@ func TestRepairer_RepairSpace(t *testing.T) {
 	})
 	t.Run("no valid copy anywhere: status flips back to Error", func(t *testing.T) {
 		fx := newFixture(t)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(false)
 		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1", "p2"})
@@ -73,8 +79,34 @@ func TestRepairer_RepairSpace(t *testing.T) {
 		err := fx.repairSpace(spaceId)
 		assert.ErrorIs(t, err, errNoValidCopy)
 	})
+	t.Run("never existed anywhere: entry garbage-collected", func(t *testing.T) {
+		fx := newFixture(t)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError}, nil)
+		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
+		fx.storage.EXPECT().SpaceExists(spaceId).Return(false)
+		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1", "p2"})
+		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p1").Return(spacesyncproto.ErrSpaceMissing)
+		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p2").Return(spacesyncproto.ErrSpaceMissing)
+		fx.indexStorage.EXPECT().DeleteSpaceEntry(gomock.Any(), spaceId).Return(nil)
+
+		require.NoError(t, fx.repairSpace(spaceId))
+		assert.Equal(t, uint32(1), fx.stat.droppedEntries.Load())
+	})
+	t.Run("missing everywhere but heads were recorded: keep Error", func(t *testing.T) {
+		fx := newFixture(t)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "realHeads"}, nil)
+		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
+		fx.storage.EXPECT().SpaceExists(spaceId).Return(false)
+		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1", "p2"})
+		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p1").Return(spacesyncproto.ErrSpaceMissing)
+		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p2").Return(spacesyncproto.ErrSpaceMissing)
+		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusError, "").Return(nil)
+
+		assert.ErrorIs(t, fx.repairSpace(spaceId), errNoValidCopy)
+	})
 	t.Run("pulled copy fails validation: status flips back to Error", func(t *testing.T) {
 		fx := newFixture(t)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(false)
 		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1"})
@@ -98,6 +130,7 @@ func TestRepairer_RepairCycle(t *testing.T) {
 	fx.nodeConf.EXPECT().IsResponsible(spaceId).Return(true)
 	fx.nodeConf.EXPECT().IsResponsible("foreign.space").Return(false)
 	// repairSpace path for the responsible one
+	fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 	fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 	fx.storage.EXPECT().SpaceExists(spaceId).Return(true)
 	fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, nil)

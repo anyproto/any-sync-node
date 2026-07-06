@@ -19,6 +19,9 @@ type repairerStat struct {
 	quarantined atomic.Uint32
 	// repaired: valid copies pulled from responsible neighbors
 	repaired atomic.Uint32
+	// droppedEntries: garbage-collected entries of spaces that never existed
+	// anywhere (definitively missing on all owners, no heads recorded)
+	droppedEntries atomic.Uint32
 }
 
 func registerMetric(s *repairerStat, registry *prometheus.Registry) {
@@ -41,5 +44,8 @@ func registerMetric(s *repairerStat, registry *prometheus.Registry) {
 	})
 	gauge("repaired", "valid copies pulled from responsible neighbors, since start", func() float64 {
 		return float64(s.repaired.Load())
+	})
+	gauge("dropped_entries", "garbage-collected entries of spaces that never existed anywhere, since start", func() float64 {
+		return float64(s.droppedEntries.Load())
 	})
 }

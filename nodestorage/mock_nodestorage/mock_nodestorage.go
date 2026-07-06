@@ -365,6 +365,20 @@ func (mr *MockIndexStorageMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockIndexStorage)(nil).Close))
 }
 
+// DeleteSpaceEntry mocks base method.
+func (m *MockIndexStorage) DeleteSpaceEntry(ctx context.Context, spaceId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSpaceEntry", ctx, spaceId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSpaceEntry indicates an expected call of DeleteSpaceEntry.
+func (mr *MockIndexStorageMockRecorder) DeleteSpaceEntry(ctx, spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpaceEntry", reflect.TypeOf((*MockIndexStorage)(nil).DeleteSpaceEntry), ctx, spaceId)
+}
+
 // DeletionLogId mocks base method.
 func (m *MockIndexStorage) DeletionLogId(ctx context.Context) (string, error) {
 	m.ctrl.T.Helper()

@@ -73,6 +73,7 @@ type IndexStorage interface {
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	SpaceStatusEntry(ctx context.Context, spaceId string) (entry SpaceStatusEntry, err error)
 	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
+	DeleteSpaceEntry(ctx context.Context, spaceId string) (err error)
 	MarkArchivedRemote(ctx context.Context, spaceId, oldHash, newHash string, compressedSize, uncompressedSize int64) (err error)
 	MarkError(ctx context.Context, spaceId string, errString string) (err error)
 	DeletionLogId(ctx context.Context) (id string, err error)
@@ -245,6 +246,18 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 		return v, false, nil
 	}))
 	return tx.Commit()
+}
+
+// DeleteSpaceEntry removes the index entry entirely (unlike the deletion flow
+// it leaves no tombstone). Used to garbage-collect entries of spaces that
+// never durably existed anywhere, e.g. leftovers of an uncommitted space push.
+func (d *indexStorage) DeleteSpaceEntry(ctx context.Context, spaceId string) (err error) {
+	err = d.spaceColl.DeleteId(ctx, spaceId)
+	if errors.Is(err, anystore.ErrDocNotFound) {
+		return nil
+	}
+	d.lastAccessCache.Delete(spaceId)
+	return err
 }
 
 func (d *indexStorage) MarkError(ctx context.Context, spaceId string, errString string) (err error) {
