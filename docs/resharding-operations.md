@@ -42,6 +42,51 @@ configurations where any chash partition would lose *all* of its current
 replicas (`unsafe configuration: ...`); `-force` overrides this check —
 emergencies only, it can produce partitions with no live source.
 
+## First deployment (one-time preparations)
+
+1. **Merge/release order**: any-sync → tag → bump the dependency in
+   coordinator and node → release both. Old node builds are compatible with
+   new ones (an old receiver answers `AdoptArchive` with "unknown rpc"; the
+   drainer parks and retries), so binaries can roll gradually — but publish
+   no topology change until the whole tree fleet runs the new build.
+2. **Audit the S3 layout before enabling anything**:
+   - every tree node must use the **same bucket** (server-side copy does not
+     cross buckets) and a **unique keyPrefix** — verify no two nodes share a
+     prefix (a shared prefix was already subtly broken before this feature);
+   - node credentials must allow `GetObject` bucket-wide (they become
+     CopyObject *sources* for keys other nodes hand them) plus write/list on
+     their own prefix.
+3. **Coordinator deploy**: on start it creates a unique partial index on
+   `nodeConf.epoch` — the mongo user needs `createIndex`. Existing configs
+   carry no epoch (treated as 0); the first `confapply` mints epoch 1.
+4. **Deploy nodes with `shared: false` first** (or leave the flag out): the
+   machinery stays dormant. Expect a one-time `fresh disk or new node`
+   warning per node — the `.diskgen` marker is created on first boot after
+   the upgrade. Its creation time also arms the sweeper's 30-day protection
+   for unindexed legacy objects automatically.
+5. **Dashboards/alerts before enabling**: panel the `node_resharder_*` and
+   `node_adopter_*` gauges; alert on `state == 2` lasting days,
+   `parked`/`errors` growing without `moved` growing, and coordinator
+   `unsafe configuration` rejections.
+6. **Mint a baseline epoch**: republish the *current unchanged* topology
+   (`confapply ... -e`). Tree membership is identical, so no drains are
+   scheduled — it just assigns epoch 1 everywhere and starts the config
+   history that removed-node draining later relies on.
+7. **Flip `s3Store.shared: true` fleet-wide.** Note: the first drain cycles
+   will also digest *legacy* orphans (spaces from past topology changes that
+   were never cleaned up) — expect `draining > 0` and background handoffs
+   without any new topology change. That is the intended cleanup; it is
+   verified the same way as a live drain. A legacy `notresponsible/` dir
+   from the old spacechecker tool shows up as an unindexable id in logs —
+   harmless; remove those dirs manually at leisure.
+8. **Optional but recommended for the first real reshard**: enable bucket
+   object versioning with a 30-day expiry of noncurrent versions — cheap
+   insurance while trust in the machinery is being established; drop it
+   later. Snapshot the coordinator's `nodeConf` collection before the first
+   topology publish.
+9. **Dry-run in staging** first: docs/resharding-e2e.md walks the full
+   add/remove/guardrail/delete-during-drain scenarios on a local network.
+
 ## Adding node(s)
 
 1. Deploy the new node(s) with the shared `s3Store` config; start them. They
