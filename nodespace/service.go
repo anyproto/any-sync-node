@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -44,6 +45,10 @@ type Service interface {
 	EvictSpace(ctx context.Context, id string) error
 	Cache() ocache.OCache
 	GetStats(ctx context.Context, id string, treeTop int) (nodestorage.SpaceStats, error)
+	// SetAclObserver registers a callback invoked with a spaceId whenever that
+	// space's ACL changes (new consensus records applied). Used by the pubsub
+	// relay to re-check subscriber membership. Only one observer is supported.
+	SetAclObserver(observer func(spaceId string))
 	app.ComponentRunnable
 }
 
@@ -58,6 +63,7 @@ type service struct {
 	nodeHead             nodehead.NodeHead
 	metric               metric.Metric
 	coordClient          coordinatorclient.CoordinatorClient
+	aclObserver          atomic.Pointer[func(spaceId string)]
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -151,7 +157,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 		}
 		return
 	}
-	ns, err := newNodeSpace(cc, s.consClient, s.spaceStorageProvider)
+	ns, err := newNodeSpace(cc, s.consClient, s.spaceStorageProvider, s.onAclUpdate)
 	if err != nil {
 		return
 	}
@@ -159,6 +165,18 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 		return
 	}
 	return ns, nil
+}
+
+func (s *service) SetAclObserver(observer func(spaceId string)) {
+	s.aclObserver.Store(&observer)
+}
+
+// onAclUpdate is passed to each loaded space and invoked when its ACL changes,
+// forwarding to the registered observer if any.
+func (s *service) onAclUpdate(spaceId string) {
+	if observer := s.aclObserver.Load(); observer != nil {
+		(*observer)(spaceId)
+	}
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
