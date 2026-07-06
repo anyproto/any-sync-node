@@ -103,12 +103,46 @@ func (r *resharder) Init(a *app.App) (err error) {
 		registerMetric(r.stat, m.(metric.Metric).Registry())
 	}
 	r.nodeConf.ObserveChanges(func(prev, cur nodeconf.NodeConf) {
+		if sameTreeMembers(prev.Configuration(), cur.Configuration()) {
+			// addresses or non-tree nodes changed: the ring is identical, no
+			// space changes hands — don't waste a full index scan (the
+			// periodic cycle remains as a backstop)
+			log.Info("network configuration changed without tree membership changes: drain not scheduled",
+				zap.Uint64("prevEpoch", prev.Configuration().Epoch),
+				zap.Uint64("curEpoch", cur.Configuration().Epoch))
+			return
+		}
 		log.Info("network configuration changed, scheduling drain cycle",
 			zap.Uint64("prevEpoch", prev.Configuration().Epoch),
 			zap.Uint64("curEpoch", cur.Configuration().Epoch))
 		r.Trigger()
 	})
 	return
+}
+
+// sameTreeMembers reports whether both configurations contain the same set of
+// tree-node peer ids. Equal membership means an identical chash ring (member
+// capacities are constant today; revisit if capacity weights are introduced).
+func sameTreeMembers(a, b nodeconf.Configuration) bool {
+	treeSet := func(c nodeconf.Configuration) map[string]struct{} {
+		set := make(map[string]struct{})
+		for _, n := range c.Nodes {
+			if n.HasType(nodeconf.NodeTypeTree) {
+				set[n.PeerId] = struct{}{}
+			}
+		}
+		return set
+	}
+	as, bs := treeSet(a), treeSet(b)
+	if len(as) != len(bs) {
+		return false
+	}
+	for id := range as {
+		if _, ok := bs[id]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *resharder) Name() (name string) {

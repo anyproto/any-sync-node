@@ -2,6 +2,7 @@ package resharder
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	anystore "github.com/anyproto/any-store"
@@ -210,6 +211,7 @@ type fixture struct {
 	nodeHead       *mock_nodehead.MockNodeHead
 	nodeConf       *mock_nodeconf.MockService
 	hotSync        *mock_hotsync.MockHotSync
+	observer       nodeconf.ChangeObserver
 	adopted        []string
 	lastReq        *nodesyncproto.AdoptArchiveRequest
 	adoptResponses map[string]*nodesyncproto.AdoptArchiveResponse
@@ -251,7 +253,9 @@ func newFixture(t *testing.T) *fixture {
 	anymock.ExpectComp(fx.hotSync.EXPECT(), hotsync.CName)
 	fx.hotSync.EXPECT().SetMetric(gomock.Any(), gomock.Any()).AnyTimes()
 	fx.storage.EXPECT().IndexStorage().AnyTimes().Return(fx.indexStorage)
-	fx.nodeConf.EXPECT().ObserveChanges(gomock.Any())
+	fx.nodeConf.EXPECT().ObserveChanges(gomock.Any()).Do(func(observer nodeconf.ChangeObserver) {
+		fx.observer = observer
+	})
 	fx.nodeConf.EXPECT().Configuration().AnyTimes().Return(nodeconf.Configuration{Epoch: 1})
 	// Run gates on Shared; keep the background loop off in unit tests
 	fx.archiveStore.EXPECT().Shared().Return(false)
@@ -274,4 +278,55 @@ func newFixture(t *testing.T) *fixture {
 		ctrl.Finish()
 	})
 	return fx
+}
+
+func confWithTreeNodes(epoch uint64, addrSuffix string, peerIds ...string) nodeconf.Configuration {
+	c := nodeconf.Configuration{Id: fmt.Sprintf("cfg-%d", epoch), NetworkId: "net", Epoch: epoch}
+	for _, id := range peerIds {
+		c.Nodes = append(c.Nodes, nodeconf.Node{
+			PeerId:    id,
+			Addresses: []string{id + addrSuffix},
+			Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree},
+		})
+	}
+	return c
+}
+
+func TestResharder_ObserverSkipsUnchangedTreeSet(t *testing.T) {
+	fx := newFixture(t)
+	require.NotNil(t, fx.observer)
+
+	prev := newRingConf("p1")
+	prev.set(confWithTreeNodes(1, ":1001", "p1", "p2", "p3"), nil)
+
+	t.Run("addresses changed, same tree members: no drain scheduled", func(t *testing.T) {
+		cur := newRingConf("p1")
+		cur.set(confWithTreeNodes(2, ":2002", "p1", "p2", "p3"), nil)
+		fx.observer(prev, cur)
+		select {
+		case <-fx.resharder.trigger:
+			t.Fatal("drain cycle must not be scheduled for an address-only change")
+		default:
+		}
+	})
+	t.Run("tree member added: drain scheduled", func(t *testing.T) {
+		cur := newRingConf("p1")
+		cur.set(confWithTreeNodes(3, ":1001", "p1", "p2", "p3", "p4"), nil)
+		fx.observer(prev, cur)
+		select {
+		case <-fx.resharder.trigger:
+		default:
+			t.Fatal("drain cycle must be scheduled when the tree set changes")
+		}
+	})
+	t.Run("tree member replaced: drain scheduled", func(t *testing.T) {
+		cur := newRingConf("p1")
+		cur.set(confWithTreeNodes(4, ":1001", "p1", "p2", "p9"), nil)
+		fx.observer(prev, cur)
+		select {
+		case <-fx.resharder.trigger:
+		default:
+			t.Fatal("drain cycle must be scheduled when a tree member is replaced")
+		}
+	})
 }
