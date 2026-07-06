@@ -146,6 +146,42 @@ publish the config without it; the surviving replicas hold every partition
 new owner(s). The dead node's bucket prefix can be deleted manually after
 recovery is confirmed.
 
+## Spaces in Error state (missing or corrupted data)
+
+Resharding deliberately routes **around** broken copies instead of touching
+them; redundancy is maintained by the healthy replicas.
+
+How a broken copy behaves during a reshard, by kind:
+
+- **Index status `Error`** (failed archive, drain found neither object nor
+  db, ...): excluded from drain candidates, its archive object is never
+  swept, and an owner holding an `Error` entry answers adopt requests with
+  *diverged* — it neither adopts a snapshot over the possibly-valuable local
+  data nor counts as a durable ACK for anyone's deletion.
+- **Corrupted db with status `Ok`**: the drain's snapshot fails to open it —
+  the space parks and retries every cycle; `node_resharder_errors` grows and
+  the failure is logged with the space id. Nothing is deleted.
+- **Status `Ok` with no local data at all**: nothing to hand off — the entry
+  is marked `Moved`; the current owners get the space from the healthy
+  replicas via the normal handoff/anti-entropy.
+
+Why this is safe: the drain deletion rule needs **2 of 3 current owners** to
+confirm the heads, so one broken owner never blocks a reshard (the two
+healthy ones ACK) and never enables a wrong deletion (it refuses to ACK).
+The space stays fully available through its healthy replicas throughout.
+
+Operator playbook for accumulating errors (`node_resharder_errors` growing,
+`parked` not shrinking):
+
+1. Find the space ids in the node logs (`drain space failed`, `space archive
+   failed`) or via the debug API.
+2. Per space, decide with `spacechecker`: if the healthy replicas hold the
+   space (they almost always do), delete the broken local copy / clear the
+   `Error` entry and let anti-entropy re-sync it; if the broken copy might be
+   the newest one, recover the db (sqlite tooling / restore from the archive
+   object if present) before clearing.
+3. Cleared spaces re-enter the normal drain flow on the next cycle.
+
 ## Safety properties (what the machinery guarantees)
 
 - A drained space is deleted locally only after ≥2 current owners durably

@@ -137,6 +137,15 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		_, err := fx.AdoptArchive(ctx, req)
 		assert.ErrorIs(t, err, nodesyncproto.ErrSpacePendingDeletion)
 	})
+	t.Run("error status: never adopted, never acked", func(t *testing.T) {
+		fx := newFixture(t)
+		req := adoptReq()
+		fx.expectNodePeer()
+		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError}, nil)
+		resp, err := fx.AdoptArchive(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveDiverged, resp.Result)
+	})
 	t.Run("not responsible rejected", func(t *testing.T) {
 		fx := newFixture(t)
 		req := adoptReq()

@@ -120,6 +120,13 @@ func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArc
 				return alreadyHaveResponse(entry, req), nil
 			}
 			// index says archived, but our object is gone: adopt to repair
+		case nodestorage.SpaceStatusError:
+			// an Error entry needs an operator: the local db may hold data
+			// that failed to archive — never overwrite it with a snapshot and
+			// never ACK the sender's deletion with a broken copy
+			return &nodesyncproto.AdoptArchiveResponse{
+				Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveDiverged,
+			}, nil
 		}
 	case errors.Is(entryErr, anystore.ErrDocNotFound):
 		if ad.storage.SpaceExists(req.SpaceId) {
