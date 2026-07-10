@@ -34,7 +34,7 @@ func TestNodeHead_Run(t *testing.T) {
 		store := fx.a.MustComponent(nodestorage.CName).(nodestorage.NodeStorage)
 		ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
 		require.NoError(t, err)
-		require.NoError(t, ss.StateStorage().SetHash(ctx, "123", "456"))
+		require.NoError(t, ss.StateStorage().SetHash(ctx, "456"))
 		require.NoError(t, ss.Close(ctx))
 		fx.Finish(t)
 
@@ -52,7 +52,7 @@ func TestNodeHead_Run(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			ss, err := store.CreateSpaceStorage(ctx, nodestorage.NewStorageCreatePayload(t))
 			require.NoError(t, err)
-			require.NoError(t, ss.StateStorage().SetHash(ctx, "123", "456"))
+			require.NoError(t, ss.StateStorage().SetHash(ctx, "456"))
 			require.NoError(t, ss.Close(ctx))
 		}
 		fx.Finish(t)

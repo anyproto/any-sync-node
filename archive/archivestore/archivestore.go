@@ -6,11 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -34,6 +38,20 @@ type ArchiveStore interface {
 	Get(ctx context.Context, name string) (data io.ReadCloser, err error)
 	Put(ctx context.Context, name string, data io.ReadSeeker) (err error)
 	Delete(ctx context.Context, name string) (err error)
+	// Exists checks the object presence in this node's prefix without fetching it.
+	Exists(ctx context.Context, name string) (ok bool, err error)
+	// Key returns the full bucket key for the given name in this node's prefix.
+	Key(name string) string
+	// CopyFrom server-side copies an object from an absolute bucket key
+	// (typically another node's prefix in the shared bucket) into this node's prefix.
+	CopyFrom(ctx context.Context, srcKey, name string) (err error)
+	// Shared reports whether the bucket is shared across the network's tree nodes,
+	// enabling S3-mediated space migration.
+	Shared() bool
+	// List iterates all objects in this node's prefix; iter receives the object
+	// name (key without the prefix) and its last-modified time, returning false
+	// to stop the iteration.
+	List(ctx context.Context, iter func(name string, lastModified time.Time) (bool, error)) (err error)
 }
 
 type archiveStore struct {
@@ -42,6 +60,7 @@ type archiveStore struct {
 	client    *s3.S3
 	keyPrefix string
 	enabled   bool
+	shared    bool
 }
 
 func (as *archiveStore) Init(a *app.App) (err error) {
@@ -89,6 +108,7 @@ func (as *archiveStore) Init(a *app.App) (err error) {
 	as.client = s3.New(as.sess)
 	as.keyPrefix = conf.KeyPrefix + "/"
 	as.enabled = true
+	as.shared = conf.Shared
 	return
 }
 
@@ -137,4 +157,97 @@ func (as *archiveStore) Delete(ctx context.Context, name string) (err error) {
 		Key:    aws.String(name),
 	})
 	return
+}
+
+// Exists deliberately uses ListObjectsV2 instead of HeadObject: GCS's
+// S3-interop layer can serve stale HEAD responses for several seconds after a
+// mutation (observed: HEAD returns 200 for a just-deleted object when the same
+// key was HEAD'ed before), while listing is read-after-write consistent.
+// Exists backs the durable-ACK check of the resharding handoff, where a stale
+// positive could acknowledge an object that is already gone.
+func (as *archiveStore) Exists(ctx context.Context, name string) (ok bool, err error) {
+	if !as.enabled {
+		return false, ErrDisabled
+	}
+	key := as.keyPrefix + name
+	out, err := as.client.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+		Bucket:  as.bucket,
+		Prefix:  aws.String(key),
+		MaxKeys: aws.Int64(1),
+	})
+	if err != nil {
+		return false, err
+	}
+	for _, obj := range out.Contents {
+		if obj.Key != nil && *obj.Key == key {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (as *archiveStore) Key(name string) string {
+	return as.keyPrefix + name
+}
+
+func (as *archiveStore) CopyFrom(ctx context.Context, srcKey, name string) (err error) {
+	if !as.enabled {
+		return ErrDisabled
+	}
+	_, err = as.client.CopyObjectWithContext(ctx, &s3.CopyObjectInput{
+		Bucket:     as.bucket,
+		CopySource: aws.String(url.PathEscape(*as.bucket + "/" + srcKey)),
+		Key:        aws.String(as.keyPrefix + name),
+	})
+	if err != nil && isNotFoundErr(err) {
+		return ErrNotFound
+	}
+	return
+}
+
+func (as *archiveStore) Shared() bool {
+	return as.enabled && as.shared
+}
+
+func (as *archiveStore) List(ctx context.Context, iter func(name string, lastModified time.Time) (bool, error)) (err error) {
+	if !as.enabled {
+		return ErrDisabled
+	}
+	var iterErr error
+	err = as.client.ListObjectsV2PagesWithContext(ctx, &s3.ListObjectsV2Input{
+		Bucket: as.bucket,
+		Prefix: aws.String(as.keyPrefix),
+	}, func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+		for _, obj := range page.Contents {
+			if obj.Key == nil {
+				continue
+			}
+			name := strings.TrimPrefix(*obj.Key, as.keyPrefix)
+			var lastModified time.Time
+			if obj.LastModified != nil {
+				lastModified = *obj.LastModified
+			}
+			cont, iErr := iter(name, lastModified)
+			if iErr != nil {
+				iterErr = iErr
+				return false
+			}
+			if !cont {
+				return false
+			}
+		}
+		return !lastPage
+	})
+	if err == nil {
+		err = iterErr
+	}
+	return
+}
+
+func isNotFoundErr(err error) bool {
+	var awsErr awserr.RequestFailure
+	if errors.As(err, &awsErr) {
+		return awsErr.StatusCode() == http.StatusNotFound || awsErr.Code() == s3.ErrCodeNoSuchKey
+	}
+	return strings.HasPrefix(err.Error(), s3.ErrCodeNoSuchKey) || strings.HasPrefix(err.Error(), "NotFound")
 }

@@ -53,7 +53,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 			payload := NewStorageCreatePayload(t)
 			storage, err := ss.CreateSpaceStorage(ctx, payload)
 			require.NoError(t, err)
-			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
+			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i))
 			require.NoError(t, err)
 		}
 		ss.updater.Close()
@@ -73,7 +73,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 			payload := NewStorageCreatePayload(t)
 			storage, err := ss.CreateSpaceStorage(ctx, payload)
 			require.NoError(t, err)
-			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
+			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i))
 			require.NoError(t, err)
 		}
 		err := ss.indexStorage.(*indexStorage).spaceColl.Drop(ctx)
@@ -98,7 +98,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 			payload := NewStorageCreatePayload(t)
 			storage, err := ss.CreateSpaceStorage(ctx, payload)
 			require.NoError(t, err)
-			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
+			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i))
 			require.NoError(t, err)
 		}
 		err := ss.indexStorage.(*indexStorage).spaceColl.Drop(ctx)
@@ -141,7 +141,7 @@ func TestStorageService_SpaceStorage(t *testing.T) {
 			payload := NewStorageCreatePayload(t)
 			storage, err := ss.CreateSpaceStorage(ctx, payload)
 			require.NoError(t, err)
-			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i), fmt.Sprint(i))
+			err = storage.StateStorage().SetHash(ctx, fmt.Sprint(i))
 			require.NoError(t, err)
 		}
 		newDir := filepath.Join(dir, "new")
