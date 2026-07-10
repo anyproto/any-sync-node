@@ -71,11 +71,11 @@ type nodeStorage struct {
 	observer hashObserver
 }
 
-func (st *nodeStorage) OnHashChange(oldHash, newHash string) {
-	st.observer(st.Id(), oldHash, newHash)
+func (st *nodeStorage) OnHashChange(hash string) {
+	st.observer(st.Id(), hash)
 }
 
-type hashObserver = func(spaceId, oldHash, newHash string)
+type hashObserver = func(spaceId, hash string)
 
 func newNodeStorage(spaceStorage spacestorage.SpaceStorage, cont *storageContainer, observer hashObserver) *nodeStorage {
 	st := &nodeStorage{

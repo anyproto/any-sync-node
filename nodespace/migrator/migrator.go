@@ -130,7 +130,6 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 		}
 		err = m.newStorage.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
 			SpaceId: id,
-			OldHash: state.OldHash,
 			NewHash: state.NewHash,
 		})
 		if err != nil {

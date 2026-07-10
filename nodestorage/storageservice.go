@@ -72,7 +72,7 @@ type NodeStorage interface {
 	DumpStorage(ctx context.Context, id string, do func(path string) error) (err error)
 	AllSpaceIds() (ids []string, err error)
 	OnDeleteStorage(onDelete func(ctx context.Context, spaceId string))
-	OnWriteHash(onWrite func(ctx context.Context, spaceId, oldHash, newHash string))
+	OnWriteHash(onWrite func(ctx context.Context, spaceId, hash string))
 	StoreDir(spaceId string) (path string)
 	DeleteSpaceStorage(ctx context.Context, spaceId string) error
 	ForceRemove(id string) (err error)
@@ -102,7 +102,7 @@ type storageService struct {
 	cache           ocache.OCache
 	indexStorage    IndexStorage
 	updater         *spaceUpdater
-	onWriteHash     func(ctx context.Context, spaceId, oldHash, newHash string)
+	onWriteHash     func(ctx context.Context, spaceId, hash string)
 	onDeleteStorage func(ctx context.Context, spaceId string)
 	currentSpaces   map[string]*storageContainer
 	mu              sync.Mutex
@@ -122,7 +122,7 @@ func (s *storageService) Init(a *app.App) (err error) {
 		}
 		if s.onWriteHash != nil {
 			for _, update := range updates {
-				s.onWriteHash(context.Background(), update.SpaceId, update.OldHash, update.NewHash)
+				s.onWriteHash(context.Background(), update.SpaceId, update.NewHash)
 			}
 		}
 	})
@@ -158,12 +158,6 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 	s.indexStorage, err = OpenIndexStorage(ctx, s.rootPath)
 	if err != nil {
 		log.Error("failed to open index storage", zap.Error(err))
-		return err
-	}
-
-	// Run migrations
-	if err := s.indexStorage.RunMigrations(ctx); err != nil {
-		log.Error("failed to run migrations", zap.Error(err))
 		return err
 	}
 	allIds, err := s.AllSpaceIds()
@@ -224,11 +218,10 @@ func (s *storageService) StatType() string {
 	return CName
 }
 
-func (s *storageService) onHashChange(spaceId, oldHash, newHash string) {
+func (s *storageService) onHashChange(spaceId, hash string) {
 	_ = s.updater.Add(SpaceUpdate{
 		SpaceId: spaceId,
-		OldHash: oldHash,
-		NewHash: newHash,
+		NewHash: hash,
 		Updated: time.Now(),
 	})
 }
@@ -397,7 +390,6 @@ func (s *storageService) IndexSpace(ctx context.Context, spaceId string, setHead
 	}
 	err = s.indexStorage.UpdateHash(ctx, SpaceUpdate{
 		SpaceId: spaceId,
-		OldHash: state.OldHash,
 		NewHash: state.NewHash,
 	})
 	if err != nil {
@@ -405,7 +397,7 @@ func (s *storageService) IndexSpace(ctx context.Context, spaceId string, setHead
 		return
 	}
 	if setHead && s.onWriteHash != nil {
-		s.onWriteHash(ctx, spaceId, state.OldHash, state.NewHash)
+		s.onWriteHash(ctx, spaceId, state.NewHash)
 	}
 	return
 }
@@ -568,7 +560,7 @@ func (s *storageService) StoreDir(spaceId string) (path string) {
 	return filepath.Join(s.rootPath, spaceId)
 }
 
-func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, oldHash, newHash string)) {
+func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
 	s.onWriteHash = onWrite
 }
 

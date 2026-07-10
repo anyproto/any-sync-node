@@ -22,7 +22,6 @@ type SpaceStatusEntry struct {
 	Status                  SpaceStatus
 	Error                   string
 	NewHash                 string
-	OldHash                 string
 	LastAccess              time.Time
 	ArchiveSizeCompressed   int64
 	ArchiveSizeUncompressed int64
@@ -48,6 +47,7 @@ const (
 	spaceCollName              = "space"
 	settingsCollName           = "settings"
 	newHashKey                 = "nh"
+	// oldHashKey held the legacy diff hash, it is only cleaned up now
 	oldHashKey                 = "oh"
 	statusKey                  = "s"
 	lastAccessKey              = "la"
@@ -55,8 +55,6 @@ const (
 	archiveSizeCompressedKey   = "asc"
 	archiveSizeUncompressedKey = "asu"
 	errorKey                   = "err"
-	diffMigrationKey           = "diffState"
-	diffVersionKey             = "diffVersion"
 
 	lastDeletionIdKey = "lastDeletionId"
 )
@@ -64,7 +62,6 @@ const (
 type IndexStorage interface {
 	UpdateHash(ctx context.Context, updates ...SpaceUpdate) (err error)
 	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
-	UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	SpaceStatusEntry(ctx context.Context, spaceId string) (entry SpaceStatusEntry, err error)
@@ -75,9 +72,6 @@ type IndexStorage interface {
 	FindOldestInactiveSpace(ctx context.Context, olderThan time.Duration, skip int) (spaceId string, err error)
 
 	UpdateLastAccess(ctx context.Context, spaceId string) (err error)
-	GetDiffMigrationVersion(ctx context.Context) (version int, err error)
-	SetDiffMigrationVersion(ctx context.Context, version int) (err error)
-	RunMigrations(ctx context.Context) (err error)
 	Close() (err error)
 }
 
@@ -104,7 +98,6 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 			if update.Updated.IsZero() {
 				update.Updated = time.Now()
 			}
-			v.Set(oldHashKey, a.NewString(update.OldHash))
 			v.Set(newHashKey, a.NewString(update.NewHash))
 			v.Set(lastAccessKey, a.NewNumberFloat64(float64(update.Updated.Unix())))
 			if v.Get(statusKey) == nil {
@@ -140,7 +133,6 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 		}
 		cont, err := iterFunc(SpaceUpdate{
 			SpaceId: doc.Value().GetString("id"),
-			OldHash: doc.Value().GetString(oldHashKey),
 			NewHash: doc.Value().GetString(newHashKey),
 			Updated: time.Unix(int64(doc.Value().GetInt(lastAccessKey)), 0),
 		})
@@ -175,7 +167,6 @@ func (d *indexStorage) SpaceStatusEntry(ctx context.Context, spaceId string) (en
 		Status:                  SpaceStatus(v.GetInt(statusKey)),
 		Error:                   v.GetString(errorKey),
 		NewHash:                 v.GetString(newHashKey),
-		OldHash:                 v.GetString(oldHashKey),
 		LastAccess:              time.Unix(int64(v.GetInt(lastAccessKey)), 0),
 		ArchiveSizeCompressed:   int64(v.GetInt(archiveSizeCompressedKey)),
 		ArchiveSizeUncompressed: int64(v.GetInt(archiveSizeUncompressedKey)),
@@ -318,76 +309,6 @@ func (d *indexStorage) FindOldestInactiveSpace(ctx context.Context, olderThan ti
 	spaceId = doc.Value().GetString("id")
 
 	return spaceId, nil
-}
-
-func (d *indexStorage) RunMigrations(ctx context.Context) (err error) {
-	diffMigration, err := newDiffMigration(d, log)
-	if err != nil {
-		return fmt.Errorf("failed to create diff migration: %w", err)
-	}
-
-	if err := diffMigration.Run(ctx); err != nil {
-		return fmt.Errorf("diff migration failed: %w", err)
-	}
-
-	return nil
-}
-
-func (d *indexStorage) UpdateHashes(ctx context.Context, updateFunc func(spaceId, newHash, oldHash string) (newNewHash, newOldHash string, shouldUpdate bool)) (err error) {
-	_, err = d.spaceColl.Find(filterStatusHashOk).Update(ctx, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		spaceId := v.GetString("id")
-		newHash := v.GetString(newHashKey)
-		oldHash := v.GetString(oldHashKey)
-
-		newNewHash, newOldHash, shouldUpdate := updateFunc(spaceId, newHash, oldHash)
-		if !shouldUpdate {
-			return v, false, nil
-		}
-
-		v.Set(newHashKey, a.NewString(newNewHash))
-		v.Set(oldHashKey, a.NewString(newOldHash))
-		if v.Get(statusKey) == nil {
-			v.Set(statusKey, a.NewNumberInt(int(SpaceStatusOk)))
-		}
-		return v, true, nil
-	}))
-	return
-}
-
-func (d *indexStorage) GetDiffMigrationVersion(ctx context.Context) (version int, err error) {
-	migrationColl, err := d.db.Collection(ctx, migrationStateCollName)
-	if err != nil {
-		return 0, err
-	}
-
-	doc, err := migrationColl.FindId(ctx, diffMigrationKey)
-	if err != nil {
-		if errors.Is(err, anystore.ErrDocNotFound) {
-			return 0, nil
-		}
-		return 0, err
-	}
-
-	return int(doc.Value().GetFloat64(diffVersionKey)), nil
-}
-
-func (d *indexStorage) SetDiffMigrationVersion(ctx context.Context, version int) (err error) {
-	migrationColl, err := d.db.Collection(ctx, migrationStateCollName)
-	if err != nil {
-		return err
-	}
-
-	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		if v == nil {
-			v = a.NewObject()
-			v.Set("id", a.NewString(diffMigrationKey))
-		}
-		v.Set(diffVersionKey, a.NewNumberFloat64(float64(version)))
-		return v, true, nil
-	})
-
-	_, err = migrationColl.UpsertId(ctx, diffMigrationKey, mod)
-	return err
 }
 
 func (d *indexStorage) Close() (err error) {

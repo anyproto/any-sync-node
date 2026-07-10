@@ -50,7 +50,6 @@ type storageService struct {
 	delStorage      DeletionStorage
 	onWriteHash     func(ctx context.Context, spaceId, hash string)
 	onDeleteStorage func(ctx context.Context, spaceId string)
-	onWriteOldHash  func(ctx context.Context, spaceId, hash string)
 	lockedSpaces    map[string]*lockSpace
 	mu              sync.Mutex
 }
@@ -230,10 +229,6 @@ func (s *storageService) StoreDir(spaceId string) (path string) {
 
 func (s *storageService) OnWriteHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
 	s.onWriteHash = onWrite
-}
-
-func (s *storageService) OnWriteOldHash(onWrite func(ctx context.Context, spaceId string, hash string)) {
-	s.onWriteOldHash = onWrite
 }
 
 func (s *storageService) OnDeleteStorage(onDelete func(ctx context.Context, spaceId string)) {

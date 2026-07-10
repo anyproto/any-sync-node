@@ -35,7 +35,7 @@ func TestSpaceDeleter_Run_Ok(t *testing.T) {
 	payload := nodestorage.NewStorageCreatePayload(t)
 	store, err := fx.storage.CreateSpaceStorage(ctx, payload)
 	require.NoError(t, err)
-	err = store.StateStorage().SetHash(ctx, "123", "456")
+	err = store.StateStorage().SetHash(ctx, "456")
 	require.NoError(t, err)
 	lg := mockDeletionLog(store.Id())
 
