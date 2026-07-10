@@ -265,6 +265,11 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 			zap.String("accountId", accountIdentity.Account()))
 		return nil, spacesyncproto.ErrPeerIsNotResponsible
 	}
+	// reject unsupported diff types before the deep-sync fallback, so a crafted
+	// request can't force a full space load only to be rejected there
+	if req.DiffType != spacesyncproto.DiffType_V3 {
+		return nil, spacesyncproto.ErrUnexpected
+	}
 	if resp = r.tryNodeHeadSync(req); resp != nil {
 		return
 	}
@@ -280,9 +285,6 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 
 func (r *rpcHandler) tryNodeHeadSync(req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse) {
 	if len(req.Ranges) == 1 && !req.Ranges[0].Elements && (req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64) {
-		if req.DiffType != spacesyncproto.DiffType_V3 {
-			return nil
-		}
 		hash, err := r.s.nodeHead.GetHead(req.SpaceId)
 		if err != nil {
 			return
