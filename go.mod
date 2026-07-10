@@ -6,7 +6,7 @@ require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
 	github.com/anyproto/any-store v0.4.7
-	github.com/anyproto/any-sync v0.13.0-alpha.5
+	github.com/anyproto/any-sync v0.13.0-alpha.5.0.20260710134112-4c9c2983a663
 	github.com/anyproto/go-chash v0.1.0
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/cheggaaa/mb/v3 v3.0.2
@@ -32,9 +32,6 @@ require (
 	github.com/anyproto/go-sqlite v1.4.2-any // indirect
 	github.com/anyproto/lexid v0.0.6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/btcsuite/btcd v0.22.1 // indirect
-	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 // indirect
-	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
