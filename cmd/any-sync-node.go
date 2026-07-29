@@ -57,6 +57,7 @@ import (
 	"github.com/anyproto/any-sync-node/debug/spacechecker"
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/nodecache"
+	"github.com/anyproto/any-sync-node/nodespace/pubsubrelay"
 	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
@@ -153,6 +154,7 @@ func Bootstrap(a *app.App) {
 		Register(secureservice.New()).
 		Register(commonspace.New()).
 		Register(nodespace.New()).
+		Register(pubsubrelay.New()).
 		Register(spacedeleter.New()).
 		Register(peermanager.New()).
 		Register(debugserver.New()).
