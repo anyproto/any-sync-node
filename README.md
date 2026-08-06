@@ -24,6 +24,13 @@ The following options are available for running the Any-Sync Node:
  - `-v` — current version.
  - `-h` — help message.
 
+## Changing the node set (resharding)
+
+Adding and removing tree nodes on a running network is supported when the
+nodes share an archive bucket — see the operator guide:
+[docs/resharding-operations.md](docs/resharding-operations.md)
+(design: [docs/resharding-plan.md](docs/resharding-plan.md)).
+
 ## Graph example of using Any-Sync Nodes group
 
 ```mermaid

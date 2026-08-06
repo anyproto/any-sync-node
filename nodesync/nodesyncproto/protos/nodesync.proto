@@ -7,6 +7,12 @@ enum ErrCodes {
     Unexpected = 0;
     ExpectedCoordinator = 1;
     UnsupportedStorage = 2;
+    SpaceDeleted = 3;
+    ArchiveUnavailable = 4;
+    ArchiveObjectMissing = 5;
+    PeerIsNotNode = 6;
+    NotResponsible = 7;
+    SpacePendingDeletion = 8;
     ErrorOffset = 1000;
 }
 
@@ -15,6 +21,10 @@ service NodeSync {
     rpc PartitionSync(PartitionSyncRequest) returns (PartitionSyncResponse);
     // ColdSync requests cold sync stream for fast space download
     rpc ColdSync(ColdSyncRequest) returns (stream ColdSyncResponse);
+    // AdoptArchive offers the receiver an archived space snapshot parked in the
+    // shared archive store; the receiver copies the object into its own prefix
+    // and registers the space as archived without materializing it
+    rpc AdoptArchive(AdoptArchiveRequest) returns (AdoptArchiveResponse);
 }
 
 // PartitionSyncRange presenting a request for one range
@@ -64,4 +74,32 @@ message ColdSyncResponse {
 enum ColdSyncProtocolType {
     Pogreb = 0;
     AnystoreSqlite = 1;
+}
+
+message AdoptArchiveRequest {
+    string spaceId = 1;
+    // srcKey is the full key of the gzipped snapshot within the shared bucket (sender's prefix)
+    string srcKey = 2;
+    // heads hashes of the space at snapshot time, as stored in the sender's index
+    string oldHash = 3;
+    string newHash = 4;
+    // eager asks the receiver to restore the space in background right away
+    bool eager = 5;
+    int64 compressedSize = 6;
+    int64 uncompressedSize = 7;
+}
+
+message AdoptArchiveResponse {
+    AdoptArchiveResult result = 1;
+}
+
+enum AdoptArchiveResult {
+    // the snapshot was copied and registered
+    AdoptArchiveOk = 0;
+    // the receiver already holds a copy of the space with the same heads:
+    // counts as a durable ACK for the sender
+    AdoptArchiveAlreadyHaveSame = 1;
+    // the receiver already holds a copy with different heads; the sender must
+    // converge via tree sync before the handoff can be acknowledged
+    AdoptArchiveAlreadyHaveDiverged = 2;
 }

@@ -19,11 +19,12 @@ type NodeSpace interface {
 	commonspace.Space
 }
 
-func newNodeSpace(cc commonspace.Space, consClient consensusclient.Service, nodeStorage nodestorage.NodeStorage) (*nodeSpace, error) {
+func newNodeSpace(cc commonspace.Space, consClient consensusclient.Service, nodeStorage nodestorage.NodeStorage, onAclUpdate func(spaceId string)) (*nodeSpace, error) {
 	return &nodeSpace{
 		Space:       cc,
 		consClient:  consClient,
 		nodeStorage: nodeStorage,
+		onAclUpdate: onAclUpdate,
 		log:         log.With(zap.String("spaceId", cc.Id())),
 	}, nil
 }
@@ -32,21 +33,28 @@ type nodeSpace struct {
 	commonspace.Space
 	consClient  consensusclient.Service
 	nodeStorage nodestorage.NodeStorage
+	onAclUpdate func(spaceId string)
 	log         logger.CtxLogger
 }
 
 func (s *nodeSpace) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) {
 	log := s.log.With(zap.Int("len(records)", len(recs)), zap.String("firstId", recs[0].Id))
 	s.Acl().Lock()
-	defer s.Acl().Unlock()
 	for i := 0; i < len(recs)/2; i++ {
 		recs[i], recs[len(recs)-i-1] = recs[len(recs)-i-1], recs[i]
 	}
 	err := s.Acl().AddRawRecords(recs)
+	s.Acl().Unlock()
 	if err != nil {
 		log.Warn("failed to add consensus records", zap.Error(err))
 	} else {
 		log.Debug("added consensus records")
+	}
+	// notify observers (pubsub relay) outside the acl lock so they can re-read it.
+	// fire even on error: AddRawRecords applies records one by one, so a partial
+	// batch may already have changed membership before failing.
+	if s.onAclUpdate != nil {
+		s.onAclUpdate(s.Id())
 	}
 }
 

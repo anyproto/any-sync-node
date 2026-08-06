@@ -13,6 +13,7 @@ import (
 	context "context"
 	io "io"
 	reflect "reflect"
+	time "time"
 
 	app "github.com/anyproto/any-sync/app"
 	gomock "go.uber.org/mock/gomock"
@@ -42,6 +43,20 @@ func (m *MockArchiveStore) EXPECT() *MockArchiveStoreMockRecorder {
 	return m.recorder
 }
 
+// CopyFrom mocks base method.
+func (m *MockArchiveStore) CopyFrom(ctx context.Context, srcKey, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopyFrom", ctx, srcKey, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CopyFrom indicates an expected call of CopyFrom.
+func (mr *MockArchiveStoreMockRecorder) CopyFrom(ctx, srcKey, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyFrom", reflect.TypeOf((*MockArchiveStore)(nil).CopyFrom), ctx, srcKey, name)
+}
+
 // Delete mocks base method.
 func (m *MockArchiveStore) Delete(ctx context.Context, name string) error {
 	m.ctrl.T.Helper()
@@ -54,6 +69,21 @@ func (m *MockArchiveStore) Delete(ctx context.Context, name string) error {
 func (mr *MockArchiveStoreMockRecorder) Delete(ctx, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockArchiveStore)(nil).Delete), ctx, name)
+}
+
+// Exists mocks base method.
+func (m *MockArchiveStore) Exists(ctx context.Context, name string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Exists", ctx, name)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Exists indicates an expected call of Exists.
+func (mr *MockArchiveStoreMockRecorder) Exists(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockArchiveStore)(nil).Exists), ctx, name)
 }
 
 // Get mocks base method.
@@ -85,6 +115,34 @@ func (mr *MockArchiveStoreMockRecorder) Init(a any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockArchiveStore)(nil).Init), a)
 }
 
+// Key mocks base method.
+func (m *MockArchiveStore) Key(name string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Key", name)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Key indicates an expected call of Key.
+func (mr *MockArchiveStoreMockRecorder) Key(name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Key", reflect.TypeOf((*MockArchiveStore)(nil).Key), name)
+}
+
+// List mocks base method.
+func (m *MockArchiveStore) List(ctx context.Context, iter func(string, time.Time) (bool, error)) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, iter)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// List indicates an expected call of List.
+func (mr *MockArchiveStoreMockRecorder) List(ctx, iter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockArchiveStore)(nil).List), ctx, iter)
+}
+
 // Name mocks base method.
 func (m *MockArchiveStore) Name() string {
 	m.ctrl.T.Helper()
@@ -111,4 +169,18 @@ func (m *MockArchiveStore) Put(ctx context.Context, name string, data io.ReadSee
 func (mr *MockArchiveStoreMockRecorder) Put(ctx, name, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockArchiveStore)(nil).Put), ctx, name, data)
+}
+
+// Shared mocks base method.
+func (m *MockArchiveStore) Shared() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Shared")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Shared indicates an expected call of Shared.
+func (mr *MockArchiveStoreMockRecorder) Shared() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shared", reflect.TypeOf((*MockArchiveStore)(nil).Shared))
 }

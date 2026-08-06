@@ -18,4 +18,8 @@ type Config struct {
 	Credentials    Credentials `yaml:"credentials"`
 	ForcePathStyle bool        `yaml:"forcePathStyle"`
 	KeyPrefix      string      `yaml:"keyPrefix"`
+	// Shared marks the bucket as shared across all tree nodes of the network
+	// (each node under its own KeyPrefix). Enables S3-mediated space migration
+	// (resharding): snapshots are handed between nodes via server-side copy.
+	Shared bool `yaml:"shared"`
 }

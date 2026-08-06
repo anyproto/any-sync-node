@@ -55,6 +55,24 @@ func (mr *MockArchiveMockRecorder) Close(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockArchive)(nil).Close), ctx)
 }
 
+// ForceArchive mocks base method.
+func (m *MockArchive) ForceArchive(ctx context.Context, spaceId string) (string, string, int64, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForceArchive", ctx, spaceId)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(int64)
+	ret3, _ := ret[3].(int64)
+	ret4, _ := ret[4].(error)
+	return ret0, ret1, ret2, ret3, ret4
+}
+
+// ForceArchive indicates an expected call of ForceArchive.
+func (mr *MockArchiveMockRecorder) ForceArchive(ctx, spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceArchive", reflect.TypeOf((*MockArchive)(nil).ForceArchive), ctx, spaceId)
+}
+
 // Init mocks base method.
 func (m *MockArchive) Init(a *app.App) error {
 	m.ctrl.T.Helper()
@@ -81,6 +99,18 @@ func (m *MockArchive) Name() string {
 func (mr *MockArchiveMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockArchive)(nil).Name))
+}
+
+// QueueRestore mocks base method.
+func (m *MockArchive) QueueRestore(spaceId string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "QueueRestore", spaceId)
+}
+
+// QueueRestore indicates an expected call of QueueRestore.
+func (mr *MockArchiveMockRecorder) QueueRestore(spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRestore", reflect.TypeOf((*MockArchive)(nil).QueueRestore), spaceId)
 }
 
 // Restore mocks base method.
