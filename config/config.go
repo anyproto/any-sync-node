@@ -23,6 +23,8 @@ import (
 	"github.com/anyproto/any-sync-node/nodestorage"
 	"github.com/anyproto/any-sync-node/nodesync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
+	"github.com/anyproto/any-sync-node/repairer"
+	"github.com/anyproto/any-sync-node/resharder"
 )
 
 const CName = "config"
@@ -56,6 +58,8 @@ type Config struct {
 	Quic                     quic.Config            `yaml:"quic"`
 	S3Store                  archivestore.Config    `yaml:"s3Store"`
 	Archive                  archive.Config         `yaml:"archive"`
+	Resharder                resharder.Config       `yaml:"resharder"`
+	Repairer                 repairer.Config        `yaml:"repairer"`
 	Secure                   secureservice.Config   `yaml:"secure"`
 }
 
@@ -141,4 +145,12 @@ func (c Config) GetArchive() archive.Config {
 
 func (c Config) GetSecureService() secureservice.Config {
 	return c.Secure
+}
+
+func (c Config) GetResharder() resharder.Config {
+	return c.Resharder
+}
+
+func (c Config) GetRepairer() repairer.Config {
+	return c.Repairer
 }

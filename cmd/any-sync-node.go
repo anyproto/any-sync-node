@@ -30,6 +30,7 @@ import (
 	"github.com/anyproto/any-sync/util/syncqueues"
 
 	"github.com/anyproto/any-sync-node/archive"
+	"github.com/anyproto/any-sync-node/archive/adopter"
 	"github.com/anyproto/any-sync-node/archive/archivestore"
 	"github.com/anyproto/any-sync-node/nodehead"
 	"github.com/anyproto/any-sync-node/nodespace/migrator"
@@ -39,6 +40,8 @@ import (
 	"github.com/anyproto/any-sync-node/nodesync/coldsync"
 	"github.com/anyproto/any-sync-node/nodesync/hotsync"
 	"github.com/anyproto/any-sync-node/oldstorage"
+	"github.com/anyproto/any-sync-node/repairer"
+	"github.com/anyproto/any-sync-node/resharder"
 
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
@@ -54,6 +57,7 @@ import (
 	"github.com/anyproto/any-sync-node/debug/spacechecker"
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/nodecache"
+	"github.com/anyproto/any-sync-node/nodespace/pubsubrelay"
 	"github.com/anyproto/any-sync-node/nodestorage"
 )
 
@@ -150,6 +154,7 @@ func Bootstrap(a *app.App) {
 		Register(secureservice.New()).
 		Register(commonspace.New()).
 		Register(nodespace.New()).
+		Register(pubsubrelay.New()).
 		Register(spacedeleter.New()).
 		Register(peermanager.New()).
 		Register(debugserver.New()).
@@ -157,6 +162,9 @@ func Bootstrap(a *app.App) {
 		Register(nodedebugrpc.New()).
 		Register(archivestore.New()).
 		Register(archive.New()).
+		Register(adopter.New()).
+		Register(resharder.New()).
+		Register(repairer.New()).
 		Register(quic.New()).
 		Register(yamux.New())
 }

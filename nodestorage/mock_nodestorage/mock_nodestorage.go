@@ -88,6 +88,20 @@ func (mr *MockNodeStorageMockRecorder) DeleteSpaceStorage(ctx, spaceId any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpaceStorage", reflect.TypeOf((*MockNodeStorage)(nil).DeleteSpaceStorage), ctx, spaceId)
 }
 
+// DiskGen mocks base method.
+func (m *MockNodeStorage) DiskGen() nodestorage.DiskGen {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DiskGen")
+	ret0, _ := ret[0].(nodestorage.DiskGen)
+	return ret0
+}
+
+// DiskGen indicates an expected call of DiskGen.
+func (mr *MockNodeStorageMockRecorder) DiskGen() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiskGen", reflect.TypeOf((*MockNodeStorage)(nil).DiskGen))
+}
+
 // DumpStorage mocks base method.
 func (m *MockNodeStorage) DumpStorage(ctx context.Context, id string, do func(string) error) error {
 	m.ctrl.T.Helper()
@@ -210,6 +224,21 @@ func (m *MockNodeStorage) OnWriteHash(onWrite func(context.Context, string, stri
 func (mr *MockNodeStorageMockRecorder) OnWriteHash(onWrite any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnWriteHash", reflect.TypeOf((*MockNodeStorage)(nil).OnWriteHash), onWrite)
+}
+
+// QuarantineSpace mocks base method.
+func (m *MockNodeStorage) QuarantineSpace(ctx context.Context, spaceId string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QuarantineSpace", ctx, spaceId)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// QuarantineSpace indicates an expected call of QuarantineSpace.
+func (mr *MockNodeStorageMockRecorder) QuarantineSpace(ctx, spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QuarantineSpace", reflect.TypeOf((*MockNodeStorage)(nil).QuarantineSpace), ctx, spaceId)
 }
 
 // SpaceExists mocks base method.
@@ -336,6 +365,20 @@ func (mr *MockIndexStorageMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockIndexStorage)(nil).Close))
 }
 
+// DeleteSpaceEntry mocks base method.
+func (m *MockIndexStorage) DeleteSpaceEntry(ctx context.Context, spaceId string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSpaceEntry", ctx, spaceId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSpaceEntry indicates an expected call of DeleteSpaceEntry.
+func (mr *MockIndexStorageMockRecorder) DeleteSpaceEntry(ctx, spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpaceEntry", reflect.TypeOf((*MockIndexStorage)(nil).DeleteSpaceEntry), ctx, spaceId)
+}
+
 // DeletionLogId mocks base method.
 func (m *MockIndexStorage) DeletionLogId(ctx context.Context) (string, error) {
 	m.ctrl.T.Helper()
@@ -380,6 +423,20 @@ func (mr *MockIndexStorageMockRecorder) MarkArchived(ctx, spaceId, compressedSiz
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkArchived", reflect.TypeOf((*MockIndexStorage)(nil).MarkArchived), ctx, spaceId, compressedSize, uncompressedSize)
 }
 
+// MarkArchivedRemote mocks base method.
+func (m *MockIndexStorage) MarkArchivedRemote(ctx context.Context, spaceId, hash string, compressedSize, uncompressedSize int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkArchivedRemote", ctx, spaceId, hash, compressedSize, uncompressedSize)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkArchivedRemote indicates an expected call of MarkArchivedRemote.
+func (mr *MockIndexStorageMockRecorder) MarkArchivedRemote(ctx, spaceId, hash, compressedSize, uncompressedSize any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkArchivedRemote", reflect.TypeOf((*MockIndexStorage)(nil).MarkArchivedRemote), ctx, spaceId, hash, compressedSize, uncompressedSize)
+}
+
 // MarkError mocks base method.
 func (m *MockIndexStorage) MarkError(ctx context.Context, spaceId, errString string) error {
 	m.ctrl.T.Helper()
@@ -406,6 +463,20 @@ func (m *MockIndexStorage) ReadHashes(ctx context.Context, iterFunc func(nodesto
 func (mr *MockIndexStorageMockRecorder) ReadHashes(ctx, iterFunc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadHashes", reflect.TypeOf((*MockIndexStorage)(nil).ReadHashes), ctx, iterFunc)
+}
+
+// ReadSpacesByStatus mocks base method.
+func (m *MockIndexStorage) ReadSpacesByStatus(ctx context.Context, status nodestorage.SpaceStatus, iterFunc func(string) (bool, error)) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadSpacesByStatus", ctx, status, iterFunc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReadSpacesByStatus indicates an expected call of ReadSpacesByStatus.
+func (mr *MockIndexStorageMockRecorder) ReadSpacesByStatus(ctx, status, iterFunc any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSpacesByStatus", reflect.TypeOf((*MockIndexStorage)(nil).ReadSpacesByStatus), ctx, status, iterFunc)
 }
 
 // SetDeletionLogId mocks base method.

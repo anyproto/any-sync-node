@@ -187,6 +187,18 @@ func (mr *MockServiceMockRecorder) Run(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockService)(nil).Run), ctx)
 }
 
+// SetAclObserver mocks base method.
+func (m *MockService) SetAclObserver(observer func(string)) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAclObserver", observer)
+}
+
+// SetAclObserver indicates an expected call of SetAclObserver.
+func (mr *MockServiceMockRecorder) SetAclObserver(observer any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAclObserver", reflect.TypeOf((*MockService)(nil).SetAclObserver), observer)
+}
+
 // MockNodeSpace is a mock of NodeSpace interface.
 type MockNodeSpace struct {
 	ctrl     *gomock.Controller
@@ -422,6 +434,20 @@ func (m *MockNodeSpace) StoredIds() []string {
 func (mr *MockNodeSpaceMockRecorder) StoredIds() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoredIds", reflect.TypeOf((*MockNodeSpace)(nil).StoredIds))
+}
+
+// SyncHeads mocks base method.
+func (m *MockNodeSpace) SyncHeads(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncHeads", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SyncHeads indicates an expected call of SyncHeads.
+func (mr *MockNodeSpaceMockRecorder) SyncHeads(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncHeads", reflect.TypeOf((*MockNodeSpace)(nil).SyncHeads), ctx)
 }
 
 // SyncStatus mocks base method.

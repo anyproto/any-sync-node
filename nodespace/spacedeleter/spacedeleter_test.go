@@ -12,7 +12,11 @@ import (
 	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/anyproto/any-sync-node/archive/archivestore"
+	"github.com/anyproto/any-sync-node/archive/archivestore/mock_archivestore"
 	"github.com/anyproto/any-sync-node/archive/mock_archive"
+	"github.com/anyproto/any-sync-node/nodehead"
+	"github.com/anyproto/any-sync-node/nodehead/mock_nodehead"
 	"github.com/anyproto/any-sync-node/nodespace"
 	"github.com/anyproto/any-sync-node/nodespace/mock_nodespace"
 	"github.com/anyproto/any-sync-node/nodestorage"
@@ -225,12 +229,18 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 	nodeSync := mock_nodesync.NewMockNodeSync(ctrl)
 	archive := mock_archive.NewMockArchive(ctrl)
 	nodeConfMock := mock_nodeconf.NewMockService(ctrl)
+	archiveStore := mock_archivestore.NewMockArchiveStore(ctrl)
+	nodeHead := mock_nodehead.NewMockNodeHead(ctrl)
 	storage := nodestorage.New()
 	anymock.ExpectComp(coordClient.EXPECT(), coordinatorclient.CName)
 	anymock.ExpectComp(spaceService.EXPECT(), nodespace.CName)
 	anymock.ExpectComp(nodeSync.EXPECT(), nodesync.CName)
 	anymock.ExpectComp(archive.EXPECT(), "node.archive")
 	anymock.ExpectComp(nodeConfMock.EXPECT(), nodeconf.CName)
+	anymock.ExpectComp(archiveStore.EXPECT(), archivestore.CName)
+	anymock.ExpectComp(nodeHead.EXPECT(), nodehead.CName)
+	archiveStore.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(archivestore.ErrDisabled)
+	nodeHead.EXPECT().DeleteHeads(gomock.Any()).AnyTimes().Return(nil)
 	nodeSync.EXPECT().WaitSyncOnStart().Return(waiterChan).AnyTimes()
 	deleter := New().(*spaceDeleter)
 	a.Register(storeConfig(dir)).
@@ -240,6 +250,8 @@ func newSpaceDeleterFixture(t *testing.T) *spaceDeleterFixture {
 		Register(archive).
 		Register(nodeSync).
 		Register(nodeConfMock).
+		Register(archiveStore).
+		Register(nodeHead).
 		Register(deleter)
 	err = a.Start(context.Background())
 	require.NoError(t, err)

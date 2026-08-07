@@ -34,6 +34,9 @@ const (
 	SpaceStatusArchived
 	SpaceStatusError
 	SpaceStatusNotResponsible
+	// SpaceStatusMoved: the space was handed off to the current owners during
+	// resharding and its local data (db and/or archive object) was deleted.
+	SpaceStatusMoved
 )
 
 var (
@@ -42,11 +45,11 @@ var (
 )
 
 const (
-	IndexStorageName           = ".index"
-	migrationStateCollName     = "migrationState"
-	spaceCollName              = "space"
-	settingsCollName           = "settings"
-	newHashKey                 = "nh"
+	IndexStorageName       = ".index"
+	migrationStateCollName = "migrationState"
+	spaceCollName          = "space"
+	settingsCollName       = "settings"
+	newHashKey             = "nh"
 	// oldHashKey held the legacy diff hash, it is only cleaned up now
 	oldHashKey                 = "oh"
 	statusKey                  = "s"
@@ -62,10 +65,13 @@ const (
 type IndexStorage interface {
 	UpdateHash(ctx context.Context, updates ...SpaceUpdate) (err error)
 	ReadHashes(ctx context.Context, iterFunc func(update SpaceUpdate) (bool, error)) (err error)
+	ReadSpacesByStatus(ctx context.Context, status SpaceStatus, iterFunc func(spaceId string) (bool, error)) (err error)
 	SetSpaceStatus(ctx context.Context, spaceId string, status SpaceStatus, recId string) (err error)
 	SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error)
 	SpaceStatusEntry(ctx context.Context, spaceId string) (entry SpaceStatusEntry, err error)
 	MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) (err error)
+	DeleteSpaceEntry(ctx context.Context, spaceId string) (err error)
+	MarkArchivedRemote(ctx context.Context, spaceId, hash string, compressedSize, uncompressedSize int64) (err error)
 	MarkError(ctx context.Context, spaceId string, errString string) (err error)
 	DeletionLogId(ctx context.Context) (id string, err error)
 	SetDeletionLogId(ctx context.Context, id string) (err error)
@@ -143,6 +149,29 @@ func (d *indexStorage) ReadHashes(ctx context.Context, iterFunc func(update Spac
 	return nil
 }
 
+func (d *indexStorage) ReadSpacesByStatus(ctx context.Context, status SpaceStatus, iterFunc func(spaceId string) (bool, error)) (err error) {
+	filter := query.Key{
+		Path:   []string{statusKey},
+		Filter: query.NewComp(query.CompOpEq, int(status)),
+	}
+	iter, err := d.spaceColl.Find(filter).Sort("id").Iter(ctx)
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return err
+		}
+		cont, err := iterFunc(doc.Value().GetString("id"))
+		if err != nil || !cont {
+			return err
+		}
+	}
+	return nil
+}
+
 func (d *indexStorage) SpaceStatus(ctx context.Context, spaceId string) (status SpaceStatus, err error) {
 	doc, err := d.spaceColl.FindId(ctx, spaceId)
 	if err != nil {
@@ -210,6 +239,18 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 	return tx.Commit()
 }
 
+// DeleteSpaceEntry removes the index entry entirely (unlike the deletion flow
+// it leaves no tombstone). Used to garbage-collect entries of spaces that
+// never durably existed anywhere, e.g. leftovers of an uncommitted space push.
+func (d *indexStorage) DeleteSpaceEntry(ctx context.Context, spaceId string) (err error) {
+	err = d.spaceColl.DeleteId(ctx, spaceId)
+	if errors.Is(err, anystore.ErrDocNotFound) {
+		return nil
+	}
+	d.lastAccessCache.Delete(spaceId)
+	return err
+}
+
 func (d *indexStorage) MarkError(ctx context.Context, spaceId string, errString string) (err error) {
 	_, err = d.spaceColl.UpdateId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		v.Set(statusKey, a.NewNumberInt(int(SpaceStatusError)))
@@ -227,6 +268,25 @@ func (d *indexStorage) MarkArchived(ctx context.Context, spaceId string, compres
 		return v, true, nil
 	}))
 	return err
+}
+
+// MarkArchivedRemote registers a space adopted from another node as archived:
+// unlike MarkArchived the space has never been opened locally, so the heads
+// hash comes from the sender and the index entry may not exist yet.
+func (d *indexStorage) MarkArchivedRemote(ctx context.Context, spaceId, hash string, compressedSize, uncompressedSize int64) (err error) {
+	_, err = d.spaceColl.UpsertId(ctx, spaceId, query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
+		v.Set(newHashKey, a.NewString(hash))
+		v.Set(lastAccessKey, a.NewNumberInt(int(time.Now().Unix())))
+		v.Set(archiveSizeCompressedKey, a.NewNumberInt(int(compressedSize)))
+		v.Set(archiveSizeUncompressedKey, a.NewNumberInt(int(uncompressedSize)))
+		v.Set(statusKey, a.NewNumberInt(int(SpaceStatusArchived)))
+		return v, true, nil
+	}))
+	if err != nil {
+		return err
+	}
+	d.lastAccessCache.Store(spaceId, time.Now())
+	return nil
 }
 
 func (d *indexStorage) DeletionLogId(ctx context.Context) (id string, err error) {

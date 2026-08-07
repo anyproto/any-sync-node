@@ -72,10 +72,12 @@ func (n *nodeSync) Init(a *app.App) (err error) {
 		registerMetric(n.syncStat, m.(metric.Metric).Registry())
 	}
 
+	adopter, _ := a.Component("node.archive.adopter").(archiveAdopter)
 	return nodesyncproto.DRPCRegisterNodeSync(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{
 		nodeRemoteDiffHandler: &nodeRemoteDiffHandler{nodehead: n.nodehead},
 		coldSync:              n.coldsync,
 		nodeSpace:             n.nodespace,
+		adopter:               adopter,
 	})
 }
 

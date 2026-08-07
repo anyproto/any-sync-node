@@ -6,8 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	anystore "github.com/anyproto/any-store"
+	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/stretchr/testify/assert"
@@ -68,7 +70,7 @@ func TestArchive_Archive(t *testing.T) {
 	})
 
 	fx.indexStorage.EXPECT().SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusOk, "")
-	fx.archiveStore.EXPECT().Delete(ctx, spaceId)
+	// restore keeps the archive object: restore is a copy, not a move
 
 	require.NoError(t, fx.Restore(ctx, spaceId))
 
@@ -135,4 +137,68 @@ func (t testConfig) Name() string {
 
 func (t testConfig) GetArchive() Config {
 	return Config{}
+}
+
+func TestArchive_ForceArchive(t *testing.T) {
+	fx := newFixture(t)
+	tmpDir := t.TempDir()
+
+	spaceId := "force.id"
+	// prepare a dump dir with a store.db like DumpStorage produces,
+	// including the space state the snapshot heads are read from
+	db, err := anystore.Open(ctx, filepath.Join(tmpDir, "store.db"), nil)
+	require.NoError(t, err)
+	_, err = db.CreateCollection(ctx, "test")
+	require.NoError(t, err)
+	stateColl, err := db.Collection(ctx, "state")
+	require.NoError(t, err)
+	arena := &anyenc.Arena{}
+	stateDoc := arena.NewObject()
+	stateDoc.Set("id", arena.NewString(spaceId))
+	stateDoc.Set("oh", arena.NewString("snap-old"))
+	stateDoc.Set("nh", arena.NewString("snap-new"))
+	require.NoError(t, stateColl.Insert(ctx, stateDoc))
+	require.NoError(t, db.Close())
+	fx.storage.EXPECT().
+		DumpStorage(ctx, spaceId, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, do func(path string) error) error {
+			return do(tmpDir)
+		})
+	var uploaded int
+	fx.archiveStore.EXPECT().Put(ctx, spaceId, gomock.Any()).DoAndReturn(func(_ context.Context, _ string, rd io.ReadSeeker) error {
+		data, err := io.ReadAll(rd)
+		require.NoError(t, err)
+		uploaded = len(data)
+		return nil
+	})
+
+	// no MarkArchived, no local deletion: the space stays live
+	hash, compressedSize, uncompressedSize, err := fx.ForceArchive(ctx, spaceId)
+	require.NoError(t, err)
+	assert.Equal(t, "snap-new", hash)
+	assert.Greater(t, compressedSize, int64(0))
+	assert.Greater(t, uncompressedSize, int64(0))
+	assert.Equal(t, int(compressedSize), uploaded)
+	_, err = os.Stat(filepath.Join(tmpDir, "store.db"))
+	assert.NoError(t, err)
+}
+
+func TestArchive_QueueRestore(t *testing.T) {
+	fx := newFixture(t)
+	spaceId := "eager.id"
+
+	restored := make(chan struct{})
+	fx.storage.EXPECT().
+		TryLockAndOpenDb(gomock.Any(), spaceId, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ nodestorage.DoAfterOpenFunc) error {
+			close(restored)
+			return nil
+		})
+
+	fx.QueueRestore(spaceId)
+	select {
+	case <-restored:
+	case <-time.After(time.Second * 5):
+		t.Fatal("eager restore was not triggered")
+	}
 }
