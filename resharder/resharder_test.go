@@ -37,7 +37,6 @@ func okEntry() nodestorage.SpaceStatusEntry {
 	return nodestorage.SpaceStatusEntry{
 		SpaceId: spaceId,
 		Status:  nodestorage.SpaceStatusOk,
-		OldHash: "oldHash",
 		NewHash: "newHash",
 	}
 }
@@ -91,7 +90,7 @@ func TestResharder_DrainSpace(t *testing.T) {
 		fx.nodeConf.EXPECT().IsResponsible(spaceId).Return(false)
 		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(okEntry(), nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(true)
-		fx.archive.EXPECT().ForceArchive(gomock.Any(), spaceId).Return("oldHash", "newHash", int64(11), int64(22), nil)
+		fx.archive.EXPECT().ForceArchive(gomock.Any(), spaceId).Return("newHash", int64(11), int64(22), nil)
 		// post-snapshot check: index still matches the snapshot heads
 		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(okEntry(), nil)
 		fx.archiveStore.EXPECT().Key(spaceId).Return("me/" + spaceId)

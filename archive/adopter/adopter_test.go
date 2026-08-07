@@ -60,8 +60,8 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		fx.storage.EXPECT().SpaceExists(req.SpaceId).Return(false)
 		fx.archiveStore.EXPECT().CopyFrom(ctx, req.SrcKey, req.SpaceId).Return(nil)
 		fx.archiveStore.EXPECT().Exists(ctx, req.SpaceId).Return(true, nil)
-		fx.indexStorage.EXPECT().MarkArchivedRemote(ctx, req.SpaceId, "oldHash", "newHash", int64(10), int64(20)).Return(nil)
-		fx.nodeHead.EXPECT().SetHead(req.SpaceId, "oldHash", "newHash").Return(0, nil)
+		fx.indexStorage.EXPECT().MarkArchivedRemote(ctx, req.SpaceId, "newHash", int64(10), int64(20)).Return(nil)
+		fx.nodeHead.EXPECT().SetHead(req.SpaceId, "newHash").Return(0, nil)
 
 		resp, err := fx.AdoptArchive(ctx, req)
 		require.NoError(t, err)
@@ -76,8 +76,8 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		fx.storage.EXPECT().SpaceExists(req.SpaceId).Return(false)
 		fx.archiveStore.EXPECT().CopyFrom(ctx, req.SrcKey, req.SpaceId).Return(nil)
 		fx.archiveStore.EXPECT().Exists(ctx, req.SpaceId).Return(true, nil)
-		fx.indexStorage.EXPECT().MarkArchivedRemote(ctx, req.SpaceId, "oldHash", "newHash", int64(10), int64(20)).Return(nil)
-		fx.nodeHead.EXPECT().SetHead(req.SpaceId, "oldHash", "newHash").Return(0, nil)
+		fx.indexStorage.EXPECT().MarkArchivedRemote(ctx, req.SpaceId, "newHash", int64(10), int64(20)).Return(nil)
+		fx.nodeHead.EXPECT().SetHead(req.SpaceId, "newHash").Return(0, nil)
 		fx.archive.EXPECT().QueueRestore(req.SpaceId)
 
 		resp, err := fx.AdoptArchive(ctx, req)
@@ -88,7 +88,7 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		fx := newFixture(t)
 		req := adoptReq()
 		fx.expectNodePeer()
-		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusOk, OldHash: "oldHash", NewHash: "newHash"}, nil)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusOk, NewHash: "newHash"}, nil)
 		fx.storage.EXPECT().SpaceExists(req.SpaceId).Return(true)
 
 		resp, err := fx.AdoptArchive(ctx, req)
@@ -99,7 +99,7 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		fx := newFixture(t)
 		req := adoptReq()
 		fx.expectNodePeer()
-		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusArchived, OldHash: "oldHash", NewHash: "newHash"}, nil)
+		fx.indexStorage.EXPECT().SpaceStatusEntry(ctx, req.SpaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusArchived, NewHash: "newHash"}, nil)
 		fx.archiveStore.EXPECT().Exists(ctx, req.SpaceId).Return(true, nil)
 
 		resp, err := fx.AdoptArchive(ctx, req)
@@ -114,8 +114,8 @@ func TestAdopter_AdoptArchive(t *testing.T) {
 		fx.archiveStore.EXPECT().Exists(ctx, req.SpaceId).Return(false, nil)
 		fx.archiveStore.EXPECT().CopyFrom(ctx, req.SrcKey, req.SpaceId).Return(nil)
 		fx.archiveStore.EXPECT().Exists(ctx, req.SpaceId).Return(true, nil)
-		fx.indexStorage.EXPECT().MarkArchivedRemote(ctx, req.SpaceId, "oldHash", "newHash", int64(10), int64(20)).Return(nil)
-		fx.nodeHead.EXPECT().SetHead(req.SpaceId, "oldHash", "newHash").Return(0, nil)
+		fx.indexStorage.EXPECT().MarkArchivedRemote(ctx, req.SpaceId, "newHash", int64(10), int64(20)).Return(nil)
+		fx.nodeHead.EXPECT().SetHead(req.SpaceId, "newHash").Return(0, nil)
 
 		resp, err := fx.AdoptArchive(ctx, req)
 		require.NoError(t, err)

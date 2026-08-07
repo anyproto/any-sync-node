@@ -152,10 +152,10 @@ func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArc
 	if !ok {
 		return nil, nodesyncproto.ErrArchiveObjectMissing
 	}
-	if err = ad.storage.IndexStorage().MarkArchivedRemote(ctx, req.SpaceId, req.OldHash, req.NewHash, req.CompressedSize, req.UncompressedSize); err != nil {
+	if err = ad.storage.IndexStorage().MarkArchivedRemote(ctx, req.SpaceId, req.NewHash, req.CompressedSize, req.UncompressedSize); err != nil {
 		return nil, err
 	}
-	if _, err = ad.nodeHead.SetHead(req.SpaceId, req.OldHash, req.NewHash); err != nil {
+	if _, err = ad.nodeHead.SetHead(req.SpaceId, req.NewHash); err != nil {
 		log.Warn("can't set nodehead after adoption", zap.String("spaceId", req.SpaceId), zap.Error(err))
 		err = nil
 	}
@@ -173,7 +173,7 @@ func (ad *adopter) AdoptArchive(ctx context.Context, req *nodesyncproto.AdoptArc
 // diverged copy could be older than the sender's and must not justify its
 // deletion.
 func alreadyHaveResponse(entry nodestorage.SpaceStatusEntry, req *nodesyncproto.AdoptArchiveRequest) *nodesyncproto.AdoptArchiveResponse {
-	if entry.NewHash == req.NewHash && entry.OldHash == req.OldHash {
+	if entry.NewHash == req.NewHash {
 		return &nodesyncproto.AdoptArchiveResponse{
 			Result: nodesyncproto.AdoptArchiveResult_AdoptArchiveAlreadyHaveSame,
 		}

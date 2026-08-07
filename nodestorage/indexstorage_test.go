@@ -1,6 +1,7 @@
 package nodestorage
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,7 +23,6 @@ func TestIndexStorage_UpdateLastAccess(t *testing.T) {
 
 	require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{
 		SpaceId: "space2",
-		OldHash: "old",
 		NewHash: "new",
 		Updated: time.Now(),
 	}))
@@ -32,7 +32,6 @@ func TestIndexStorage_UpdateLastAccess(t *testing.T) {
 		assert.True(t, update.Updated.Before(time.Now()))
 		assert.True(t, update.SpaceId == "space1" || update.SpaceId == "space2")
 		if update.SpaceId == "space2" {
-			assert.Equal(t, "old", update.OldHash)
 			assert.Equal(t, "new", update.NewHash)
 		}
 		return true, nil
@@ -134,7 +133,6 @@ func TestIndexStorage_SpaceStatusEntry(t *testing.T) {
 		require.NoError(t, fx.SetSpaceStatus(ctx, "space1", SpaceStatusOk, ""))
 		require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{
 			SpaceId: "space1",
-			OldHash: "old",
 			NewHash: "new",
 		}))
 		require.NoError(t, fx.MarkArchived(ctx, "space1", 100, 200))
@@ -144,7 +142,6 @@ func TestIndexStorage_SpaceStatusEntry(t *testing.T) {
 		assert.Equal(t, "space1", entry.SpaceId)
 		assert.Equal(t, SpaceStatusArchived, entry.Status)
 		assert.Equal(t, "new", entry.NewHash)
-		assert.Equal(t, "old", entry.OldHash)
 		assert.Equal(t, int64(100), entry.ArchiveSizeCompressed)
 		assert.Equal(t, int64(200), entry.ArchiveSizeUncompressed)
 		assert.False(t, entry.LastAccess.IsZero())
@@ -177,4 +174,13 @@ func TestIndexStorage_MarkError(t *testing.T) {
 	status, err := fx.SpaceStatus(ctx, "space1")
 	require.NoError(t, err)
 	assert.Equal(t, SpaceStatusError, status)
+}
+
+func createTestIndexStorage(ctx context.Context, tempDir string) (IndexStorage, error) {
+	dbPath := filepath.Join(tempDir, "test_index")
+	err := os.MkdirAll(dbPath, 0755)
+	if err != nil {
+		return nil, err
+	}
+	return OpenIndexStorage(ctx, dbPath)
 }

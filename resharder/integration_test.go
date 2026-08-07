@@ -68,7 +68,7 @@ func TestIntegration_DrainAdoptRestore(t *testing.T) {
 	require.NoError(t, stateColl.Insert(ctx, stateDoc))
 	require.NoError(t, db.Close())
 	require.NoError(t, nodeA.storage.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
-		SpaceId: spaceId, OldHash: "h-old", NewHash: "h-new",
+		SpaceId: spaceId, NewHash: "h-new",
 	}))
 
 	// node A is no longer responsible; node B is the only owner (minAcks=1)
@@ -77,7 +77,7 @@ func TestIntegration_DrainAdoptRestore(t *testing.T) {
 	// node B accepts adoption from node A (a tree node) and registers heads
 	nodeB.nodeConf.EXPECT().NodeTypes("nodeA").Return([]nodeconf.NodeType{nodeconf.NodeTypeTree})
 	nodeB.nodeConf.EXPECT().IsResponsible(spaceId).Return(true)
-	nodeB.nodeHead.EXPECT().SetHead(spaceId, "h-old", "h-new").Return(0, nil)
+	nodeB.nodeHead.EXPECT().SetHead(spaceId, "h-new").Return(0, nil)
 
 	// wire the drainer's adopt call straight into node B's adopter
 	nodeA.resharder.adoptFn = func(_ context.Context, peerId string, req *nodesyncproto.AdoptArchiveRequest) (*nodesyncproto.AdoptArchiveResponse, error) {

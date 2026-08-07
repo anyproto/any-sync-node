@@ -71,14 +71,11 @@ type nodeStorage struct {
 	observer hashObserver
 }
 
-func (st *nodeStorage) OnHashChange(newHash string) {
-	// any-sync's statestorage no longer tracks a distinct old hash after the
-	// diffsync-V2 removal (it mirrors "oh" == "nh" == newHash); the node keeps
-	// its oldHash plumbing, so we pass newHash for both.
-	st.observer(st.Id(), newHash, newHash)
+func (st *nodeStorage) OnHashChange(hash string) {
+	st.observer(st.Id(), hash)
 }
 
-type hashObserver = func(spaceId, oldHash, newHash string)
+type hashObserver = func(spaceId, hash string)
 
 func newNodeStorage(spaceStorage spacestorage.SpaceStorage, cont *storageContainer, observer hashObserver) *nodeStorage {
 	st := &nodeStorage{

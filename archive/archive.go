@@ -47,12 +47,12 @@ type Archive interface {
 	// keeping the local DB and its status intact. Used to ship live spaces
 	// through the shared archive store during migration. The caller must ensure
 	// the space is not already archived: opening an archived space triggers a
-	// restore. Returns the heads read from the snapshot itself (they exactly
-	// describe the uploaded object, unlike the asynchronously updated index)
+	// restore. Returns the heads hash read from the snapshot itself (it exactly
+	// describes the uploaded object, unlike the asynchronously updated index)
 	// and the snapshot sizes.
 	// The return types are primitives on purpose: a struct would make the
 	// generated mock import this package and create test-only import cycles.
-	ForceArchive(ctx context.Context, spaceId string) (oldHash, newHash string, compressedSize, uncompressedSize int64, err error)
+	ForceArchive(ctx context.Context, spaceId string) (hash string, compressedSize, uncompressedSize int64, err error)
 	// QueueRestore schedules a background restore of an archived space
 	// (used for eager adoption of migrated spaces).
 	QueueRestore(spaceId string)
@@ -213,12 +213,12 @@ func (a *archive) Archive(ctx context.Context, spaceId string) (err error) {
 	return
 }
 
-func (a *archive) ForceArchive(ctx context.Context, spaceId string) (oldHash, newHash string, compressedSize, uncompressedSize int64, err error) {
+func (a *archive) ForceArchive(ctx context.Context, spaceId string) (hash string, compressedSize, uncompressedSize int64, err error) {
 	// DumpStorage backups the db into a temp dir; it works for open spaces too
 	err = a.storageProvider.DumpStorage(ctx, spaceId, func(path string) error {
 		// read the heads from the snapshot: they describe exactly what the
 		// uploaded object contains
-		oldHash, newHash, err = readSnapshotHeads(ctx, spaceId, filepath.Join(path, "store.db"))
+		hash, err = readSnapshotHead(ctx, spaceId, filepath.Join(path, "store.db"))
 		if err != nil {
 			return err
 		}
@@ -243,10 +243,10 @@ func (a *archive) ForceArchive(ctx context.Context, spaceId string) (oldHash, ne
 	return
 }
 
-// readSnapshotHeads reads the space state directly from the snapshot db
+// readSnapshotHead reads the space state directly from the snapshot db
 // (schema of commonspace/headsync/statestorage, including the legacy
-// single-hash fallback).
-func readSnapshotHeads(ctx context.Context, spaceId, dbPath string) (oldHash, newHash string, err error) {
+// "h" key fallback).
+func readSnapshotHead(ctx context.Context, spaceId, dbPath string) (hash string, err error) {
 	db, err := anystore.Open(ctx, dbPath, nil)
 	if err != nil {
 		return
@@ -262,13 +262,11 @@ func readSnapshotHeads(ctx context.Context, spaceId, dbPath string) (oldHash, ne
 	if err != nil {
 		return
 	}
-	oldHash = doc.Value().GetString("oh")
-	newHash = doc.Value().GetString("nh")
-	if oldHash == "" || newHash == "" {
-		oldHash = doc.Value().GetString("h")
-		newHash = oldHash
+	hash = doc.Value().GetString("nh")
+	if hash == "" {
+		hash = doc.Value().GetString("h")
 	}
-	return oldHash, newHash, nil
+	return hash, nil
 }
 
 // createGzipFromStore creates store.gz from store.db inside spaceDir.

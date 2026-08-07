@@ -215,7 +215,7 @@ func (mr *MockNodeStorageMockRecorder) OnDeleteStorage(onDelete any) *gomock.Cal
 }
 
 // OnWriteHash mocks base method.
-func (m *MockNodeStorage) OnWriteHash(onWrite func(context.Context, string, string, string)) {
+func (m *MockNodeStorage) OnWriteHash(onWrite func(context.Context, string, string)) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "OnWriteHash", onWrite)
 }
@@ -409,21 +409,6 @@ func (mr *MockIndexStorageMockRecorder) FindOldestInactiveSpace(ctx, olderThan, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOldestInactiveSpace", reflect.TypeOf((*MockIndexStorage)(nil).FindOldestInactiveSpace), ctx, olderThan, skip)
 }
 
-// GetDiffMigrationVersion mocks base method.
-func (m *MockIndexStorage) GetDiffMigrationVersion(ctx context.Context) (int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDiffMigrationVersion", ctx)
-	ret0, _ := ret[0].(int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDiffMigrationVersion indicates an expected call of GetDiffMigrationVersion.
-func (mr *MockIndexStorageMockRecorder) GetDiffMigrationVersion(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiffMigrationVersion", reflect.TypeOf((*MockIndexStorage)(nil).GetDiffMigrationVersion), ctx)
-}
-
 // MarkArchived mocks base method.
 func (m *MockIndexStorage) MarkArchived(ctx context.Context, spaceId string, compressedSize, uncompressedSize int64) error {
 	m.ctrl.T.Helper()
@@ -439,17 +424,17 @@ func (mr *MockIndexStorageMockRecorder) MarkArchived(ctx, spaceId, compressedSiz
 }
 
 // MarkArchivedRemote mocks base method.
-func (m *MockIndexStorage) MarkArchivedRemote(ctx context.Context, spaceId, oldHash, newHash string, compressedSize, uncompressedSize int64) error {
+func (m *MockIndexStorage) MarkArchivedRemote(ctx context.Context, spaceId, hash string, compressedSize, uncompressedSize int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkArchivedRemote", ctx, spaceId, oldHash, newHash, compressedSize, uncompressedSize)
+	ret := m.ctrl.Call(m, "MarkArchivedRemote", ctx, spaceId, hash, compressedSize, uncompressedSize)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MarkArchivedRemote indicates an expected call of MarkArchivedRemote.
-func (mr *MockIndexStorageMockRecorder) MarkArchivedRemote(ctx, spaceId, oldHash, newHash, compressedSize, uncompressedSize any) *gomock.Call {
+func (mr *MockIndexStorageMockRecorder) MarkArchivedRemote(ctx, spaceId, hash, compressedSize, uncompressedSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkArchivedRemote", reflect.TypeOf((*MockIndexStorage)(nil).MarkArchivedRemote), ctx, spaceId, oldHash, newHash, compressedSize, uncompressedSize)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkArchivedRemote", reflect.TypeOf((*MockIndexStorage)(nil).MarkArchivedRemote), ctx, spaceId, hash, compressedSize, uncompressedSize)
 }
 
 // MarkError mocks base method.
@@ -494,20 +479,6 @@ func (mr *MockIndexStorageMockRecorder) ReadSpacesByStatus(ctx, status, iterFunc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSpacesByStatus", reflect.TypeOf((*MockIndexStorage)(nil).ReadSpacesByStatus), ctx, status, iterFunc)
 }
 
-// RunMigrations mocks base method.
-func (m *MockIndexStorage) RunMigrations(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunMigrations", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RunMigrations indicates an expected call of RunMigrations.
-func (mr *MockIndexStorageMockRecorder) RunMigrations(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunMigrations", reflect.TypeOf((*MockIndexStorage)(nil).RunMigrations), ctx)
-}
-
 // SetDeletionLogId mocks base method.
 func (m *MockIndexStorage) SetDeletionLogId(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
@@ -520,20 +491,6 @@ func (m *MockIndexStorage) SetDeletionLogId(ctx context.Context, id string) erro
 func (mr *MockIndexStorageMockRecorder) SetDeletionLogId(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeletionLogId", reflect.TypeOf((*MockIndexStorage)(nil).SetDeletionLogId), ctx, id)
-}
-
-// SetDiffMigrationVersion mocks base method.
-func (m *MockIndexStorage) SetDiffMigrationVersion(ctx context.Context, version int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetDiffMigrationVersion", ctx, version)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetDiffMigrationVersion indicates an expected call of SetDiffMigrationVersion.
-func (mr *MockIndexStorageMockRecorder) SetDiffMigrationVersion(ctx, version any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDiffMigrationVersion", reflect.TypeOf((*MockIndexStorage)(nil).SetDiffMigrationVersion), ctx, version)
 }
 
 // SetSpaceStatus mocks base method.
@@ -597,20 +554,6 @@ func (mr *MockIndexStorageMockRecorder) UpdateHash(ctx any, updates ...any) *gom
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx}, updates...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHash", reflect.TypeOf((*MockIndexStorage)(nil).UpdateHash), varargs...)
-}
-
-// UpdateHashes mocks base method.
-func (m *MockIndexStorage) UpdateHashes(ctx context.Context, updateFunc func(string, string, string) (string, string, bool)) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateHashes", ctx, updateFunc)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateHashes indicates an expected call of UpdateHashes.
-func (mr *MockIndexStorageMockRecorder) UpdateHashes(ctx, updateFunc any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHashes", reflect.TypeOf((*MockIndexStorage)(nil).UpdateHashes), ctx, updateFunc)
 }
 
 // UpdateLastAccess mocks base method.

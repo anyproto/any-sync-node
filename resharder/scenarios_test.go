@@ -227,7 +227,7 @@ func (net *scenarioNet) createSpace(t *testing.T, nodeName, spaceId string) {
 	require.NoError(t, stateColl.Insert(ctx, stateDoc))
 	require.NoError(t, db.Close())
 	require.NoError(t, node.storage.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
-		SpaceId: spaceId, OldHash: "old-" + spaceId, NewHash: "new-" + spaceId,
+		SpaceId: spaceId, NewHash: "new-" + spaceId,
 	}))
 }
 
@@ -246,7 +246,7 @@ func newScenarioNode(t *testing.T, name string, bucket *memBucket, conf *ringCon
 	hotSync := mock_hotsync.NewMockHotSync(ctrl)
 	anymock.ExpectComp(nodeHead.EXPECT(), nodehead.CName)
 	anymock.ExpectComp(hotSync.EXPECT(), hotsync.CName)
-	nodeHead.EXPECT().SetHead(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(0, nil)
+	nodeHead.EXPECT().SetHead(gomock.Any(), gomock.Any()).AnyTimes().Return(0, nil)
 	nodeHead.EXPECT().DeleteHeads(gomock.Any()).AnyTimes().Return(nil)
 	hotSync.EXPECT().SetMetric(gomock.Any(), gomock.Any()).AnyTimes()
 	hotSync.EXPECT().UpdateQueue(gomock.Any()).AnyTimes()

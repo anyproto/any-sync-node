@@ -173,10 +173,9 @@ func TestArchive_ForceArchive(t *testing.T) {
 	})
 
 	// no MarkArchived, no local deletion: the space stays live
-	oldHash, newHash, compressedSize, uncompressedSize, err := fx.ForceArchive(ctx, spaceId)
+	hash, compressedSize, uncompressedSize, err := fx.ForceArchive(ctx, spaceId)
 	require.NoError(t, err)
-	assert.Equal(t, "snap-old", oldHash)
-	assert.Equal(t, "snap-new", newHash)
+	assert.Equal(t, "snap-new", hash)
 	assert.Greater(t, compressedSize, int64(0))
 	assert.Greater(t, uncompressedSize, int64(0))
 	assert.Equal(t, int(compressedSize), uploaded)

@@ -130,9 +130,6 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 		}
 		err = m.newStorage.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
 			SpaceId: id,
-			// statestorage.State no longer carries a distinct old hash after the
-			// diffsync-V2 removal; use NewHash for both (matches the "oh" == "nh" mirror).
-			OldHash: state.NewHash,
 			NewHash: state.NewHash,
 		})
 		if err != nil {

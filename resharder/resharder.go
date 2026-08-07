@@ -308,7 +308,7 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 
 	// heads advertised to the owners; for live spaces they are read from the
 	// snapshot itself so they exactly describe the uploaded object
-	oldHash, newHash := entry.OldHash, entry.NewHash
+	newHash := entry.NewHash
 	compressedSize, uncompressedSize := entry.ArchiveSizeCompressed, entry.ArchiveSizeUncompressed
 	eager := false
 	if status == nodestorage.SpaceStatusOk {
@@ -316,7 +316,7 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 			// index entry without local data: nothing to hand off
 			return true, index.SetSpaceStatus(ctx, spaceId, nodestorage.SpaceStatusMoved, "")
 		}
-		if oldHash, newHash, compressedSize, uncompressedSize, err = r.archive.ForceArchive(ctx, spaceId); err != nil {
+		if newHash, compressedSize, uncompressedSize, err = r.archive.ForceArchive(ctx, spaceId); err != nil {
 			return false, err
 		}
 		// writes may have landed while the snapshot was taken/uploaded: park
@@ -333,9 +333,11 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 	}
 
 	req := &nodesyncproto.AdoptArchiveRequest{
-		SpaceId:          spaceId,
-		SrcKey:           r.archiveStore.Key(spaceId),
-		OldHash:          oldHash,
+		SpaceId: spaceId,
+		SrcKey:  r.archiveStore.Key(spaceId),
+		// OldHash is a legacy wire field: mirror NewHash for receivers that
+		// still compare both
+		OldHash:          newHash,
 		NewHash:          newHash,
 		Eager:            eager,
 		CompressedSize:   compressedSize,
@@ -388,7 +390,7 @@ func (r *resharder) drainSpace(spaceId string) (ok bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	if cur.NewHash != newHash || cur.OldHash != oldHash {
+	if cur.NewHash != newHash {
 		log.Info("drain: heads changed during handoff, retrying next cycle", zap.String("spaceId", spaceId))
 		return false, nil
 	}

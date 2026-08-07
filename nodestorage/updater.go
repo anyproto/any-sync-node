@@ -11,7 +11,6 @@ import (
 
 type SpaceUpdate struct {
 	SpaceId string
-	OldHash string
 	NewHash string
 	Updated time.Time
 }

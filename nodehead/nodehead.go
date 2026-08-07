@@ -35,9 +35,8 @@ func New() NodeHead {
 
 // NodeHead keeps current state of all spaces by partitions
 type NodeHead interface {
-	SetHead(spaceId, oldHead, newHead string) (part int, err error)
+	SetHead(spaceId, head string) (part int, err error)
 	GetHead(spaceId string) (head string, err error)
-	GetOldHead(spaceId string) (head string, err error)
 	DeleteHeads(spaceId string) error
 	ReloadHeadFromStore(ctx context.Context, spaceId string) error
 	LDiff(partId int) ldiff.Diff
@@ -53,18 +52,16 @@ type nodeStorage interface {
 type nodeHead struct {
 	mu         sync.Mutex
 	partitions map[int]ldiff.Diff
-	oldHashes  map[string]string
 	nodeconf   nodeconf.NodeConf
 	spaceStore nodeStorage
 }
 
 func (n *nodeHead) Init(a *app.App) (err error) {
 	n.partitions = map[int]ldiff.Diff{}
-	n.oldHashes = map[string]string{}
 	n.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	n.spaceStore = a.MustComponent(spacestorage.CName).(nodeStorage)
-	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, oldHash, newHash string) {
-		if _, e := n.SetHead(spaceId, oldHash, newHash); e != nil {
+	n.spaceStore.OnWriteHash(func(_ context.Context, spaceId, hash string) {
+		if _, e := n.SetHead(spaceId, hash); e != nil {
 			log.Error("can't set head", zap.Error(e))
 		}
 	})
@@ -88,7 +85,7 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 	var total int
 	err = n.spaceStore.IndexStorage().ReadHashes(ctx, func(update nodestorage.SpaceUpdate) (bool, error) {
 		total++
-		if _, e := n.SetHead(update.SpaceId, update.OldHash, update.NewHash); e != nil {
+		if _, e := n.SetHead(update.SpaceId, update.NewHash); e != nil {
 			log.Error("can't set head", zap.Error(e))
 			return false, e
 		}
@@ -104,7 +101,6 @@ func (n *nodeHead) Run(ctx context.Context) (err error) {
 func (n *nodeHead) DeleteHeads(spaceId string) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	delete(n.oldHashes, spaceId)
 	part := n.nodeconf.Partition(spaceId)
 	if ld, ok := n.partitions[part]; ok {
 		return ld.RemoveId(spaceId)
@@ -112,7 +108,7 @@ func (n *nodeHead) DeleteHeads(spaceId string) error {
 	return nil
 }
 
-func (n *nodeHead) SetHead(spaceId, oldHead, newHead string) (part int, err error) {
+func (n *nodeHead) SetHead(spaceId, head string) (part int, err error) {
 	part = n.nodeconf.Partition(spaceId)
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -121,8 +117,7 @@ func (n *nodeHead) SetHead(spaceId, oldHead, newHead string) (part int, err erro
 		ld = ldiff.New(16, 16)
 		n.partitions[part] = ld
 	}
-	ld.Set(ldiff.Element{Id: spaceId, Head: newHead})
-	n.oldHashes[spaceId] = oldHead
+	ld.Set(ldiff.Element{Id: spaceId, Head: head})
 	return
 }
 
@@ -158,16 +153,6 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 		return
 	}
 	return el.Head, nil
-}
-
-func (n *nodeHead) GetOldHead(spaceId string) (hash string, err error) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	hash, ok := n.oldHashes[spaceId]
-	if !ok {
-		err = ErrSpaceNotFound
-	}
-	return
 }
 
 func (n *nodeHead) ReloadHeadFromStore(ctx context.Context, spaceId string) error {

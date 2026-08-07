@@ -60,7 +60,6 @@ func TestNodeHead_Run(t *testing.T) {
 		fx = newFixture(t, tmpDir)
 		defer fx.Finish(t)
 		assert.Len(t, fx.NodeHead.(*nodeHead).partitions, 1)
-		assert.Len(t, fx.NodeHead.(*nodeHead).oldHashes, 10)
 	})
 }
 
@@ -80,10 +79,10 @@ func TestNodeHead_SetHead(t *testing.T) {
 	}
 
 	t.Run("set head", func(t *testing.T) {
-		part, err := fx.SetHead("2.2", "oldHead", "newhead")
+		part, err := fx.SetHead("2.2", "newhead")
 		require.NoError(t, err)
 		h1 := getHash(part)
-		part2, err := fx.SetHead("3.2", "oldHead", "newhead")
+		part2, err := fx.SetHead("3.2", "newhead")
 		assert.Equal(t, part, part2)
 		h2 := getHash(part)
 		assert.NotEqual(t, h1, h2)
@@ -109,18 +108,13 @@ func TestNodeHead_Ranges(t *testing.T) {
 func TestNodeHead_GetSpaceHash(t *testing.T) {
 	fx := newFixture(t, "")
 	defer fx.Finish(t)
-	oldHash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
 	newHash := "bf1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
-	_, err := fx.SetHead("space1", oldHash, newHash)
+	_, err := fx.SetHead("space1", newHash)
 	require.NoError(t, err)
 
 	head, err := fx.GetHead("space1")
 	require.NoError(t, err)
 	assert.Equal(t, newHash, head)
-
-	head, err = fx.GetOldHead("space1")
-	require.NoError(t, err)
-	assert.Equal(t, oldHash, head)
 
 	_, err = fx.GetHead("not found")
 	assert.Equal(t, ErrSpaceNotFound, err)
@@ -130,7 +124,7 @@ func TestNodeHead_DeleteHeads(t *testing.T) {
 	fx := newFixture(t, "")
 	defer fx.Finish(t)
 	hash := "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
-	_, err := fx.SetHead("space1", hash, hash)
+	_, err := fx.SetHead("space1", hash)
 	require.NoError(t, err)
 
 	err = fx.NodeHead.(*nodeHead).DeleteHeads("space1")

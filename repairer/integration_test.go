@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc"
@@ -15,7 +16,6 @@ import (
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/testutil/anymock"
-	anystore "github.com/anyproto/any-store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -52,7 +52,7 @@ func TestIntegration_RepairFlows(t *testing.T) {
 		spaceId := fx.genSpaceOnB(t)
 		// node A: an index entry with heads, but no data on disk at all
 		require.NoError(t, fx.storageA.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
-			SpaceId: spaceId, OldHash: "lost", NewHash: "lost",
+			SpaceId: spaceId, NewHash: "lost",
 		}))
 		require.NoError(t, fx.storageA.IndexStorage().MarkError(ctx, spaceId, "db file is missing"))
 
@@ -92,7 +92,7 @@ func (fx *intFixture) corruptSpaceOnA(t *testing.T, spaceId string) {
 	require.NoError(t, os.MkdirAll(spaceDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(spaceDir, "store.db"), []byte("this is not a sqlite database"), 0o644))
 	require.NoError(t, fx.storageA.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
-		SpaceId: spaceId, OldHash: "corrupt", NewHash: "corrupt",
+		SpaceId: spaceId, NewHash: "corrupt",
 	}))
 	require.NoError(t, fx.storageA.IndexStorage().MarkError(ctx, spaceId, "malformed database"))
 }
