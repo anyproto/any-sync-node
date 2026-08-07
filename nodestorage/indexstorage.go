@@ -45,12 +45,11 @@ var (
 )
 
 const (
-	IndexStorageName       = ".index"
-	migrationStateCollName = "migrationState"
-	spaceCollName          = "space"
-	settingsCollName       = "settings"
-	newHashKey             = "nh"
-	// oldHashKey held the legacy diff hash, it is only cleaned up now
+	IndexStorageName = ".index"
+	spaceCollName    = "space"
+	settingsCollName = "settings"
+	newHashKey       = "nh"
+	// oldHashKey is the legacy diff hash key: never written, only cleared
 	oldHashKey                 = "oh"
 	statusKey                  = "s"
 	lastAccessKey              = "la"

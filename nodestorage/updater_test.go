@@ -46,15 +46,12 @@ func TestSpaceUpdater(t *testing.T) {
 	update, exists := spaceUpdates["space1"]
 	require.True(t, exists, "Missing update for space1")
 	require.Equal(t, "new3", update.NewHash, "For space1, should have the latest update")
-	require.Equal(t, "new3", update.NewHash, "For space1, should have the latest update")
 
 	update, exists = spaceUpdates["space2"]
 	require.True(t, exists, "Missing update for space2")
 	require.Equal(t, "new2", update.NewHash, "For space2, should have the latest update")
-	require.Equal(t, "new2", update.NewHash, "For space2, should have the latest update")
 
 	update, exists = spaceUpdates["space3"]
 	require.True(t, exists, "Missing update for space3")
-	require.Equal(t, "new1", update.NewHash, "For space3, should have the latest update")
 	require.Equal(t, "new1", update.NewHash, "For space3, should have the latest update")
 }
