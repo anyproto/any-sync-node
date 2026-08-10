@@ -49,7 +49,7 @@ const (
 	spaceCollName    = "space"
 	settingsCollName = "settings"
 	newHashKey       = "nh"
-	// oldHashKey is the legacy diff hash key: never written, only cleared
+	// oldHashKey is the legacy diff hash key: never written, deleted on update
 	oldHashKey                 = "oh"
 	statusKey                  = "s"
 	lastAccessKey              = "la"
@@ -104,6 +104,7 @@ func (d *indexStorage) UpdateHash(ctx context.Context, updates ...SpaceUpdate) (
 				update.Updated = time.Now()
 			}
 			v.Set(newHashKey, a.NewString(update.NewHash))
+			v.Del(oldHashKey)
 			v.Set(lastAccessKey, a.NewNumberFloat64(float64(update.Updated.Unix())))
 			if v.Get(statusKey) == nil {
 				v.Set(statusKey, a.NewNumberInt(int(SpaceStatusOk)))
@@ -216,7 +217,7 @@ func (d *indexStorage) SetSpaceStatus(ctx context.Context, spaceId string, statu
 		v.Set(statusKey, a.NewNumberInt(int(status)))
 		v.Set(lastAccessKey, a.NewNumberInt(int(time.Now().Unix())))
 		if status == SpaceStatusRemove {
-			v.Set(oldHashKey, a.NewNull())
+			v.Del(oldHashKey)
 			v.Set(newHashKey, a.NewNull())
 		}
 		return v, true, nil
