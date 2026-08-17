@@ -19,7 +19,7 @@ require (
 	go.uber.org/zap v1.28.0
 	golang.org/x/exp v0.0.0-20260718201538-764159d718ef
 	golang.org/x/net v0.57.0
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v1.0.0
 )
