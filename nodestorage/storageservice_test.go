@@ -404,12 +404,14 @@ func TestStorageService_IndexSpace(t *testing.T) {
 		require.NoError(t, ss.IndexStorage().DeleteSpaceEntry(ctx, spaceId))
 		return spaceId, hash
 	}
-	inCache := func(ss *storageService, spaceId string) bool {
-		_, err := ss.cache.Pick(ctx, spaceId)
-		return err == nil
+	// a released storage is evictable; a pinned one never is
+	requireReleased := func(t *testing.T, ss *storageService, spaceId string) {
+		removed, err := ss.cache.TryRemove(spaceId)
+		require.NoError(t, err)
+		require.True(t, removed)
 	}
 
-	t.Run("indexes and evicts", func(t *testing.T) {
+	t.Run("indexes and releases", func(t *testing.T) {
 		ss := newStorageService(t)
 		defer ss.Close(ctx)
 		spaceId, hash := newSpace(t, ss)
@@ -418,7 +420,7 @@ func TestStorageService_IndexSpace(t *testing.T) {
 
 		require.NoError(t, ss.IndexSpace(ctx, spaceId, false))
 
-		assert.False(t, inCache(ss, spaceId))
+		requireReleased(t, ss, spaceId)
 		assert.False(t, headSet)
 		entry, err := ss.IndexStorage().SpaceStatusEntry(ctx, spaceId)
 		require.NoError(t, err)
@@ -445,14 +447,11 @@ func TestStorageService_IndexSpace(t *testing.T) {
 
 		require.NoError(t, ss.IndexSpace(ctx, spaceId, false))
 
-		require.True(t, inCache(ss, spaceId))
 		_, err = held.StateStorage().GetState(ctx)
 		require.NoError(t, err)
 
 		require.NoError(t, held.Close(ctx))
-		removed, err := ss.cache.TryRemove(spaceId)
-		require.NoError(t, err)
-		assert.True(t, removed)
+		requireReleased(t, ss, spaceId)
 	})
 	t.Run("released on error", func(t *testing.T) {
 		ss := newStorageService(t)
@@ -466,9 +465,7 @@ func TestStorageService_IndexSpace(t *testing.T) {
 		require.Error(t, ss.IndexSpace(ctx, spaceId, false))
 
 		require.NoError(t, held.Close(ctx))
-		removed, err := ss.cache.TryRemove(spaceId)
-		require.NoError(t, err)
-		assert.True(t, removed)
+		requireReleased(t, ss, spaceId)
 	})
 }
 
