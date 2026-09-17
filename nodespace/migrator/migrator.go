@@ -120,20 +120,8 @@ func (m *migrator) Run(ctx context.Context) (err error) {
 			return err
 		}
 		log.Info("migrated space", zap.String("spaceId", id), zap.String("total", fmt.Sprintf("%d/%d", idx, len(allIds))), zap.String("time", time.Since(tm).String()))
-		st, err := m.newStorage.WaitSpaceStorage(ctx, id)
-		if err != nil {
-			return fmt.Errorf("migration: failed to get new space storage: %w", err)
-		}
-		state, err := st.StateStorage().GetState(ctx)
-		if err != nil {
-			return fmt.Errorf("migration: failed to get state: %w", err)
-		}
-		err = m.newStorage.IndexStorage().UpdateHash(ctx, nodestorage.SpaceUpdate{
-			SpaceId: id,
-			NewHash: state.NewHash,
-		})
-		if err != nil {
-			return fmt.Errorf("migration: failed to update hash: %w", err)
+		if err = m.newStorage.IndexSpace(ctx, id, false); err != nil {
+			return fmt.Errorf("migration: failed to index space: %w", err)
 		}
 		select {
 		case <-ctx.Done():
