@@ -194,14 +194,8 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		return err
 	}
 	for _, id := range toUpdate {
-		err := s.IndexSpace(ctx, id, false)
-		if err != nil {
+		if err := s.IndexSpace(ctx, id, false); err != nil {
 			log.Error("failed to index space", zap.String("spaceId", id), zap.Error(err))
-			continue
-		}
-		err = s.ForceRemove(id)
-		if err != nil {
-			log.Error("failed to remove space", zap.String("spaceId", id), zap.Error(err))
 		}
 	}
 	return
@@ -404,6 +398,9 @@ func (s *storageService) IndexSpace(ctx context.Context, spaceId string, setHead
 		if cErr := ss.Close(ctx); cErr != nil {
 			log.Warn("can't close indexed storage", zap.String("spaceId", spaceId), zap.Error(cErr))
 		}
+		// bulk indexing must not keep every db open until the cache gc;
+		// a storage held by someone else stays
+		_, _ = s.cache.TryRemove(spaceId)
 	}()
 	state, err := ss.StateStorage().GetState(ctx)
 	if err != nil {
