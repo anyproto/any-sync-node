@@ -394,11 +394,9 @@ func TestStorageService_IndexSpace(t *testing.T) {
 	require.NoError(t, ss.IndexSpace(ctx, spaceId, false))
 
 	// the storage is released, so the cache can evict it
-	cont, err := ss.cache.Pick(ctx, spaceId)
+	removed, err := ss.cache.TryRemove(spaceId)
 	require.NoError(t, err)
-	closed, err := cont.TryClose(0)
-	require.NoError(t, err)
-	assert.True(t, closed)
+	assert.True(t, removed)
 }
 
 func TestSpaceStorage_GetSpaceStats_CalcMedian(t *testing.T) {

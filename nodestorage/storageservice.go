@@ -401,8 +401,8 @@ func (s *storageService) IndexSpace(ctx context.Context, spaceId string, setHead
 	}
 	// an unreleased storage is never evicted from the cache
 	defer func() {
-		if cErr := ss.Close(ctx); err == nil {
-			err = cErr
+		if cErr := ss.Close(ctx); cErr != nil {
+			log.Warn("can't close indexed storage", zap.String("spaceId", spaceId), zap.Error(cErr))
 		}
 	}()
 	state, err := ss.StateStorage().GetState(ctx)
