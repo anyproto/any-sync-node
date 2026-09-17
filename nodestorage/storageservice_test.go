@@ -383,6 +383,24 @@ func TestStorageService_TryLockAndOpenDb(t *testing.T) {
 	})
 }
 
+func TestStorageService_IndexSpace(t *testing.T) {
+	ss := newStorageService(t)
+	defer ss.Close(ctx)
+	store, err := ss.CreateSpaceStorage(ctx, NewStorageCreatePayload(t))
+	require.NoError(t, err)
+	spaceId := store.Id()
+	require.NoError(t, ss.ForceRemove(spaceId))
+
+	require.NoError(t, ss.IndexSpace(ctx, spaceId, false))
+
+	// the storage is released, so the cache can evict it
+	cont, err := ss.cache.Pick(ctx, spaceId)
+	require.NoError(t, err)
+	closed, err := cont.TryClose(0)
+	require.NoError(t, err)
+	assert.True(t, closed)
+}
+
 func TestSpaceStorage_GetSpaceStats_CalcMedian(t *testing.T) {
 	l1 := []int{1, 3, 2}
 	l2 := []int{1}

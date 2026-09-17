@@ -252,7 +252,7 @@ func (r *resharder) reconcileUnindexed() {
 			continue
 		}
 		ctx, cancel := context.WithTimeout(r.runCtx, time.Minute)
-		if _, iErr := r.storage.IndexSpace(ctx, id, true); iErr != nil {
+		if iErr := r.storage.IndexSpace(ctx, id, true); iErr != nil {
 			log.Warn("drain cycle: can't index unindexed space dir", zap.String("spaceId", id), zap.Error(iErr))
 		} else {
 			log.Info("drain cycle: indexed a space dir without an index entry", zap.String("spaceId", id))

@@ -173,7 +173,7 @@ func (r *repairer) repairSpace(spaceId string) (err error) {
 	if r.storage.SpaceExists(spaceId) {
 		// the error may have been transient (e.g. a failed archive upload):
 		// if the db opens and indexes fine, the space is healthy in place
-		if _, ipErr := r.storage.IndexSpace(ctx, spaceId, true); ipErr == nil {
+		if ipErr := r.storage.IndexSpace(ctx, spaceId, true); ipErr == nil {
 			log.Info("space repaired in place", zap.String("spaceId", spaceId))
 			r.stat.repairedInPlace.Add(1)
 			return nil
@@ -222,7 +222,7 @@ func (r *repairer) repairSpace(spaceId string) (err error) {
 		return errNoValidCopy
 	}
 	// validate and register the pulled copy (index hashes + nodehead)
-	if _, err = r.storage.IndexSpace(ctx, spaceId, true); err != nil {
+	if err = r.storage.IndexSpace(ctx, spaceId, true); err != nil {
 		return err
 	}
 	log.Info("space repaired from a neighbor", zap.String("spaceId", spaceId))

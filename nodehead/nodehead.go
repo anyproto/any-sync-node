@@ -156,11 +156,7 @@ func (n *nodeHead) GetHead(spaceId string) (hash string, err error) {
 }
 
 func (n *nodeHead) ReloadHeadFromStore(ctx context.Context, spaceId string) error {
-	ss, err := n.spaceStore.IndexSpace(ctx, spaceId, true)
-	if err != nil {
-		return err
-	}
-	return ss.Close(ctx)
+	return n.spaceStore.IndexSpace(ctx, spaceId, true)
 }
 
 func (n *nodeHead) registerMetrics(m metric.Metric) {
