@@ -65,7 +65,7 @@ type (
 type NodeStorage interface {
 	spacestorage.SpaceStorageProvider
 	IndexStorage() IndexStorage
-	IndexSpace(ctx context.Context, spaceId string, setHead bool) (spacestorage.SpaceStorage, error)
+	IndexSpace(ctx context.Context, spaceId string, setHead bool) error
 	SpaceStorage(ctx context.Context, spaceId string) (spacestorage.SpaceStorage, error)
 	TryLockAndDo(ctx context.Context, spaceId string, do DoFunc) (err error)
 	TryLockAndOpenDb(ctx context.Context, spaceId string, do DoAfterOpenFunc) (err error)
@@ -194,7 +194,7 @@ func (s *storageService) Run(ctx context.Context) (err error) {
 		return err
 	}
 	for _, id := range toUpdate {
-		_, err := s.IndexSpace(ctx, id, false)
+		err := s.IndexSpace(ctx, id, false)
 		if err != nil {
 			log.Error("failed to index space", zap.String("spaceId", id), zap.Error(err))
 			continue
@@ -394,11 +394,17 @@ func (s *storageService) SpaceExists(id string) bool {
 	return true
 }
 
-func (s *storageService) IndexSpace(ctx context.Context, spaceId string, setHead bool) (ss spacestorage.SpaceStorage, err error) {
-	ss, err = s.SpaceStorage(ctx, spaceId)
+func (s *storageService) IndexSpace(ctx context.Context, spaceId string, setHead bool) (err error) {
+	ss, err := s.SpaceStorage(ctx, spaceId)
 	if err != nil {
 		return
 	}
+	// an unreleased storage is never evicted from the cache
+	defer func() {
+		if cErr := ss.Close(ctx); cErr != nil {
+			log.Warn("can't close indexed storage", zap.String("spaceId", spaceId), zap.Error(cErr))
+		}
+	}()
 	state, err := ss.StateStorage().GetState(ctx)
 	if err != nil {
 		return

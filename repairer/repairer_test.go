@@ -31,7 +31,7 @@ func TestRepairer_RepairSpace(t *testing.T) {
 		fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(true)
-		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, nil)
+		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil)
 
 		require.NoError(t, fx.repairSpace(spaceId))
 		assert.Equal(t, uint32(1), fx.stat.repairedInPlace.Load())
@@ -42,13 +42,13 @@ func TestRepairer_RepairSpace(t *testing.T) {
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(true)
 		// in-place validation fails: db is corrupted
-		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, errors.New("malformed database"))
+		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(errors.New("malformed database"))
 		fx.storage.EXPECT().QuarantineSpace(gomock.Any(), spaceId).Return("/quarantine/err.space-1", nil)
 		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1", "p2"})
 		// first peer fails, second delivers
 		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p1").Return(errors.New("unreachable"))
 		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p2").Return(nil)
-		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, nil)
+		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil)
 
 		require.NoError(t, fx.repairSpace(spaceId))
 		assert.Equal(t, uint32(1), fx.stat.quarantined.Load())
@@ -61,7 +61,7 @@ func TestRepairer_RepairSpace(t *testing.T) {
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(false)
 		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1"})
 		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p1").Return(nil)
-		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, nil)
+		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil)
 
 		require.NoError(t, fx.repairSpace(spaceId))
 		assert.Equal(t, uint32(1), fx.stat.repaired.Load())
@@ -111,7 +111,7 @@ func TestRepairer_RepairSpace(t *testing.T) {
 		fx.storage.EXPECT().SpaceExists(spaceId).Return(false)
 		fx.nodeConf.EXPECT().NodeIds(spaceId).Return([]string{"p1"})
 		fx.coldSync.EXPECT().Sync(gomock.Any(), spaceId, "p1").Return(nil)
-		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, errors.New("malformed database"))
+		fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(errors.New("malformed database"))
 		fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusError, "").Return(nil)
 
 		assert.Error(t, fx.repairSpace(spaceId))
@@ -133,7 +133,7 @@ func TestRepairer_RepairCycle(t *testing.T) {
 	fx.indexStorage.EXPECT().SpaceStatusEntry(gomock.Any(), spaceId).Return(nodestorage.SpaceStatusEntry{Status: nodestorage.SpaceStatusError, NewHash: "someHash"}, nil)
 	fx.indexStorage.EXPECT().SetSpaceStatus(gomock.Any(), spaceId, nodestorage.SpaceStatusOk, "").Return(nil)
 	fx.storage.EXPECT().SpaceExists(spaceId).Return(true)
-	fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil, nil)
+	fx.storage.EXPECT().IndexSpace(gomock.Any(), spaceId, true).Return(nil)
 
 	fx.repairCycle()
 	assert.Equal(t, uint32(0), fx.stat.errored.Load())

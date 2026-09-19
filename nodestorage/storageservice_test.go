@@ -16,6 +16,7 @@ import (
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/testutil/anymock"
 	"github.com/stretchr/testify/assert"
@@ -380,6 +381,91 @@ func TestStorageService_TryLockAndOpenDb(t *testing.T) {
 		runtime.Gosched()
 		close(release)
 		wg.Wait()
+	})
+}
+
+func TestStorageService_IndexSpace(t *testing.T) {
+	newSpace := func(t *testing.T, ss *storageService) (spaceId, hash string) {
+		store, err := ss.CreateSpaceStorage(ctx, NewStorageCreatePayload(t))
+		require.NoError(t, err)
+		spaceId = store.Id()
+		hash = "hash-" + spaceId
+		require.NoError(t, ss.ForceRemove(spaceId))
+		// the hash is set on the raw db: the storage observer would index it asynchronously
+		require.NoError(t, ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+			state, err := statestorage.New(ctx, spaceId, db)
+			if err != nil {
+				return err
+			}
+			return state.SetHash(ctx, hash)
+		}))
+		require.NoError(t, ss.ForceRemove(spaceId))
+		// the index entry is left for IndexSpace to write
+		require.NoError(t, ss.IndexStorage().DeleteSpaceEntry(ctx, spaceId))
+		return spaceId, hash
+	}
+	// a released storage is evictable; a pinned one never is
+	requireReleased := func(t *testing.T, ss *storageService, spaceId string) {
+		removed, err := ss.cache.TryRemove(spaceId)
+		require.NoError(t, err)
+		require.True(t, removed)
+	}
+
+	t.Run("indexes and releases", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		spaceId, hash := newSpace(t, ss)
+		var headSet bool
+		ss.OnWriteHash(func(_ context.Context, _, _ string) { headSet = true })
+
+		require.NoError(t, ss.IndexSpace(ctx, spaceId, false))
+
+		requireReleased(t, ss, spaceId)
+		assert.False(t, headSet)
+		entry, err := ss.IndexStorage().SpaceStatusEntry(ctx, spaceId)
+		require.NoError(t, err)
+		assert.Equal(t, hash, entry.NewHash)
+	})
+	t.Run("set head", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		spaceId, hash := newSpace(t, ss)
+		var gotId, gotHash string
+		ss.OnWriteHash(func(_ context.Context, id, h string) { gotId, gotHash = id, h })
+
+		require.NoError(t, ss.IndexSpace(ctx, spaceId, true))
+
+		assert.Equal(t, spaceId, gotId)
+		assert.Equal(t, hash, gotHash)
+	})
+	t.Run("held storage stays open", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		spaceId, _ := newSpace(t, ss)
+		held, err := ss.SpaceStorage(ctx, spaceId)
+		require.NoError(t, err)
+
+		require.NoError(t, ss.IndexSpace(ctx, spaceId, false))
+
+		_, err = held.StateStorage().GetState(ctx)
+		require.NoError(t, err)
+
+		require.NoError(t, held.Close(ctx))
+		requireReleased(t, ss, spaceId)
+	})
+	t.Run("released on error", func(t *testing.T) {
+		ss := newStorageService(t)
+		defer ss.Close(ctx)
+		spaceId, _ := newSpace(t, ss)
+		// a cached storage skips the index status check, so the failure is UpdateHash
+		held, err := ss.SpaceStorage(ctx, spaceId)
+		require.NoError(t, err)
+		require.NoError(t, ss.indexStorage.Close())
+
+		require.Error(t, ss.IndexSpace(ctx, spaceId, false))
+
+		require.NoError(t, held.Close(ctx))
+		requireReleased(t, ss, spaceId)
 	})
 }
 

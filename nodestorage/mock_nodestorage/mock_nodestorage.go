@@ -146,12 +146,11 @@ func (mr *MockNodeStorageMockRecorder) GetStats(ctx, id, treeTop any) *gomock.Ca
 }
 
 // IndexSpace mocks base method.
-func (m *MockNodeStorage) IndexSpace(ctx context.Context, spaceId string, setHead bool) (spacestorage.SpaceStorage, error) {
+func (m *MockNodeStorage) IndexSpace(ctx context.Context, spaceId string, setHead bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IndexSpace", ctx, spaceId, setHead)
-	ret0, _ := ret[0].(spacestorage.SpaceStorage)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // IndexSpace indicates an expected call of IndexSpace.
