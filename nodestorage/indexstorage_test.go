@@ -8,6 +8,8 @@ import (
 	"time"
 
 	anystore "github.com/anyproto/any-store"
+	"github.com/anyproto/any-store/anyenc"
+	"github.com/anyproto/any-store/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,6 +100,31 @@ func Test_migrateToSingleCollection(t *testing.T) {
 	assert.NotContains(t, collNames, "deletionIndex")
 	assert.Contains(t, collNames, spaceCollName)
 	assert.Contains(t, collNames, settingsCollName)
+}
+
+func TestIndexStorage_NoLegacyOldHash(t *testing.T) {
+	tempDir := t.TempDir()
+	fx, err := createTestIndexStorage(ctx, tempDir)
+	require.NoError(t, err)
+	defer fx.Close()
+	coll := fx.(*indexStorage).spaceColl
+
+	// legacy doc carries "oh" written by an older version
+	_, err = coll.UpsertId(ctx, "legacy", query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (*anyenc.Value, bool, error) {
+		v.Set(oldHashKey, a.NewString("old"))
+		return v, true, nil
+	}))
+	require.NoError(t, err)
+
+	require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "legacy", NewHash: "new"}))
+	require.NoError(t, fx.UpdateHash(ctx, SpaceUpdate{SpaceId: "fresh", NewHash: "new"}))
+	require.NoError(t, fx.SetSpaceStatus(ctx, "removed", SpaceStatusRemove, ""))
+
+	for _, id := range []string{"legacy", "fresh", "removed"} {
+		doc, err := coll.FindId(ctx, id)
+		require.NoError(t, err)
+		assert.Nil(t, doc.Value().Get(oldHashKey), id)
+	}
 }
 
 func TestIndexStorage_MarkArchived(t *testing.T) {
