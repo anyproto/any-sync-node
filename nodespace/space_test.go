@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
+	"github.com/anyproto/any-sync/commonspace/mock_commonspace"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
 	"github.com/anyproto/any-sync/consensus/consensusclient/mock_consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -58,8 +59,46 @@ func TestNodeSpace_addLog(t *testing.T) {
 				cancel()
 				return consensuserr.ErrUnexpected
 			})
-		start := time.Now()
+		// one attempt only, which the mock checks
 		s.addLog(ctx, spaceId, root)
-		assert.Less(t, time.Since(start), addLogRetryDelay)
+	})
+}
+
+func TestNodeSpace_Init(t *testing.T) {
+	const spaceId = "spaceId"
+	root := &consensusproto.RawRecordWithId{Id: "aclId", Payload: []byte("root")}
+
+	newSpace := func(t *testing.T) (*nodeSpace, *mock_commonspace.MockSpace, *mock_consensusclient.MockService) {
+		ctrl := gomock.NewController(t)
+		sp := mock_commonspace.NewMockSpace(ctrl)
+		acl := mock_syncacl.NewMockSyncAcl(ctrl)
+		cons := mock_consensusclient.NewMockService(ctrl)
+		sp.EXPECT().Id().Return(spaceId).AnyTimes()
+		sp.EXPECT().Acl().Return(acl).AnyTimes()
+		acl.EXPECT().Root().Return(root).AnyTimes()
+		acl.EXPECT().Id().Return(root.Id).AnyTimes()
+		s, err := newNodeSpace(sp, cons, nil, nil)
+		require.NoError(t, err)
+		return s, sp, cons
+	}
+
+	t.Run("the log is created before the space watches it", func(t *testing.T) {
+		s, sp, cons := newSpace(t)
+		gomock.InOrder(
+			sp.EXPECT().Init(gomock.Any()).Return(nil),
+			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrUnexpected),
+			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrLogExists),
+			cons.EXPECT().Watch(spaceId, s).Return(nil),
+		)
+		require.NoError(t, s.Init(context.Background()))
+	})
+	t.Run("the space loads when every attempt fails", func(t *testing.T) {
+		s, sp, cons := newSpace(t)
+		gomock.InOrder(
+			sp.EXPECT().Init(gomock.Any()).Return(nil),
+			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrUnexpected).Times(addLogAttempts),
+			cons.EXPECT().Watch(spaceId, s).Return(nil),
+		)
+		require.NoError(t, s.Init(context.Background()))
 	})
 }
