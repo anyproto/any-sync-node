@@ -69,13 +69,10 @@ func (s *nodeSpace) Init(ctx context.Context) (err error) {
 		return
 	}
 	// TODO: call a coordinator?
-	err = s.consClient.AddLog(ctx, s.Id(), &consensusproto.RawRecordWithId{
+	s.addLog(ctx, s.Id(), &consensusproto.RawRecordWithId{
 		Payload: s.Acl().Root().Payload,
 		Id:      s.Acl().Id(),
 	})
-	if err != nil && rpcerr.Unwrap(err) != consensuserr.ErrLogExists {
-		log.Warn("failed to add consensus record", zap.Error(err))
-	}
 	if err = s.consClient.Watch(s.Id(), s); err != nil {
 		_ = s.Space.Close()
 		return
@@ -99,4 +96,53 @@ func (s *nodeSpace) Close() (err error) {
 		s.log.Warn("failed to unwatch space", zap.Error(err))
 	}
 	return s.Space.Close()
+}
+
+const (
+	// addLogAttempts bounds the attempts to create the space's consensus log
+	addLogAttempts = 3
+	// addLogRetryDelay is the wait before the second attempt; it grows linearly with each attempt
+	addLogRetryDelay = 100 * time.Millisecond
+)
+
+// addLog creates the space's consensus log, or finds it created. Every node that stores the space creates it,
+// usually at the same time, and a watch on the log fails until it exists, so a failed attempt is retried.
+// A failure is only logged, so that the space still loads.
+func (s *nodeSpace) addLog(ctx context.Context, spaceId string, root *consensusproto.RawRecordWithId) {
+	var err error
+	for attempt := 1; attempt <= addLogAttempts; attempt++ {
+		if attempt > 1 && !sleepCtx(ctx, time.Duration(attempt-1)*addLogRetryDelay) {
+			break
+		}
+		err = s.consClient.AddLog(ctx, spaceId, root)
+		switch rpcerr.Unwrap(err) {
+		case nil, consensuserr.ErrLogExists:
+			return
+		}
+		if isPermanentAddLogErr(err) {
+			break
+		}
+	}
+	s.log.Warn("failed to add consensus record", zap.Error(err))
+}
+
+// isPermanentAddLogErr reports whether another AddLog attempt would fail the same way
+func isPermanentAddLogErr(err error) bool {
+	switch rpcerr.Unwrap(err) {
+	case consensuserr.ErrForbidden, consensuserr.ErrInvalidPayload:
+		return true
+	}
+	return false
+}
+
+// sleepCtx waits for d and reports false when ctx is done first
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
 }
