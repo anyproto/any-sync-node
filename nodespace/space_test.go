@@ -14,90 +14,84 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+const testSpaceId = "spaceId"
+
+var testRoot = &consensusproto.RawRecordWithId{Id: "aclId", Payload: []byte("root")}
+
+// newTestSpace returns a node space whose space and acl are mocks with testSpaceId and testRoot
+func newTestSpace(t *testing.T) (*nodeSpace, *mock_commonspace.MockSpace, *mock_consensusclient.MockService) {
+	ctrl := gomock.NewController(t)
+	sp := mock_commonspace.NewMockSpace(ctrl)
+	acl := mock_syncacl.NewMockSyncAcl(ctrl)
+	cons := mock_consensusclient.NewMockService(ctrl)
+	sp.EXPECT().Id().Return(testSpaceId).AnyTimes()
+	sp.EXPECT().Acl().Return(acl).AnyTimes()
+	acl.EXPECT().Root().Return(testRoot).AnyTimes()
+	acl.EXPECT().Id().Return(testRoot.Id).AnyTimes()
+	s, err := newNodeSpace(sp, cons, nil, nil)
+	require.NoError(t, err)
+	return s, sp, cons
+}
+
 func TestNodeSpace_addLog(t *testing.T) {
-	const spaceId = "spaceId"
-	root := &consensusproto.RawRecordWithId{Id: "aclId", Payload: []byte("root")}
-
-	newSpace := func(t *testing.T) (*nodeSpace, *mock_consensusclient.MockService) {
-		cons := mock_consensusclient.NewMockService(gomock.NewController(t))
-		return &nodeSpace{consClient: cons, log: log.With()}, cons
-	}
-
 	t.Run("a created log needs one attempt", func(t *testing.T) {
-		s, cons := newSpace(t)
-		cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(nil)
-		s.addLog(context.Background(), spaceId, root)
+		s, _, cons := newTestSpace(t)
+		cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(nil)
+		s.addLog(context.Background(), testRoot)
 	})
 	t.Run("an existing log needs one attempt", func(t *testing.T) {
-		s, cons := newSpace(t)
-		cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrLogExists)
-		s.addLog(context.Background(), spaceId, root)
+		s, _, cons := newTestSpace(t)
+		cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(consensuserr.ErrLogExists)
+		s.addLog(context.Background(), testRoot)
 	})
 	t.Run("a failed attempt is retried until the log exists", func(t *testing.T) {
-		s, cons := newSpace(t)
+		s, _, cons := newTestSpace(t)
 		gomock.InOrder(
-			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrUnexpected),
-			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrLogExists),
+			cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(consensuserr.ErrUnexpected),
+			cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(consensuserr.ErrLogExists),
 		)
-		s.addLog(context.Background(), spaceId, root)
+		s.addLog(context.Background(), testRoot)
 	})
 	t.Run("attempts stop after addLogAttempts", func(t *testing.T) {
-		s, cons := newSpace(t)
-		cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(errors.New("network")).Times(addLogAttempts)
-		s.addLog(context.Background(), spaceId, root)
+		s, _, cons := newTestSpace(t)
+		cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(errors.New("network")).Times(addLogAttempts)
+		s.addLog(context.Background(), testRoot)
 	})
 	t.Run("a permanent error is not retried", func(t *testing.T) {
-		s, cons := newSpace(t)
-		cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrForbidden)
-		s.addLog(context.Background(), spaceId, root)
+		s, _, cons := newTestSpace(t)
+		cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(consensuserr.ErrForbidden)
+		s.addLog(context.Background(), testRoot)
 	})
 	t.Run("a done context stops the retries", func(t *testing.T) {
-		s, cons := newSpace(t)
+		s, _, cons := newTestSpace(t)
 		ctx, cancel := context.WithCancel(context.Background())
-		cons.EXPECT().AddLog(gomock.Any(), spaceId, root).DoAndReturn(
+		cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).DoAndReturn(
 			func(context.Context, string, *consensusproto.RawRecordWithId) error {
 				cancel()
 				return consensuserr.ErrUnexpected
 			})
 		// one attempt only, which the mock checks
-		s.addLog(ctx, spaceId, root)
+		s.addLog(ctx, testRoot)
 	})
 }
 
 func TestNodeSpace_Init(t *testing.T) {
-	const spaceId = "spaceId"
-	root := &consensusproto.RawRecordWithId{Id: "aclId", Payload: []byte("root")}
-
-	newSpace := func(t *testing.T) (*nodeSpace, *mock_commonspace.MockSpace, *mock_consensusclient.MockService) {
-		ctrl := gomock.NewController(t)
-		sp := mock_commonspace.NewMockSpace(ctrl)
-		acl := mock_syncacl.NewMockSyncAcl(ctrl)
-		cons := mock_consensusclient.NewMockService(ctrl)
-		sp.EXPECT().Id().Return(spaceId).AnyTimes()
-		sp.EXPECT().Acl().Return(acl).AnyTimes()
-		acl.EXPECT().Root().Return(root).AnyTimes()
-		acl.EXPECT().Id().Return(root.Id).AnyTimes()
-		s, err := newNodeSpace(sp, cons, nil, nil)
-		require.NoError(t, err)
-		return s, sp, cons
-	}
-
 	t.Run("the log is created before the space watches it", func(t *testing.T) {
-		s, sp, cons := newSpace(t)
+		s, sp, cons := newTestSpace(t)
 		gomock.InOrder(
 			sp.EXPECT().Init(gomock.Any()).Return(nil),
-			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrUnexpected),
-			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrLogExists),
-			cons.EXPECT().Watch(spaceId, s).Return(nil),
+			cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(consensuserr.ErrUnexpected),
+			cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(consensuserr.ErrLogExists),
+			cons.EXPECT().Watch(testSpaceId, s).Return(nil),
 		)
 		require.NoError(t, s.Init(context.Background()))
 	})
 	t.Run("the space loads when every attempt fails", func(t *testing.T) {
-		s, sp, cons := newSpace(t)
+		s, sp, cons := newTestSpace(t)
 		gomock.InOrder(
 			sp.EXPECT().Init(gomock.Any()).Return(nil),
-			cons.EXPECT().AddLog(gomock.Any(), spaceId, root).Return(consensuserr.ErrUnexpected).Times(addLogAttempts),
-			cons.EXPECT().Watch(spaceId, s).Return(nil),
+			cons.EXPECT().AddLog(gomock.Any(), testSpaceId, testRoot).Return(consensuserr.ErrUnexpected).Times(addLogAttempts),
+			cons.EXPECT().Watch(testSpaceId, s).Return(nil),
 		)
 		require.NoError(t, s.Init(context.Background()))
 	})

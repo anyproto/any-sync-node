@@ -69,7 +69,7 @@ func (s *nodeSpace) Init(ctx context.Context) (err error) {
 		return
 	}
 	// TODO: call a coordinator?
-	s.addLog(ctx, s.Id(), &consensusproto.RawRecordWithId{
+	s.addLog(ctx, &consensusproto.RawRecordWithId{
 		Payload: s.Acl().Root().Payload,
 		Id:      s.Acl().Id(),
 	})
@@ -108,13 +108,13 @@ const (
 // addLog creates the space's consensus log, or finds it created. Every node that stores the space creates it,
 // usually at the same time, and a watch on the log fails until it exists, so a failed attempt is retried.
 // A failure is only logged, so that the space still loads.
-func (s *nodeSpace) addLog(ctx context.Context, spaceId string, root *consensusproto.RawRecordWithId) {
+func (s *nodeSpace) addLog(ctx context.Context, root *consensusproto.RawRecordWithId) {
 	var err error
 	for attempt := 1; attempt <= addLogAttempts; attempt++ {
 		if attempt > 1 && !sleepCtx(ctx, time.Duration(attempt-1)*addLogRetryDelay) {
 			break
 		}
-		err = s.consClient.AddLog(ctx, spaceId, root)
+		err = s.consClient.AddLog(ctx, s.Id(), root)
 		switch rpcerr.Unwrap(err) {
 		case nil, consensuserr.ErrLogExists:
 			return
