@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/cheggaaa/mb/v3 v3.0.3
 	github.com/planetscale/vtprotobuf v0.6.0
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/atomic v1.12.0
 	go.uber.org/mock v0.6.0
@@ -70,8 +70,8 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
-	github.com/prometheus/common v0.70.1 // indirect
-	github.com/prometheus/procfs v0.21.1 // indirect
+	github.com/prometheus/common v0.72.0 // indirect
+	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.63.0 // indirect
 	github.com/quic-go/webtransport-go v0.13.0 // indirect
