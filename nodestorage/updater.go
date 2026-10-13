@@ -18,14 +18,14 @@ type SpaceUpdate struct {
 type spaceUpdater struct {
 	updateFunc func(update []SpaceUpdate)
 	batcher    *mb.MB[SpaceUpdate]
-	done       chan struct{}
+	// done is closed when process returns; it stays nil until Run starts process
+	done chan struct{}
 }
 
 func newSpaceUpdater(update func(updates []SpaceUpdate)) *spaceUpdater {
 	return &spaceUpdater{
 		batcher:    mb.New[SpaceUpdate](0),
 		updateFunc: update,
-		done:       make(chan struct{}),
 	}
 }
 
@@ -34,6 +34,7 @@ func (hu *spaceUpdater) Add(update SpaceUpdate) error {
 }
 
 func (hu *spaceUpdater) Run() {
+	hu.done = make(chan struct{})
 	go hu.process()
 }
 
@@ -51,7 +52,10 @@ func (hu *spaceUpdater) process() {
 
 func (hu *spaceUpdater) Close() error {
 	_ = hu.batcher.Close()
-	<-hu.done
+	// without Run there is no process to wait for
+	if hu.done != nil {
+		<-hu.done
+	}
 	return nil
 }
 

@@ -615,16 +615,26 @@ func (s *storageService) OnDeleteStorage(onDelete func(ctx context.Context, spac
 	s.onDeleteStorage = onDelete
 }
 
+// Close is also called after a failed Init or without Run, so fields may be unset.
 func (s *storageService) Close(ctx context.Context) (err error) {
-	err = s.updater.Close()
-	if err != nil {
-		log.Error("failed to close updater", zap.Error(err))
+	if s.updater != nil {
+		if err := s.updater.Close(); err != nil {
+			log.Error("failed to close updater", zap.Error(err))
+		}
+	}
+	if s.statService != nil {
+		s.statService.RemoveProvider(s)
+	}
+	// closing the cache stops its gc and closes every space db it still holds
+	if s.cache != nil {
+		if err := s.cache.Close(); err != nil {
+			log.Error("failed to close space cache", zap.Error(err))
+		}
 	}
 	if s.indexStorage != nil {
 		return s.indexStorage.Close()
 	}
-	s.statService.RemoveProvider(s)
-	return
+	return nil
 }
 
 type storageContainer struct {

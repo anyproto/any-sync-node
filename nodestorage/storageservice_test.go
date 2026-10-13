@@ -16,6 +16,8 @@ import (
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/testutil/anymock"
@@ -384,6 +386,52 @@ func TestStorageService_TryLockAndOpenDb(t *testing.T) {
 	})
 }
 
+func TestStorageService_Close(t *testing.T) {
+	t.Run("closes cached space dbs and the cache", func(t *testing.T) {
+		ss := newStorageService(t)
+		store, err := ss.CreateSpaceStorage(ctx, NewStorageCreatePayload(t))
+		require.NoError(t, err)
+		db := store.(*nodeStorage).cont.db
+		require.NoError(t, store.Close(ctx))
+
+		require.NoError(t, ss.Close(ctx))
+
+		require.ErrorIs(t, db.Close(), anystore.ErrDBIsClosed)
+		_, err = ss.cache.Get(ctx, store.Id())
+		require.ErrorIs(t, err, ocache.ErrClosed)
+	})
+	t.Run("removes the stat provider", func(t *testing.T) {
+		// debugstat.Init resets its providers, so it is registered first
+		stat := debugstat.New()
+		ss := New().(*storageService)
+		a := newStorageApp(t, t.TempDir())
+		a.Register(stat).Register(ss)
+		require.NoError(t, a.Start(ctx))
+		require.Len(t, stat.GetStat().Stats, 1)
+
+		require.NoError(t, ss.Close(ctx))
+
+		assert.Empty(t, stat.GetStat().Stats)
+	})
+	t.Run("returns when Run was never called", func(t *testing.T) {
+		// app.Close closes a component whose Init ran even if its Run did not,
+		// for example when a later component fails to initialize
+		ss := New().(*storageService)
+		a := newStorageApp(t, t.TempDir())
+		a.Register(ss)
+		require.NoError(t, ss.Init(a))
+
+		closed := make(chan error, 1)
+		go func() { closed <- ss.Close(ctx) }()
+		select {
+		case err := <-closed:
+			require.NoError(t, err)
+		case <-time.After(5 * time.Second):
+			t.Fatal("Close blocked without Run")
+		}
+	})
+}
+
 func TestStorageService_IndexSpace(t *testing.T) {
 	newSpace := func(t *testing.T, ss *storageService) (spaceId, hash string) {
 		store, err := ss.CreateSpaceStorage(ctx, NewStorageCreatePayload(t))
@@ -541,15 +589,20 @@ func newStorageService(t *testing.T) *storageService {
 
 func newStorageServiceWithDir(t *testing.T, tempDir string) *storageService {
 	ss := New()
-	a := new(app.App)
+	a := newStorageApp(t, tempDir)
+	a.Register(ss)
+	a.Start(ctx)
+	return ss.(*storageService)
+}
 
+// newStorageApp registers the config and an archive mock; the caller registers the storage service.
+func newStorageApp(t *testing.T, tempDir string) *app.App {
 	ctrl := gomock.NewController(t)
 	archive := mock_archive.NewMockArchive(ctrl)
 	anymock.ExpectComp(archive.EXPECT(), archiveCName)
-
 	t.Cleanup(ctrl.Finish)
 
-	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss).Register(archive)
-	a.Start(ctx)
-	return ss.(*storageService)
+	a := new(app.App)
+	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(archive)
+	return a
 }
