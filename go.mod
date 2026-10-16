@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/akrylysov/pogreb v0.10.3-0.20240803013244-523613e335e9
-	github.com/anyproto/any-store v1.0.2
+	github.com/anyproto/any-store v1.0.3
 	github.com/anyproto/any-sync v0.13.6
 	github.com/anyproto/go-chash v0.1.0
 	github.com/aws/aws-sdk-go v1.55.8
