@@ -89,3 +89,6 @@ archive:
   enabled: false
   archiveAfterDays: 7
   checkPeriodMinutes: 2
+
+# 1/n of mutex contention events are reported in /debug/pprof/mutex, 0 disables
+mutexProfileFraction: 0

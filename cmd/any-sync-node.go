@@ -8,6 +8,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -97,6 +98,10 @@ func main() {
 	conf, err := config.NewFromFile(*flagConfigFile)
 	if err != nil {
 		log.Fatal("can't open config file", zap.Error(err))
+	}
+	if conf.MutexProfileFraction > 0 {
+		// report 1/n of mutex contention events in /debug/pprof/mutex
+		runtime.SetMutexProfileFraction(conf.MutexProfileFraction)
 	}
 
 	// bootstrap components
