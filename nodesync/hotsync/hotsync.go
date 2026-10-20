@@ -10,7 +10,6 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/util/periodicsync"
-	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync-node/nodespace"
@@ -39,6 +38,7 @@ type idProvider interface {
 
 type hotSync struct {
 	spaceQueue       []string
+	spaceQueued      map[string]struct{} // ids in spaceQueue
 	syncQueue        map[string]struct{}
 	simultaneousSync int
 	hit              *atomic.Uint32
@@ -54,6 +54,7 @@ func (h *hotSync) Init(a *app.App) (err error) {
 	if h.simultaneousSync == 0 {
 		h.simultaneousSync = defaultSimRequests
 	}
+	h.spaceQueued = map[string]struct{}{}
 	h.syncQueue = map[string]struct{}{}
 	h.spaceService = a.MustComponent(nodespace.CName).(nodespace.Service)
 	h.periodicSync = periodicsync.NewPeriodicSync(10, 0, h.checkCache, log)
@@ -81,9 +82,16 @@ func (h *hotSync) SetMetric(hit, miss *atomic.Uint32) {
 func (h *hotSync) UpdateQueue(changedIds []string) {
 	h.mx.Lock()
 	defer h.mx.Unlock()
-	added := slice.Difference(changedIds, h.spaceQueue)
-	h.spaceQueue = append(h.spaceQueue, added...)
-	log.Info("updated queue", zap.Int("added", len(added)), zap.Int("queue len", len(h.spaceQueue)))
+	var added int
+	for _, id := range changedIds {
+		if _, queued := h.spaceQueued[id]; queued {
+			continue
+		}
+		h.spaceQueued[id] = struct{}{}
+		h.spaceQueue = append(h.spaceQueue, id)
+		added++
+	}
+	log.Info("updated queue", zap.Int("added", added), zap.Int("queue len", len(h.spaceQueue)))
 }
 
 func (h *hotSync) checkCache(ctx context.Context) (err error) {
@@ -96,6 +104,9 @@ func (h *hotSync) checkCache(ctx context.Context) (err error) {
 	var cp []string
 	cp = append(cp, h.spaceQueue[:newBatchLen]...)
 	h.spaceQueue = h.spaceQueue[newBatchLen:]
+	for _, id := range cp {
+		delete(h.spaceQueued, id)
+	}
 	h.mx.Unlock()
 
 	for _, id := range cp {

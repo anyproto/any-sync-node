@@ -53,6 +53,7 @@ func newFixture(t *testing.T, simReq int) *fixture {
 	sync.SetMetric(&atomic.Uint32{}, &atomic.Uint32{})
 	sync.simultaneousSync = simReq
 	sync.spaceService = mockSpaceService
+	sync.spaceQueued = map[string]struct{}{}
 	sync.syncQueue = map[string]struct{}{}
 	cache := ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
 		return newSpace(id), nil
@@ -66,14 +67,32 @@ func newFixture(t *testing.T, simReq int) *fixture {
 }
 
 func TestHotSync_UpdateQueue(t *testing.T) {
-	fx := newFixture(t, 10)
-	defer fx.stop()
-	fx.hotSync.UpdateQueue([]string{"b"})
-	require.Equal(t, []string{"b"}, fx.hotSync.spaceQueue)
-	fx.hotSync.UpdateQueue([]string{"a", "b", "c"})
-	require.Equal(t, []string{"b", "a", "c"}, fx.hotSync.spaceQueue)
-	fx.hotSync.UpdateQueue([]string{"d", "e"})
-	require.Equal(t, []string{"b", "a", "c", "d", "e"}, fx.hotSync.spaceQueue)
+	t.Run("keeps order and skips queued ids", func(t *testing.T) {
+		fx := newFixture(t, 10)
+		defer fx.stop()
+		fx.hotSync.UpdateQueue([]string{"b"})
+		require.Equal(t, []string{"b"}, fx.hotSync.spaceQueue)
+		fx.hotSync.UpdateQueue([]string{"a", "b", "c"})
+		require.Equal(t, []string{"b", "a", "c"}, fx.hotSync.spaceQueue)
+		fx.hotSync.UpdateQueue([]string{"d", "e"})
+		require.Equal(t, []string{"b", "a", "c", "d", "e"}, fx.hotSync.spaceQueue)
+		fx.hotSync.UpdateQueue([]string{"f", "f", "a"})
+		require.Equal(t, []string{"b", "a", "c", "d", "e", "f"}, fx.hotSync.spaceQueue)
+	})
+	t.Run("ids taken by checkCache can be queued again", func(t *testing.T) {
+		fx := newFixture(t, 2)
+		defer fx.stop()
+		fx.mockSpaceService.EXPECT().Cache().Return(fx.cache).AnyTimes()
+		fx.mockSpaceService.EXPECT().GetSpace(gomock.Any(), gomock.Any()).Times(2).Return(nil, nil)
+		fx.hotSync.UpdateQueue([]string{"a", "b", "c"})
+
+		require.NoError(t, fx.hotSync.checkCache(context.Background()))
+		require.Equal(t, []string{"c"}, fx.hotSync.spaceQueue)
+
+		fx.hotSync.UpdateQueue([]string{"a", "c", "d"})
+		require.Equal(t, []string{"c", "a", "d"}, fx.hotSync.spaceQueue)
+		require.Len(t, fx.hotSync.spaceQueued, 3)
+	})
 }
 
 func TestHotSync_checkCache(t *testing.T) {
@@ -87,7 +106,7 @@ func TestHotSync_checkCache(t *testing.T) {
 		fx.hotSync.syncQueue["a"] = struct{}{}
 		fx.hotSync.syncQueue["b"] = struct{}{}
 		fx.hotSync.syncQueue["c"] = struct{}{}
-		fx.hotSync.spaceQueue = []string{"d", "e"}
+		fx.hotSync.UpdateQueue([]string{"d", "e"})
 
 		err := fx.hotSync.checkCache(context.Background())
 		require.NoError(t, err)
@@ -105,7 +124,7 @@ func TestHotSync_checkCache(t *testing.T) {
 		fx.hotSync.syncQueue["a"] = struct{}{}
 		fx.hotSync.syncQueue["b"] = struct{}{}
 		fx.hotSync.syncQueue["c"] = struct{}{}
-		fx.hotSync.spaceQueue = []string{"d", "e"}
+		fx.hotSync.UpdateQueue([]string{"d", "e"})
 
 		err := fx.hotSync.checkCache(context.Background())
 		require.NoError(t, err)
