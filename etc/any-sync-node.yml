@@ -62,6 +62,7 @@ space:
 storage:
   path: db
   anyStorePath: anyDb
+  anyStoreSynchronous: "off"
 metric:
   addr: ":7001"
 nodeSync:
