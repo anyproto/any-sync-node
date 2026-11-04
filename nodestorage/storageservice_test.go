@@ -1,12 +1,14 @@
 package nodestorage
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -19,6 +21,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/testutil/anymock"
+	"github.com/anyproto/go-sqlite"
+	"github.com/anyproto/go-sqlite/sqlitex"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -469,6 +473,90 @@ func TestStorageService_IndexSpace(t *testing.T) {
 	})
 }
 
+func TestStorageService_AnyStoreSynchronous(t *testing.T) {
+	for _, tc := range []struct {
+		setting string
+		want    int
+	}{
+		{setting: "", want: 0}, // unset: off, as before the setting existed
+		{setting: "off", want: 0},
+		{setting: "normal", want: 1},
+		{setting: "full", want: 2},
+		{setting: "NORMAL", want: 1},
+		{setting: "Full", want: 2},
+	} {
+		t.Run(cmp.Or(tc.setting, "unset"), func(t *testing.T) {
+			ss, err := startStorageService(t, t.TempDir(), tc.setting)
+			require.NoError(t, err)
+			defer ss.Close(ctx)
+
+			store, err := ss.CreateSpaceStorage(ctx, NewStorageCreatePayload(t))
+			require.NoError(t, err)
+			spaceId := store.Id()
+			assert.Equal(t, tc.want, storeSynchronous(t, store.(*nodeStorage).cont.db), "created store")
+			require.NoError(t, store.Close(ctx))
+
+			require.NoError(t, ss.ForceRemove(spaceId))
+			require.NoError(t, ss.TryLockAndOpenDb(ctx, spaceId, func(db anystore.DB) error {
+				assert.Equal(t, tc.want, storeSynchronous(t, db), "reopened store")
+				return nil
+			}))
+		})
+	}
+	t.Run("invalid", func(t *testing.T) {
+		// SQLite's numeric forms are refused too; extra behaves as full in
+		// WAL mode, so it is refused rather than implying more durability;
+		// false is what YAML 1.1 tools turn a bare off into
+		for _, setting := range []string{"fast", "2", "extra", "EXTRA", "false"} {
+			t.Run(setting, func(t *testing.T) {
+				dir := t.TempDir()
+				ss, err := startStorageService(t, dir, setting)
+				require.ErrorContains(t, err, fmt.Sprintf("storage.anyStoreSynchronous: invalid value %q", setting))
+				require.ErrorContains(t, err, "want off, normal or full")
+				assert.Nil(t, ss.indexStorage)
+				assert.NoDirExists(t, filepath.Join(dir, "new"))
+			})
+		}
+	})
+}
+
+// storeSynchronous returns PRAGMA synchronous of the connection db's write
+// transactions run on. any-store has no raw SQL, so the test takes that
+// connection out of a write transaction by reflection.
+func storeSynchronous(t *testing.T, db anystore.DB) int {
+	t.Helper()
+	tx, err := db.WriteTx(ctx)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, tx.Rollback()) }()
+	con := structField(t, reflect.ValueOf(tx), "con")
+	conn := structField(t, con, "conn")
+	require.True(t, conn.Type() == reflect.TypeFor[*sqlite.Conn]() && !conn.IsNil(), "any-store's conn field is not a *sqlite.Conn")
+	level := -1
+	err = sqlitex.ExecuteTransient((*sqlite.Conn)(conn.UnsafePointer()), "PRAGMA synchronous", &sqlitex.ExecOptions{
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			level = stmt.ColumnInt(0)
+			return nil
+		},
+	})
+	require.NoError(t, err)
+	return level
+}
+
+// structField returns the named field of v, dereferencing pointers and
+// interfaces first, and fails the test instead of panicking when any-store's
+// internals no longer have that shape.
+func structField(t *testing.T, v reflect.Value, name string) reflect.Value {
+	t.Helper()
+	for v.IsValid() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
+		require.False(t, v.IsNil(), "any-store's %s holder is nil", name)
+		v = v.Elem()
+	}
+	require.True(t, v.IsValid() && v.Kind() == reflect.Struct, "any-store's %s holder is not a struct", name)
+	f := v.FieldByName(name)
+	require.True(t, f.IsValid(), "any-store has no %s field", name)
+	return f
+}
+
 func TestSpaceStorage_GetSpaceStats_CalcMedian(t *testing.T) {
 	l1 := []int{1, 3, 2}
 	l2 := []int{1}
@@ -514,8 +602,9 @@ func assertFloat64(t *testing.T, a, b float64, msg string) {
 }
 
 type mockConfigGetter struct {
-	tempStoreNew string
-	tempStoreOld string
+	tempStoreNew        string
+	tempStoreOld        string
+	anyStoreSynchronous string
 }
 
 func (m mockConfigGetter) Init(a *app.App) (err error) {
@@ -528,8 +617,9 @@ func (m mockConfigGetter) Name() (name string) {
 
 func (m mockConfigGetter) GetStorage() Config {
 	return Config{
-		Path:         m.tempStoreOld,
-		AnyStorePath: m.tempStoreNew,
+		Path:                m.tempStoreOld,
+		AnyStorePath:        m.tempStoreNew,
+		AnyStoreSynchronous: m.anyStoreSynchronous,
 	}
 }
 
@@ -540,6 +630,13 @@ func newStorageService(t *testing.T) *storageService {
 }
 
 func newStorageServiceWithDir(t *testing.T, tempDir string) *storageService {
+	ss, _ := startStorageService(t, tempDir, "")
+	return ss
+}
+
+// startStorageService starts the storage service in tempDir with
+// storage.anyStoreSynchronous set to synchronous, and returns the start error.
+func startStorageService(t *testing.T, tempDir, synchronous string) (*storageService, error) {
 	ss := New()
 	a := new(app.App)
 
@@ -549,7 +646,11 @@ func newStorageServiceWithDir(t *testing.T, tempDir string) *storageService {
 
 	t.Cleanup(ctrl.Finish)
 
-	a.Register(mockConfigGetter{tempStoreNew: filepath.Join(tempDir, "new"), tempStoreOld: filepath.Join(tempDir, "old")}).Register(ss).Register(archive)
-	a.Start(ctx)
-	return ss.(*storageService)
+	a.Register(mockConfigGetter{
+		tempStoreNew:        filepath.Join(tempDir, "new"),
+		tempStoreOld:        filepath.Join(tempDir, "old"),
+		anyStoreSynchronous: synchronous,
+	}).Register(ss).Register(archive)
+	err := a.Start(ctx)
+	return ss.(*storageService), err
 }

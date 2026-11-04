@@ -48,11 +48,11 @@ const (
 	doAfterOpen  optKey = 2
 )
 
-func anyStoreConfig() *anystore.Config {
+func anyStoreConfig(synchronous string) *anystore.Config {
 	return &anystore.Config{
 		ReadConnections: 4,
 		SQLiteConnectionOptions: map[string]string{
-			"synchronous": "off",
+			"synchronous": synchronous,
 		},
 	}
 }
@@ -107,6 +107,7 @@ const archiveCName = "node.archive"
 
 type storageService struct {
 	rootPath        string
+	synchronous     string
 	cache           ocache.OCache
 	indexStorage    IndexStorage
 	updater         *spaceUpdater
@@ -121,6 +122,9 @@ type storageService struct {
 
 func (s *storageService) Init(a *app.App) (err error) {
 	cfg := a.MustComponent("config").(configGetter).GetStorage()
+	if s.synchronous, err = cfg.anyStoreSynchronous(); err != nil {
+		return err
+	}
 	s.archive = a.MustComponent(archiveCName).(archiveService)
 	s.updater = newSpaceUpdater(func(updates []SpaceUpdate) {
 		if s.indexStorage == nil {
@@ -253,7 +257,7 @@ func (s *storageService) openDb(ctx context.Context, id string) (db anystore.DB,
 		}
 		return nil, err
 	}
-	return anystore.Open(ctx, dbPath, anyStoreConfig())
+	return anystore.Open(ctx, dbPath, anyStoreConfig(s.synchronous))
 }
 
 func (s *storageService) createDb(ctx context.Context, id string) (db anystore.DB, err error) {
@@ -263,7 +267,7 @@ func (s *storageService) createDb(ctx context.Context, id string) (db anystore.D
 		return nil, err
 	}
 	dbPath := path.Join(dirPath, "store.db")
-	return anystore.Open(ctx, dbPath, anyStoreConfig())
+	return anystore.Open(ctx, dbPath, anyStoreConfig(s.synchronous))
 }
 
 const (
@@ -616,6 +620,10 @@ func (s *storageService) OnDeleteStorage(onDelete func(ctx context.Context, spac
 }
 
 func (s *storageService) Close(ctx context.Context) (err error) {
+	if s.updater == nil {
+		// Init failed on the config and set nothing up; the app still closes it
+		return nil
+	}
 	err = s.updater.Close()
 	if err != nil {
 		log.Error("failed to close updater", zap.Error(err))

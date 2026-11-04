@@ -88,7 +88,7 @@ func Test_migrateToSingleCollection(t *testing.T) {
 	require.NoError(t, err)
 	anyStorePath := filepath.Join(tempDir, "index_store_v1.db")
 	require.NoError(t, os.WriteFile(anyStorePath, data, 0644))
-	db, err := anystore.Open(ctx, anyStorePath, anyStoreConfig())
+	db, err := anystore.Open(ctx, anyStorePath, anyStoreConfig(defaultAnyStoreSynchronous))
 	require.NoError(t, err)
 	defer db.Close()
 
