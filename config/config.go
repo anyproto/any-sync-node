@@ -61,6 +61,7 @@ type Config struct {
 	Resharder                resharder.Config       `yaml:"resharder"`
 	Repairer                 repairer.Config        `yaml:"repairer"`
 	Secure                   secureservice.Config   `yaml:"secure"`
+	MutexProfileFraction     int                    `yaml:"mutexProfileFraction"`
 }
 
 func (c Config) Init(a *app.App) (err error) {
